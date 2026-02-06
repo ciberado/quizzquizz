@@ -1,11 +1,8 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file, organized by date.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## 2026-02-06
 
 ### Added
 - Initial project setup for QuizzQuizz
@@ -29,11 +26,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed accidentally committed .pnpm-store directory (~19k cache files) from git tracking
 - Added .pnpm-store/ to .gitignore to prevent future commits
 - Purged .pnpm-store/ from entire git history using git filter-branch to reclaim disk space
-
----
-
-## History
-
-### 2026-02-06
-- Repository initialized
-- Project planning and documentation created
