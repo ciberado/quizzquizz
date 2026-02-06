@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Removed accidentally committed .pnpm-store directory (~19k cache files) from git tracking
 - Added .pnpm-store/ to .gitignore to prevent future commits
+- Purged .pnpm-store/ from entire git history using git filter-branch to reclaim disk space
 
 ---
 
