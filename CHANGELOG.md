@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file, organized b
 - Vite configuration for host-app (port 3001) and player-app (port 3002)
 
 ### Changed
+- Updated testing instructions to use `--run` flag to avoid interactive watch mode
+
+### Changed
 - Updated package manager from pnpm to npm workspaces
 - Updated all workspace dependency references to npm format
 

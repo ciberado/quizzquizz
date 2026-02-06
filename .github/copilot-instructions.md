@@ -111,7 +111,7 @@ npm run build --workspaces
 - **Framework**: Vitest (fast, TypeScript-native)
 - **Coverage**: Aim for 80%+ on utils, parsers, scoring
 - **Location**: `*.test.ts` files alongside source
-- **Run**: `npm test` in each package
+- **Run**: `npm test -- --run` in each package (use `--run` flag to avoid interactive watch mode)
 
 **Critical test areas**:
 - `@quizzquizz/common`: Scoring calculations, PIN generation, validation
