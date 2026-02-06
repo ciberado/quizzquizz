@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated package manager from pnpm to npm workspaces
 - Updated all workspace dependency references to npm format
 
+### Fixed
+- Removed accidentally committed .pnpm-store directory (~19k cache files) from git tracking
+- Added .pnpm-store/ to .gitignore to prevent future commits
+
 ---
 
 ## History
