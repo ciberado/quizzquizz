@@ -13,8 +13,9 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "@quizzquizz/common": "*",
-    "@quizzquizz/question-bank": "*",
+    "@quizzquizz/common": "0.0.0",
+    "@quizzquizz/question-bank": "0.0.0",
+    "@hono/zod-validator": "^0.2.1",
     "hono": "^4.0.0",
     "drizzle-orm": "^0.29.3",
     "better-sqlite3": "^9.3.0"

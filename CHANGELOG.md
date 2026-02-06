@@ -29,6 +29,17 @@ All notable changes to this project will be documented in this file, organized b
 - CLI demo tool to load and display question banks
 - TypeScript strict mode compliance with proper null checks
 
+### Added (Phase 2)
+- Hono REST API server with CORS and logging middleware
+- SQLite database with Drizzle ORM (schema: sessions, players, player_answers)
+- Session management endpoints (POST /api/sessions, GET /api/sessions/:id, DELETE /api/sessions/:id)
+- Player management endpoints (POST /api/sessions/join, GET /api/sessions/:id/players)
+- Question bank endpoints (GET /api/question-banks, GET /api/question-banks/:id)
+- Automatic question bank loading on server startup
+- Host token authentication for session operations
+- PIN-based session joining with duplicate nickname prevention
+- REST client test file (test.http) for manual API testing
+
 ### Changed
 - Updated package manager from pnpm to npm workspaces
 - Updated all workspace dependency references to npm format

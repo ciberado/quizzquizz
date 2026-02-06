@@ -1,0 +1,86 @@
+# QuizzQuizz API Tests
+
+This file can be used with the VS Code REST Client extension.
+Start the server with: `npm run dev --workspace=@quizzquizz/api-server`
+
+## Variables
+@baseUrl = http://localhost:3000
+@hostToken = 
+@sessionId = 
+@pin = 
+@playerId = 
+
+---
+
+## Health Check
+GET {{baseUrl}}/health
+
+---
+
+## Question Banks
+
+### List all question banks
+GET {{baseUrl}}/api/question-banks
+
+### Get specific question bank
+GET {{baseUrl}}/api/question-banks/sample-general-knowledge
+
+---
+
+## Sessions
+
+### Create a new session
+POST {{baseUrl}}/api/sessions
+Content-Type: application/json
+
+{
+  "questionBankId": "sample-general-knowledge"
+}
+
+### Get session (requires host token)
+# After creating a session, copy the hostToken to @hostToken variable above
+GET {{baseUrl}}/api/sessions/{{sessionId}}
+X-Host-Token: {{hostToken}}
+
+### Delete session (requires host token)
+DELETE {{baseUrl}}/api/sessions/{{sessionId}}
+X-Host-Token: {{hostToken}}
+
+---
+
+## Players
+
+### Join session with PIN
+# After creating a session, copy the PIN to @pin variable above
+POST {{baseUrl}}/api/sessions/join
+Content-Type: application/json
+
+{
+  "pin": "{{pin}}",
+  "nickname": "Player1"
+}
+
+### Join with another player
+POST {{baseUrl}}/api/sessions/join
+Content-Type: application/json
+
+{
+  "pin": "{{pin}}",
+  "nickname": "Player2"
+}
+
+### List players in session
+GET {{baseUrl}}/api/sessions/{{sessionId}}/players
+
+---
+
+## Test Workflow
+
+1. Health Check
+2. List Question Banks
+3. Create Session (save sessionId, hostToken, and pin)
+4. Join Session as Player1 (save playerId)
+5. Join Session as Player2
+6. List Players
+7. Get Session
+8. Delete Session (cleanup)
