@@ -21,6 +21,14 @@ All notable changes to this project will be documented in this file, organized b
 ### Changed
 - Updated testing instructions to use `--run` flag to avoid interactive watch mode
 
+### Added (Phase 1)
+- Question bank markdown parser with full parsing logic for questions, answers, metadata
+- Question filtering by difficulty, topics, tags, and limit
+- Random question selection utility
+- 16 comprehensive unit tests for question-bank package
+- CLI demo tool to load and display question banks
+- TypeScript strict mode compliance with proper null checks
+
 ### Changed
 - Updated package manager from pnpm to npm workspaces
 - Updated all workspace dependency references to npm format
