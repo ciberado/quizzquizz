@@ -20,7 +20,7 @@ quizzquizz/
 └── vibe/                 # Project documentation
 ```
 
-**Package manager**: pnpm with workspaces  
+**Package manager**: npm with workspaces  
 **TypeScript**: Project references enabled (build dependencies matter!)
 
 ## TypeScript Conventions
@@ -86,8 +86,8 @@ git commit -m "feat(common): add PIN generation utility"
 
 ### Initial Setup (Phase 0)
 ```bash
-# Initialize pnpm workspace
-pnpm init
+# Initialize npm workspace
+npm init
 # Create packages with TypeScript + references
 # Configure shared tsconfig.base.json, ESLint, Prettier
 ```
@@ -95,14 +95,14 @@ pnpm init
 ### Working with Monorepo
 ```bash
 # Install dependencies for all packages
-pnpm install
+npm install
 
 # Run from workspace root
-pnpm --filter @quizzquizz/api-server dev
-pnpm --filter @quizzquizz/player-app dev
+npm run dev --workspace=@quizzquizz/api-server
+npm run dev --workspace=@quizzquizz/player-app
 
 # Build with TypeScript project references
-pnpm -r build
+npm run build --workspaces
 ```
 
 ### Testing Strategy (Required)
@@ -111,7 +111,7 @@ pnpm -r build
 - **Framework**: Vitest (fast, TypeScript-native)
 - **Coverage**: Aim for 80%+ on utils, parsers, scoring
 - **Location**: `*.test.ts` files alongside source
-- **Run**: `pnpm test` in each package
+- **Run**: `npm test` in each package
 
 **Critical test areas**:
 - `@quizzquizz/common`: Scoring calculations, PIN generation, validation
@@ -174,7 +174,7 @@ Session states: 'lobby' → 'playing' → 'finished'
 
 1. **Don't use WebSockets** - This is intentional. Use polling with ETags.
 2. **Don't add a framework** - Web Components are part of the design philosophy.
-3. **TypeScript project references** - Build order matters in monorepo. Run `pnpm -r build` from root.
+3. **TypeScript project references** - Build order matters in monorepo. Run `npm run build --workspaces` from root.
 4. **Session cleanup** - Expire old sessions (Phase 6 task). Database will grow otherwise.
 5. **Server-side timing** - Use server timestamps for answer validation, not client time.
 

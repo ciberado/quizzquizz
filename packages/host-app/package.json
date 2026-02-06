@@ -1,0 +1,20 @@
+{
+  "name": "@quizzquizz/host-app",
+  "version": "0.0.0",
+  "description": "Host/presenter web application",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@quizzquizz/common": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  }
+}
