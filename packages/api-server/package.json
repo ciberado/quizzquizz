@@ -13,19 +13,20 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.9",
+    "@hono/zod-validator": "^0.2.1",
     "@quizzquizz/common": "0.0.0",
     "@quizzquizz/question-bank": "0.0.0",
-    "@hono/zod-validator": "^0.2.1",
-    "hono": "^4.0.0",
+    "better-sqlite3": "^9.3.0",
     "drizzle-orm": "^0.29.3",
-    "better-sqlite3": "^9.3.0"
+    "hono": "^4.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.9",
     "@types/node": "^20.11.5",
+    "drizzle-kit": "^0.20.13",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.2",
-    "drizzle-kit": "^0.20.13"
+    "vitest": "^1.2.2"
   }
 }

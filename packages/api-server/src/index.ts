@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { serve } from '@hono/node-server';
 import { initDatabase } from './db';
 import { loadQuestionBanks } from '@quizzquizz/question-bank';
 import { questionBanks } from './state';
@@ -57,9 +58,9 @@ initialize();
 
 const port = parseInt(process.env.PORT || '3000', 10);
 
-console.log(`🚀 QuizzQuizz API Server running on http://localhost:${port}`);
+console.log(`🚀 QuizzQuizz API Server starting on http://localhost:${port}...`);
 
-export default {
-  port,
+serve({
   fetch: app.fetch,
-};
+  port,
+});

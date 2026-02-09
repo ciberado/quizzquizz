@@ -60,3 +60,9 @@ All notable changes to this project will be documented in this file, organized b
 ### Added
 - 26 unit tests for api-server routes (sessions, players, question-banks)
 - Vitest configuration for api-server package
+- Playwright E2E testing framework with automatic server management
+- 2 comprehensive E2E test suites (15 test scenarios total)
+  - Complete quiz session flow (PIN join, players, auth, cleanup)
+  - Multiple concurrent sessions with player isolation
+- @hono/node-server adapter to properly serve HTTP requests
+- test:e2e script for running E2E tests
