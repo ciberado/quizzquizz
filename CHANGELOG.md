@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-09
 
+### Fixed (Phase 4D Test improvements)
+- Playwright E2E tests: Changed from Web Component tag selectors to content-based selectors
+- Added waitForURL() to ensure navigation completes before checking elements
+- Increased timeouts for question screen appearance (10s instead of 5s)
+- Use .feedback and .waiting-indicator for waiting screen validation
+- Check for h1 text content instead of component tags for screen detection
+- Test reliability improved: 6/10 passing (up from inconsistent results)
+- Remaining issues: Navigation timing between screens needs further investigation
+
 ### Added (Phase 4D - Playwright E2E Tests)
 - Comprehensive Playwright test suite for player UI (10 test scenarios)
 - E2E test: Complete player flow from join to results screen
