@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-09
 
+### Added (Phase 4C - Question & Answer Screens)
+- Question screen Web Component with real-time countdown timer
+- Answer selection UI with single and multiple answer support
+- Answer submission with automatic timeout handling
+- Waiting screen with correct/incorrect feedback and points display
+- Visual timer warning when < 5 seconds remaining
+- Automatic game state polling for question transitions
+- Navigation between question, waiting, and results screens
+- Answer button selection/deselection toggle
+- Submit button state management (disabled until answers selected)
+- HTML escape for safe question/answer text rendering
+- Comprehensive unit tests (12 total, all passing)
+- Integration test script `test-phase-4c.sh` with 9 test scenarios
+- CSS animations for timer warnings and waiting indicators
+
+### Technical (Phase 4C)
+- Web Components: `QuestionScreen`, `WaitingScreen`
+- Countdown timer using setInterval (updates every second)
+- Auto-submit logic when timer reaches 0
+- Polling mechanism with 1.5s interval for questions, 2s for waiting
+- Query parameter passing for feedback (correct/incorrect, score)
+- Answer selection state management with Set data structure
+- Prevent double submission with hasSubmitted flag
+- Component lifecycle: startTimer, stopTimer, startPolling, stopPolling
+- Error handling for submission failures with fallback navigation
+
 ### Added (Phase 4B - Join & Lobby Screens)
 - Join screen Web Component with PIN input validation
 - Nickname screen Web Component with API integration

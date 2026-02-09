@@ -1,0 +1,289 @@
+import { BaseComponent } from './base-component';
+import { state } from '../state';
+import { api } from '../api-client';
+import { router } from '../router';
+import type { GameState } from '@quizzquizz/common';
+
+/**
+ * Question Screen Component
+ * Displays the current question with answers, timer, and submit button.
+ * Polls for game state to detect when question changes or quiz ends.
+ */
+export class QuestionScreen extends BaseComponent {
+  private pollInterval: number | null = null;
+  private timerInterval: number | null = null;
+  private selectedAnswerIds: Set<string> = new Set();
+  private timeRemaining: number = 0;
+  private currentQuestion: GameState['currentQuestion'] = null;
+  private questionStartedAt: number | null = null;
+  private timeLimit: number = 0;
+  private hasSubmitted: boolean = false;
+
+  protected onMount(): void {
+    this.startPolling();
+  }
+
+  protected onUnmount(): void {
+    this.stopPolling();
+    this.stopTimer();
+  }
+
+  private startPolling(): void {
+    this.pollGameState(); // Immediate first call
+    this.pollInterval = window.setInterval(() => {
+      this.pollGameState();
+    }, 1500); // Poll every 1.5 seconds
+  }
+
+  private stopPolling(): void {
+    if (this.pollInterval !== null) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+
+  private startTimer(): void {
+    this.stopTimer(); // Clear any existing timer
+    
+    // Calculate initial time remaining
+    const elapsed = Date.now() - (this.questionStartedAt || 0);
+    this.timeRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
+    
+    this.timerInterval = window.setInterval(() => {
+      this.timeRemaining -= 1;
+      
+      if (this.timeRemaining <= 0) {
+        this.stopTimer();
+        if (!this.hasSubmitted) {
+          this.submitAnswer(); // Auto-submit when time runs out
+        }
+      } else {
+        this.updateTimerDisplay();
+      }
+    }, 1000);
+    
+    this.updateTimerDisplay();
+  }
+
+  private stopTimer(): void {
+    if (this.timerInterval !== null) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  private updateTimerDisplay(): void {
+    const timerEl = this.querySelector('.timer');
+    if (timerEl) {
+      timerEl.textContent = `${this.timeRemaining}s`;
+      
+      // Add warning class when < 5 seconds
+      if (this.timeRemaining < 5) {
+        timerEl.classList.add('timer-warning');
+      } else {
+        timerEl.classList.remove('timer-warning');
+      }
+    }
+  }
+
+  private async pollGameState(): Promise<void> {
+    const currentState = state.getState();
+    
+    if (!currentState.sessionId || !currentState.playerId) {
+      router.navigate('/');
+      return;
+    }
+
+    try {
+      const gameState = await api.getGameState(
+        currentState.sessionId,
+        currentState.playerId
+      );
+
+      // Check if quiz ended
+      if (gameState.status === 'finished') {
+        router.navigate(`/results?sessionId=${currentState.sessionId}`);
+        return;
+      }
+
+      // Check if we're in lobby (shouldn't happen, but handle it)
+      if (gameState.status === 'lobby') {
+        router.navigate(`/lobby?sessionId=${currentState.sessionId}`);
+        return;
+      }
+
+      // Update question if it changed
+      if (gameState.currentQuestion && 
+          gameState.currentQuestion.id !== this.currentQuestion?.id) {
+        this.currentQuestion = gameState.currentQuestion;
+        this.questionStartedAt = gameState.questionStartedAt;
+        this.timeLimit = gameState.timeLimit || 20;
+        this.selectedAnswerIds.clear();
+        this.hasSubmitted = false;
+        this.startTimer();
+        this.render();
+      }
+    } catch (error) {
+      console.error('Error polling game state:', error);
+      // Continue polling even on error
+    }
+  }
+
+  private toggleAnswer(answerId: string): void {
+    if (this.hasSubmitted) return; // Don't allow changes after submission
+    
+    if (this.selectedAnswerIds.has(answerId)) {
+      this.selectedAnswerIds.delete(answerId);
+    } else {
+      this.selectedAnswerIds.add(answerId);
+    }
+    
+    this.updateAnswerButtons();
+  }
+
+  private updateAnswerButtons(): void {
+    const buttons = this.querySelectorAll('.answer-btn');
+    buttons.forEach((btn) => {
+      const answerId = (btn as HTMLElement).dataset.answerId;
+      if (answerId) {
+        if (this.selectedAnswerIds.has(answerId)) {
+          btn.classList.add('selected');
+        } else {
+          btn.classList.remove('selected');
+        }
+      }
+    });
+  }
+
+  private async submitAnswer(): Promise<void> {
+    if (this.hasSubmitted) return; // Prevent double submission
+    
+    const currentState = state.getState();
+    if (!currentState.sessionId || !currentState.playerId || !this.currentQuestion) {
+      return;
+    }
+
+    this.hasSubmitted = true;
+    this.stopTimer();
+    this.stopPolling();
+
+    // Disable all answer buttons
+    const buttons = this.querySelectorAll('.answer-btn');
+    buttons.forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = true;
+    });
+
+    try {
+      const result = await api.submitAnswer(
+        currentState.sessionId,
+        currentState.playerId,
+        {
+          questionId: this.currentQuestion.id,
+          selectedAnswerIds: Array.from(this.selectedAnswerIds),
+        }
+      );
+
+      // Navigate to waiting screen
+      router.navigate(`/waiting?correct=${result.correct}&score=${result.score}`);
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      // Show error message but don't retry
+      const errorEl = this.querySelector('.error-message');
+      if (errorEl) {
+        errorEl.textContent = 'Failed to submit answer. Moving to next question...';
+      }
+      
+      // Navigate to waiting screen anyway after a delay
+      setTimeout(() => {
+        router.navigate(`/waiting`);
+      }, 2000);
+    }
+  }
+
+  protected render(): string {
+    if (!this.currentQuestion) {
+      return `
+        <div class="screen question-screen">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Waiting for question...</p>
+          </div>
+        </div>
+      `;
+    }
+
+    const currentState = state.getState();
+    
+    return `
+      <div class="screen question-screen">
+        <div class="question-header">
+          <div class="timer">0s</div>
+          <div class="question-number">
+            Question ${this.questionStartedAt ? '?' : '?'}
+          </div>
+        </div>
+
+        <div class="question-text">
+          ${this.escapeHtml(this.currentQuestion.text)}
+        </div>
+
+        <div class="answers-grid">
+          ${this.currentQuestion.answers.map((answer) => `
+            <button 
+              class="answer-btn" 
+              data-answer-id="${answer.id}"
+              ${this.hasSubmitted ? 'disabled' : ''}
+            >
+              ${this.escapeHtml(answer.text)}
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="question-footer">
+          <button 
+            class="submit-btn primary-btn" 
+            ${this.hasSubmitted || this.selectedAnswerIds.size === 0 ? 'disabled' : ''}
+          >
+            Submit Answer
+          </button>
+          <p class="hint">
+            ${this.currentQuestion.correctAnswerIds.length > 1 
+              ? 'Select all correct answers' 
+              : 'Select one answer'}
+          </p>
+        </div>
+
+        <div class="error-message"></div>
+      </div>
+    `;
+  }
+
+  protected attachEventListeners(): void {
+    // Answer button clicks
+    const answerButtons = this.querySelectorAll('.answer-btn');
+    answerButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const answerId = (btn as HTMLElement).dataset.answerId;
+        if (answerId) {
+          this.toggleAnswer(answerId);
+        }
+      });
+    });
+
+    // Submit button
+    const submitBtn = this.querySelector('.submit-btn');
+    if (submitBtn) {
+      submitBtn.addEventListener('click', () => {
+        this.submitAnswer();
+      });
+    }
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}
+
+customElements.define('question-screen', QuestionScreen);

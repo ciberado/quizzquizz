@@ -6,6 +6,8 @@ import { state } from './state';
 import './components/join-screen';
 import './components/nickname-screen';
 import './components/lobby-screen';
+import './components/question-screen';
+import './components/waiting-screen';
 
 /**
  * QuizzQuizz Player App
@@ -32,8 +34,12 @@ router.on('/lobby/:sessionId', () => {
   showScreen('lobby-screen');
 });
 
-router.on('/play/:sessionId', () => {
-  showScreen('play-screen-placeholder');
+router.on('/question/:sessionId', () => {
+  showScreen('question-screen');
+});
+
+router.on('/waiting', () => {
+  showScreen('waiting-screen');
 });
 
 router.on('/results/:sessionId', () => {

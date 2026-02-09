@@ -138,3 +138,118 @@ describe('State Management', () => {
     expect(cleared.score).toBe(0);
   });
 });
+
+describe('QuestionScreen Component', () => {
+  let component: any;
+
+  beforeEach(() => {
+    // Mock API
+    vi.spyOn(api, 'getGameState').mockResolvedValue({
+      status: 'playing',
+      currentQuestion: {
+        id: 'q1',
+        text: 'What is 2 + 2?',
+        answers: [
+          { id: 'a1', text: '3' },
+          { id: 'a2', text: '4' },
+        ],
+        correctAnswerIds: ['a2'],
+        difficulty: 'easy' as const,
+        topics: ['math'],
+        tags: [],
+        timeLimit: 20,
+      },
+      questionStartedAt: Date.now(),
+      timeLimit: 20,
+      totalQuestions: 5,
+      currentQuestionNumber: 1,
+    });
+
+    // Set up state
+    state.setState({
+      sessionId: 'session-123',
+      playerId: 'player-456',
+      nickname: 'TestPlayer',
+      score: 0,
+      currentQuestionIndex: 0,
+    });
+
+    // Dynamically import the component
+    import('../components/question-screen');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    state.clearState();
+  });
+
+  it('should instantiate QuestionScreen component', () => {
+    component = document.createElement('question-screen');
+    expect(component).toBeTruthy();
+    expect(component.tagName).toBe('QUESTION-SCREEN');
+  });
+
+  it('should call API to get game state when mounted', async () => {
+    component = document.createElement('question-screen');
+    document.body.appendChild(component);
+
+    // Wait for polling to trigger
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    expect(api.getGameState).toHaveBeenCalled();
+    
+    if (component.parentNode) {
+      document.body.removeChild(component);
+    }
+  });
+});
+
+describe('WaitingScreen Component', () => {
+  let component: any;
+
+  beforeEach(() => {
+    // Mock API
+    vi.spyOn(api, 'getGameState').mockResolvedValue({
+      status: 'playing',
+      currentQuestion: null,
+      questionStartedAt: null,
+      timeLimit: null,
+      totalQuestions: 5,
+      currentQuestionNumber: 1,
+    });
+
+    state.setState({
+      sessionId: 'session-123',
+      playerId: 'player-456',
+      nickname: 'TestPlayer',
+      score: 100,
+      currentQuestionIndex: 1,
+    });
+
+    import('../components/waiting-screen');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (component && component.parentNode) {
+      document.body.removeChild(component);
+    }
+    state.clearState();
+  });
+
+  it('should instantiate WaitingScreen component', () => {
+    component = document.createElement('waiting-screen');
+    expect(component).toBeTruthy();
+    expect(component.tagName).toBe('WAITING-SCREEN');
+  });
+
+  it('should call API to poll game state when mounted', async () => {
+    component = document.createElement('waiting-screen');
+    document.body.appendChild(component);
+
+    // Wait for polling to trigger
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    expect(api.getGameState).toHaveBeenCalled();
+  });
+});
