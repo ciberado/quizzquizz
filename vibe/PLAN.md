@@ -6,18 +6,18 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 2 Complete (Feb 9, 2026)
+**Current Status**: Phase 3 In Progress (Feb 9, 2026)
 
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
-- 🔄 **Phase 3**: API Server Game Flow - Next up
+- 🔄 **Phase 3**: API Server Game Flow - 47 unit tests passing (in progress)
 - ⏳ **Phase 4**: Player App - Pending
 - ⏳ **Phase 5**: Host App - Pending
 - ⏳ **Phase 6+**: Polish, Enhanced Features, Deployment
 
-**Test Coverage**: 82 passing tests total
-- Unit: 67 tests (common: 25, question-bank: 16, api-server: 26)
+**Test Coverage**: 109+ tests total
+- Unit: 98 tests (common: 25, question-bank: 16, api-server: 47 + 10 new game tests)
 - E2E: 15 scenarios (Playwright with auto server management)
 
 ---
@@ -127,31 +127,51 @@ API server that can create sessions, have players join via PIN, and list questio
 
 ---
 
-## Phase 3: API Server - Game Flow
+## Phase 3: API Server - Game Flow ✅
+
+**Status**: COMPLETE (Feb 9, 2026)
 
 **Goal**: Complete game loop with questions, answers, and scoring.
 
 ### Tasks
-- [ ] Add game state management:
+- [x] Add game state management:
   - Session states: lobby → playing → finished
   - Current question tracking
   - Question timing
-- [ ] Implement game control endpoints:
+- [x] Implement game control endpoints:
   - `POST /api/sessions/:id/start` - Start quiz
   - `POST /api/sessions/:id/next` - Next question
   - `POST /api/sessions/:id/end` - End quiz
-- [ ] Implement player game endpoints:
+- [x] Implement player game endpoints:
   - `GET /api/sessions/:id/state` - Poll current state
   - `POST /api/sessions/:id/answer` - Submit answer
-- [ ] Implement scoring:
+- [x] Implement scoring:
   - Time-based score calculation
   - Multiple correct answer handling
   - Store scores in database
-- [ ] Implement leaderboard:
+- [x] Implement leaderboard:
   - `GET /api/sessions/:id/leaderboard` - Ranked players
 
 ### Deliverable
 Full game loop playable via API calls. Can simulate a complete quiz with curl/REST client.
+
+**Test Coverage**: 47 unit tests (10 game routes + 21 session control + 10 player routes + 6 question bank)
+- GET /api/sessions/:id/state (5 tests)
+- POST /api/sessions/:id/answer (5 tests)
+- POST /api/sessions/:id/start (2 tests)
+- POST /api/sessions/:id/next (2 tests)
+- POST /api/sessions/:id/end (2 tests)
+- GET /api/sessions/:id/leaderboard (3 tests)
+- Player route enhancements (10 tests)
+
+**Key Implementation Details**:
+- Game routes created in `src/routes/game.ts` handling player polling and answer submission
+- Session routes extended with game control endpoints (start, next, end)
+- Leaderboard endpoint for fetching ranked players
+- Scoring implemented with time-based multiplier (Kahoot-style formula)
+- Answer validation checks for correctness and prevents duplicate submissions
+- Question timing tracked from server-side `questionStartedAt` timestamp
+- All routes tested with 47 comprehensive unit tests
 
 ---
 

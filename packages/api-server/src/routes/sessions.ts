@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { db } from '../db';
-import { sessions } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { sessions, players } from '../db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { generateId, generatePin } from '@quizzquizz/common';
+import { questionBanks } from '../state';
 
 const sessionRoutes = new Hono();
 
@@ -108,6 +109,203 @@ sessionRoutes.delete('/:id', async (c) => {
   } catch (error) {
     console.error('Error deleting session:', error);
     return c.json({ error: 'Failed to delete session' }, 500);
+  }
+});
+
+// Start quiz (requires host token)
+sessionRoutes.post('/:id/start', async (c) => {
+  const sessionId = c.req.param('id');
+  const hostToken = c.req.header('X-Host-Token');
+
+  if (!hostToken) {
+    return c.json({ error: 'Host token required' }, 401);
+  }
+
+  try {
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    if (session.hostToken !== hostToken) {
+      return c.json({ error: 'Invalid host token' }, 403);
+    }
+
+    if (session.status !== 'lobby') {
+      return c.json({ error: 'Session is not in lobby state' }, 400);
+    }
+
+    // Verify question bank exists
+    const questionBank = questionBanks.get(session.questionBankId);
+    if (!questionBank || questionBank.questions.length === 0) {
+      return c.json({ error: 'Question bank has no questions' }, 400);
+    }
+
+    // Start quiz: move to first question
+    await db
+      .update(sessions)
+      .set({
+        status: 'playing',
+        currentQuestionIndex: 0,
+        questionStartedAt: Date.now(),
+      })
+      .where(eq(sessions.id, sessionId));
+
+    return c.json({ message: 'Quiz started', currentQuestionIndex: 0 });
+  } catch (error) {
+    console.error('Error starting quiz:', error);
+    return c.json({ error: 'Failed to start quiz' }, 500);
+  }
+});
+
+// Move to next question (requires host token)
+sessionRoutes.post('/:id/next', async (c) => {
+  const sessionId = c.req.param('id');
+  const hostToken = c.req.header('X-Host-Token');
+
+  if (!hostToken) {
+    return c.json({ error: 'Host token required' }, 401);
+  }
+
+  try {
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    if (session.hostToken !== hostToken) {
+      return c.json({ error: 'Invalid host token' }, 403);
+    }
+
+    if (session.status !== 'playing') {
+      return c.json({ error: 'Session is not currently playing' }, 400);
+    }
+
+    // Get question bank
+    const questionBank = questionBanks.get(session.questionBankId);
+    if (!questionBank) {
+      return c.json({ error: 'Question bank not found' }, 404);
+    }
+
+    const nextIndex = session.currentQuestionIndex + 1;
+
+    // Check if we've reached the end
+    if (nextIndex >= questionBank.questions.length) {
+      // End the quiz
+      await db
+        .update(sessions)
+        .set({
+          status: 'finished',
+          currentQuestionIndex: -1,
+          questionStartedAt: null,
+        })
+        .where(eq(sessions.id, sessionId));
+
+      return c.json({
+        message: 'Quiz finished',
+        status: 'finished',
+      });
+    }
+
+    // Move to next question
+    await db
+      .update(sessions)
+      .set({
+        currentQuestionIndex: nextIndex,
+        questionStartedAt: Date.now(),
+      })
+      .where(eq(sessions.id, sessionId));
+
+    return c.json({
+      message: 'Moved to next question',
+      currentQuestionIndex: nextIndex,
+    });
+  } catch (error) {
+    console.error('Error moving to next question:', error);
+    return c.json({ error: 'Failed to move to next question' }, 500);
+  }
+});
+
+// End quiz (requires host token)
+sessionRoutes.post('/:id/end', async (c) => {
+  const sessionId = c.req.param('id');
+  const hostToken = c.req.header('X-Host-Token');
+
+  if (!hostToken) {
+    return c.json({ error: 'Host token required' }, 401);
+  }
+
+  try {
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    if (session.hostToken !== hostToken) {
+      return c.json({ error: 'Invalid host token' }, 403);
+    }
+
+    if (session.status === 'finished') {
+      return c.json({ error: 'Session is already finished' }, 400);
+    }
+
+    // End the quiz
+    await db
+      .update(sessions)
+      .set({
+        status: 'finished',
+        currentQuestionIndex: -1,
+        questionStartedAt: null,
+      })
+      .where(eq(sessions.id, sessionId));
+
+    return c.json({ message: 'Quiz ended' });
+  } catch (error) {
+    console.error('Error ending quiz:', error);
+    return c.json({ error: 'Failed to end quiz' }, 500);
+  }
+});
+
+// Get leaderboard (accessible by anyone with session ID)
+sessionRoutes.get('/:id/leaderboard', async (c) => {
+  const sessionId = c.req.param('id');
+
+  try {
+    // Verify session exists
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    // Get all players ranked by score
+    const ranking = await db.query.players.findMany({
+      where: eq(players.sessionId, sessionId),
+      orderBy: [desc(players.score), players.joinedAt],
+    });
+
+    const leaderboard = ranking.map((p, index) => ({
+      rank: index + 1,
+      nickname: p.nickname,
+      score: p.score,
+      playerId: p.id,
+    }));
+
+    return c.json({ leaderboard });
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    return c.json({ error: 'Failed to fetch leaderboard' }, 500);
   }
 });
 

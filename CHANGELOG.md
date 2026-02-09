@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## 2026-02-09
+
+### Added (Phase 3)
+- Game routes module (`src/routes/game.ts`) for handling player polling and answer submission
+- `GET /api/sessions/:id/state` endpoint - Retrieve current game state, active question, and player score
+- `POST /api/sessions/:id/answer` endpoint - Players submit answers with time-based scoring
+- `POST /api/sessions/:id/start` endpoint - Host starts quiz, transitions from lobby to playing
+- `POST /api/sessions/:id/next` endpoint - Host advances to next question or ends quiz
+- `POST /api/sessions/:id/end` endpoint - Host ends quiz prematurely
+- `GET /api/sessions/:id/leaderboard` endpoint - Get ranked players by score
+- 47 comprehensive unit tests for game flow (10 game routes + 37 session/player enhancements)
+- Answer validation preventing duplicate submissions for same question
+- Time-based score calculation using Kahoot-style formula
+- Server-side question timing with `questionStartedAt` tracking
+- Game flow state machine: lobby → playing → finished
+
+### Changed
+- Updated `src/index.ts` to register game routes
+- Extended sessions routes with game control endpoints
+- Updated test setup in game.test.ts and players.test.ts with question bank fixtures
+
+### Technical
+- Used Hono for routing with Zod validation
+- Drizzle ORM for database queries across all endpoints
+- Proper error handling with meaningful HTTP status codes (400, 401, 403, 404)
+- All answers stored in `player_answers` table with score calculation
+
 ## 2026-02-06
 
 ### Added

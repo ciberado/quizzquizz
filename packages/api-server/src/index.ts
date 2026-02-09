@@ -7,6 +7,7 @@ import { loadQuestionBanks } from '@quizzquizz/question-bank';
 import { questionBanks } from './state';
 import sessionRoutes from './routes/sessions';
 import playerRoutes from './routes/players';
+import gameRoutes from './routes/game';
 import questionBankRoutes from './routes/question-banks';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -29,6 +30,7 @@ app.get('/health', (c) => {
 // API routes
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
+app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/state and /answer patterns
 app.route('/api/question-banks', questionBankRoutes);
 
 // Initialize on startup

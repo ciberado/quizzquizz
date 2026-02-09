@@ -6,6 +6,8 @@ import playerRoutes from '../routes/players';
 import { initDatabase, db } from '../db';
 import { sessions, players } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { questionBanks } from '../state';
+import { QuestionBank } from '@quizzquizz/common';
 
 const app = new Hono();
 app.route('/api/sessions', sessionRoutes);
@@ -29,6 +31,32 @@ describe('Player Routes', () => {
   beforeAll(() => {
     process.env.DB_PATH = ':memory:';
     initDatabase();
+
+    // Create a sample question bank for testing
+    const sampleBank: QuestionBank = {
+      id: 'test-bank',
+      metadata: {
+        name: 'Test Bank',
+        defaultTimeLimit: 10,
+        topics: [],
+      },
+      questions: [
+        {
+          id: 'q1',
+          text: 'Question 1',
+          answers: [
+            { id: 'a1', text: 'Answer 1' },
+            { id: 'a2', text: 'Answer 2' },
+          ],
+          correctAnswerIds: ['a1'],
+          difficulty: 'easy',
+          topics: [],
+          tags: [],
+        },
+      ],
+    };
+
+    questionBanks.set('test-bank', sampleBank);
   });
 
   beforeEach(async () => {
