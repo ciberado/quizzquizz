@@ -96,21 +96,28 @@ export class LobbyScreen extends BaseComponent {
     try {
       const gameState = await api.getGameState(this.sessionId, this.playerId);
 
-      // Update player count (from leaderboard)
-      const leaderboard = await api.getLeaderboard(this.sessionId);
-      if (this.playerCountElement) {
-        this.playerCountElement.textContent = String(leaderboard.entries.length);
-      }
-
-      // Check if game has started
+      // Check if game has started FIRST (before fetching leaderboard)
       if (gameState.status === 'playing') {
         // Game started! Stop polling and navigate to question screen
         this.stopPolling();
         router.navigate(`/question/${this.sessionId}`);
+        return; // Early return, no need to update player count
       } else if (gameState.status === 'finished') {
         // Game finished (shouldn't happen in lobby but handle it)
         this.stopPolling();
         router.navigate(`/results/${this.sessionId}`);
+        return;
+      }
+
+      // Update player count (from leaderboard)
+      try {
+        const leaderboard = await api.getLeaderboard(this.sessionId);
+        if (this.playerCountElement && leaderboard.entries) {
+          this.playerCountElement.textContent = String(leaderboard.entries.length);
+        }
+      } catch (leaderboardError) {
+        // Ignore leaderboard errors, don't fail the whole poll
+        console.debug('Could not fetch leaderboard:', leaderboardError);
       }
     } catch (error) {
       if (error instanceof ApiError) {
