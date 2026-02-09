@@ -1,6 +1,7 @@
 import './styles.css';
 import { router } from './router';
 import { state } from './state';
+import { OfflineIndicator } from './offline-indicator';
 
 // Import screen components
 import './components/join-screen';
@@ -8,11 +9,15 @@ import './components/nickname-screen';
 import './components/lobby-screen';
 import './components/question-screen';
 import './components/waiting-screen';
+import './components/results-screen';
 
 /**
  * QuizzQuizz Player App
  * Web Components-based player interface
  */
+
+// Initialize offline indicator
+new OfflineIndicator();
 
 // Load saved state from localStorage (for reconnection)
 state.loadFromStorage();
@@ -43,7 +48,11 @@ router.on('/waiting', () => {
 });
 
 router.on('/results/:sessionId', () => {
-  showScreen('results-screen-placeholder');
+  showScreen('results-screen');
+});
+
+router.on('/results', () => {
+  showScreen('results-screen');
 });
 
 /**
@@ -53,34 +62,8 @@ function showScreen(componentTag: string): void {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Placeholder screens for Phase 4C
-  const placeholders: Record<string, string> = {
-    'play-screen-placeholder': `
-      <div class="screen">
-        <div class="card">
-          <h1>Question Screen</h1>
-          <p>Coming in Phase 4C...</p>
-          <button onclick="location.hash='/join'" class="secondary">Back to Join</button>
-        </div>
-      </div>
-    `,
-    'results-screen-placeholder': `
-      <div class="screen">
-        <div class="card">
-          <h1>Results Screen</h1>
-          <p>Coming in Phase 4C...</p>
-          <button onclick="location.hash='/join'" class="secondary">Back to Join</button>
-        </div>
-      </div>
-    `,
-  };
-
-  // Use placeholder or create component
-  if (placeholders[componentTag]) {
-    app.innerHTML = placeholders[componentTag];
-  } else {
-    app.innerHTML = `<${componentTag}></${componentTag}>`;
-  }
+  // Mount Web Component
+  app.innerHTML = `<${componentTag}></${componentTag}>`;
 }
 
 console.log('QuizzQuizz Player App initialized');

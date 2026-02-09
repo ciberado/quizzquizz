@@ -61,7 +61,7 @@ class Router {
     const fullPath = this.getCurrentPath();
     
     // Strip query parameters for route matching
-    const path = fullPath.split('?')[0];
+    const path = fullPath.split('?')[0] || '/';
     
     // Avoid re-processing same route
     if (fullPath === this.currentRoute) {

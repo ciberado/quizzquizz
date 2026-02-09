@@ -10,6 +10,7 @@ import type {
   SubmitAnswerResponse,
   LeaderboardResponse,
 } from '@quizzquizz/common';
+import { retryWithBackoff, isNetworkError } from './network-utils';
 
 /**
  * API client error
@@ -40,46 +41,63 @@ class ApiClient {
   }
 
   /**
-   * Generic fetch wrapper with error handling
+   * Generic fetch wrapper with error handling and retry logic
    */
   private async fetch<T>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retry: boolean = true
   ): Promise<T> {
-    const url = `${this.config.baseUrl}${path}`;
+    const doFetch = async (): Promise<T> => {
+      const url = `${this.config.baseUrl}${path}`;
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      });
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        });
 
-      // Parse response body
-      const data = await response.json().catch(() => ({}));
+        // Parse response body
+        const data = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
+        if (!response.ok) {
+          throw new ApiError(
+            data.error || `Request failed with status ${response.status}`,
+            response.status,
+            data
+          );
+        }
+
+        return data as T;
+      } catch (error) {
+        if (error instanceof ApiError) {
+          throw error;
+        }
+        
+        // Network error or other fetch failure
         throw new ApiError(
-          data.error || `Request failed with status ${response.status}`,
-          response.status,
-          data
+          error instanceof Error ? error.message : 'Network request failed',
+          0
         );
       }
+    };
 
-      return data as T;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      
-      // Network error or other fetch failure
-      throw new ApiError(
-        error instanceof Error ? error.message : 'Network request failed',
-        0
-      );
+    // Retry network errors automatically
+    if (retry) {
+      return retryWithBackoff(doFetch, {
+        maxRetries: 2,
+        initialDelay: 1000,
+        shouldRetry: (error) => {
+          // Only retry network errors, not 4xx/5xx responses
+          return isNetworkError(error);
+        },
+      });
     }
+
+    return doFetch();
   }
 
   /**
