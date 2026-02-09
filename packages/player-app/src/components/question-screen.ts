@@ -212,7 +212,6 @@ export class QuestionScreen extends BaseComponent {
       `;
     }
 
-    const currentState = state.getState();
     
     return `
       <div class="screen question-screen">

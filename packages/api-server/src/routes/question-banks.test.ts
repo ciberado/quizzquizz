@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Hono } from 'hono';
 import questionBankRoutes from '../routes/question-banks';

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from '../routes/sessions';

@@ -103,9 +103,11 @@ describe('State Management', () => {
     const stored = localStorage.getItem('quizzquizz_player_state');
     expect(stored).toBeTruthy();
     
-    const parsed = JSON.parse(stored!);
-    expect(parsed.sessionId).toBe('session-123');
-    expect(parsed.score).toBe(100);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      expect(parsed.sessionId).toBe('session-123');
+      expect(parsed.score).toBe(100);
+    }
   });
 
   it('should notify subscribers on state change', () => {
@@ -140,7 +142,7 @@ describe('State Management', () => {
 });
 
 describe('QuestionScreen Component', () => {
-  let component: any;
+  let component: HTMLElement;
 
   beforeEach(() => {
     // Mock API
@@ -205,7 +207,7 @@ describe('QuestionScreen Component', () => {
 });
 
 describe('WaitingScreen Component', () => {
-  let component: any;
+  let component: HTMLElement;
 
   beforeEach(() => {
     // Mock API

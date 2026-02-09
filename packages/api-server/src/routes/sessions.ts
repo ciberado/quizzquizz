@@ -73,6 +73,7 @@ sessionRoutes.get('/:id', async (c) => {
     }
 
     // Don't send hostToken in response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { hostToken: _, ...sessionData } = session;
     return c.json(sessionData);
   } catch (error) {
