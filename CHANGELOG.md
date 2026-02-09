@@ -29,6 +29,12 @@ All notable changes to this project will be documented in this file, organized b
 - Happy-DOM test environment for component testing
 - Test coverage: Join screen validation, state management, router navigation
 
+### Fixed
+- **Node.js v24 LTS compatibility**: Upgraded better-sqlite3 from v9.6.0 to v12.6.2
+  - Resolved MODULE_VERSION mismatch (compiled for Node v22, now compatible with v24)
+  - API server now starts successfully with Node v24.13.0
+  - All backend tests passing (46/47)
+
 ### Added (Phase 4A - Player App Foundation)
 - Base Web Component class (`BaseComponent`) with lifecycle hooks and helper methods
 - Hash-based router for SPA navigation with parameter support

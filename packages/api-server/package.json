@@ -17,7 +17,7 @@
     "@hono/zod-validator": "^0.2.1",
     "@quizzquizz/common": "0.0.0",
     "@quizzquizz/question-bank": "0.0.0",
-    "better-sqlite3": "^9.3.0",
+    "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.29.3",
     "hono": "^4.0.0"
   },
