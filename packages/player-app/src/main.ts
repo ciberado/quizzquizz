@@ -2,89 +2,79 @@ import './styles.css';
 import { router } from './router';
 import { state } from './state';
 
+// Import screen components
+import './components/join-screen';
+import './components/nickname-screen';
+import './components/lobby-screen';
+
 /**
  * QuizzQuizz Player App
- * Simple Web Components-based player interface
+ * Web Components-based player interface
  */
 
 // Load saved state from localStorage (for reconnection)
 state.loadFromStorage();
 
-// Define routes (will add components in Phase 4B)
+// Define routes
 router.on('/', () => {
-  showScreen('join');
+  showScreen('join-screen');
 });
 
 router.on('/join', () => {
-  showScreen('join');
+  showScreen('join-screen');
 });
 
 router.on('/nickname', () => {
-  showScreen('nickname');
+  showScreen('nickname-screen');
 });
 
-router.on('/lobby/:sessionId', (params) => {
-  console.log('Lobby screen:', params.sessionId);
-  showScreen('lobby');
+router.on('/lobby/:sessionId', () => {
+  showScreen('lobby-screen');
 });
 
-router.on('/play/:sessionId', (params) => {
-  console.log('Play screen:', params.sessionId);
-  showScreen('play');
+router.on('/play/:sessionId', () => {
+  showScreen('play-screen-placeholder');
 });
 
-router.on('/results/:sessionId', (params) => {
-  console.log('Results screen:', params.sessionId);
-  showScreen('results');
+router.on('/results/:sessionId', () => {
+  showScreen('results-screen-placeholder');
 });
 
 /**
- * Simple screen switcher (will replace with actual components)
+ * Screen switcher - mounts Web Components
  */
-function showScreen(screenName: string): void {
+function showScreen(componentTag: string): void {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // For now, just show placeholder content
-  const screens: Record<string, string> = {
-    join: `
+  // Placeholder screens for Phase 4C
+  const placeholders: Record<string, string> = {
+    'play-screen-placeholder': `
       <div class="screen">
-        <h1>Join Quiz</h1>
-        <p>Enter PIN screen placeholder</p>
-        <button onclick="location.hash='/nickname'">Test: Go to Nickname</button>
+        <div class="card">
+          <h1>Question Screen</h1>
+          <p>Coming in Phase 4C...</p>
+          <button onclick="location.hash='/join'" class="secondary">Back to Join</button>
+        </div>
       </div>
     `,
-    nickname: `
+    'results-screen-placeholder': `
       <div class="screen">
-        <h1>Enter Nickname</h1>
-        <p>Nickname screen placeholder</p>
-        <button onclick="location.hash='/lobby/test'">Test: Go to Lobby</button>
-      </div>
-    `,
-    lobby: `
-      <div class="screen">
-        <h1>Lobby</h1>
-        <p>Waiting for host to start...</p>
-        <button onclick="location.hash='/play/test'">Test: Go to Question</button>
-      </div>
-    `,
-    play: `
-      <div class="screen">
-        <h1>Question</h1>
-        <p>Question screen placeholder</p>
-        <button onclick="location.hash='/results/test'">Test: Go to Results</button>
-      </div>
-    `,
-    results: `
-      <div class="screen">
-        <h1>Results</h1>
-        <p>Results screen placeholder</p>
-        <button onclick="location.hash='/join'">Test: Back to Join</button>
+        <div class="card">
+          <h1>Results Screen</h1>
+          <p>Coming in Phase 4C...</p>
+          <button onclick="location.hash='/join'" class="secondary">Back to Join</button>
+        </div>
       </div>
     `,
   };
 
-  app.innerHTML = screens[screenName] || '<div class="screen"><h1>404</h1></div>';
+  // Use placeholder or create component
+  if (placeholders[componentTag]) {
+    app.innerHTML = placeholders[componentTag];
+  } else {
+    app.innerHTML = `<${componentTag}></${componentTag}>`;
+  }
 }
 
 console.log('QuizzQuizz Player App initialized');

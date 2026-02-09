@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-09
 
+### Added (Phase 4B - Join & Lobby Screens)
+- Join screen Web Component with PIN input validation
+- Nickname screen Web Component with API integration
+- Lobby screen Web Component with real-time polling
+- Complete join flow: PIN → Nickname → Lobby → Game
+- Input validation (numeric PIN, nickname length limits)
+- Error handling for all API scenarios (404, 409, 403)
+- Network error detection and user-friendly messages
+- Automatic game start detection in lobby (polling every 2s)
+- Player count display in lobby
+- Leave quiz functionality with state cleanup
+- Vitest test suite with 8 unit tests (all passing)
+- Manual test script with comprehensive test scenarios
+- CSS animations for lobby status indicator
+
+### Technical (Phase 4B)
+- Web Components: `JoinScreen`, `NicknameScreen`, `LobbyScreen`
+- API integration using typed client from Phase 4A
+- State management with localStorage persistence
+- Polling mechanism with interval cleanup on unmount
+- Query parameters for PIN passing between screens
+- Component lifecycle hooks (onMount, onUnmount)
+- Happy-DOM test environment for component testing
+- Test coverage: Join screen validation, state management, router navigation
+
 ### Added (Phase 4A - Player App Foundation)
 - Base Web Component class (`BaseComponent`) with lifecycle hooks and helper methods
 - Hash-based router for SPA navigation with parameter support

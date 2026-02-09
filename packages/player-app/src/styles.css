@@ -199,6 +199,7 @@ input.error {
   padding: var(--spacing-sm);
   border-radius: var(--radius-md);
   margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
 }
 
 /* Success Message */
@@ -208,6 +209,77 @@ input.error {
   padding: var(--spacing-sm);
   border-radius: var(--radius-md);
   margin-top: var(--spacing-sm);
+}
+
+/* PIN Badge */
+.pin-badge {
+  display: inline-block;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  background-color: var(--color-primary);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-md);
+  letter-spacing: 0.2em;
+}
+
+/* Nickname Display */
+.nickname-display {
+  font-size: var(--font-size-base);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-lg);
+}
+
+.nickname-display strong {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Lobby Status */
+.lobby-status {
+  text-align: center;
+  padding: var(--spacing-xl) 0;
+}
+
+.status-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-md);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.player-count {
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+  margin-top: var(--spacing-md);
+  font-weight: 600;
+}
+
+/* Form Spacing */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+form input {
+  text-align: center;
+}
+
+form button + button {
+  margin-top: 0;
 }
 
 /* Responsive Design */

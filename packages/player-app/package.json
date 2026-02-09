@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "test": "vitest",
     "clean": "rm -rf dist *.tsbuildinfo",
     "lint": "eslint src --ext .ts"
   },
@@ -15,6 +16,8 @@
   },
   "devDependencies": {
     "typescript": "^5.3.3",
-    "vite": "^5.0.12"
+    "vite": "^5.0.12",
+    "vitest": "^1.0.0",
+    "happy-dom": "^12.10.3"
   }
 }
