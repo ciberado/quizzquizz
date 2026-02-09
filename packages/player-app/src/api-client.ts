@@ -106,12 +106,16 @@ class ApiClient {
    */
   async submitAnswer(
     sessionId: string,
+    playerId: string,
     request: SubmitAnswerRequest
   ): Promise<SubmitAnswerResponse> {
     return this.fetch<SubmitAnswerResponse>(
       `/api/sessions/${sessionId}/answer`,
       {
         method: 'POST',
+        headers: {
+          'X-Player-Id': playerId,
+        },
         body: JSON.stringify(request),
       }
     );

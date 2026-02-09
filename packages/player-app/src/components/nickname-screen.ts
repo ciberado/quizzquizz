@@ -10,7 +10,6 @@ export class NicknameScreen extends BaseComponent {
   private nicknameInput: HTMLInputElement | null = null;
   private submitButton: HTMLButtonElement | null = null;
   private errorMessage: HTMLDivElement | null = null;
-  private pinDisplay: HTMLSpanElement | null = null;
   private isSubmitting = false;
   private pin = '';
 
@@ -64,7 +63,6 @@ export class NicknameScreen extends BaseComponent {
     this.nicknameInput = this.qs<HTMLInputElement>('#nickname-input');
     this.submitButton = this.qs<HTMLButtonElement>('#submit-button');
     this.errorMessage = this.qs<HTMLDivElement>('#error-message');
-    this.pinDisplay = this.qs<HTMLSpanElement>('#pin-display');
 
     // Set up event listeners
     this.setupEventListeners();
