@@ -4,81 +4,126 @@
 
 This plan outlines a phased approach to building QuizzQuizz using vibecoding methodology. Each phase delivers a working increment that can be tested and demonstrated. Phases are designed to be completable in focused coding sessions.
 
+## Progress Summary
+
+**Current Status**: Phase 2 Complete (Feb 9, 2026)
+
+- ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
+- ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
+- ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
+- 🔄 **Phase 3**: API Server Game Flow - Next up
+- ⏳ **Phase 4**: Player App - Pending
+- ⏳ **Phase 5**: Host App - Pending
+- ⏳ **Phase 6+**: Polish, Enhanced Features, Deployment
+
+**Test Coverage**: 82 passing tests total
+- Unit: 67 tests (common: 25, question-bank: 16, api-server: 26)
+- E2E: 15 scenarios (Playwright with auto server management)
+
 ---
 
-## Phase 0: Project Foundation
+## Phase 0: Project Foundation ✅
+
+**Status**: COMPLETE (Feb 6, 2026)
 
 **Goal**: Set up the monorepo structure and development environment.
 
 ### Tasks
-- [ ] Initialize pnpm workspace
-- [ ] Create base `package.json` with workspace configuration
-- [ ] Set up `tsconfig.base.json` with shared TypeScript settings
-- [ ] Create package directories with initial `package.json` files:
+- [x] Initialize npm workspace (changed from pnpm)
+- [x] Create base `package.json` with workspace configuration
+- [x] Set up `tsconfig.base.json` with shared TypeScript settings
+- [x] Create package directories with initial `package.json` files:
   - `packages/common`
   - `packages/question-bank`
   - `packages/api-server`
   - `packages/host-app`
   - `packages/player-app`
-- [ ] Configure ESLint and Prettier
-- [ ] Add basic scripts for building and running
-- [ ] Create `.gitignore`
+- [x] Configure ESLint and Prettier
+- [x] Add basic scripts for building and running
+- [x] Create `.gitignore`
 
 ### Deliverable
 Empty but properly configured monorepo where packages can import from each other.
 
+**Notes**: Used npm workspaces instead of pnpm. Added Vite configuration for frontend apps (ports 3001, 3002).
+
 ---
 
-## Phase 1: Common Package & Question Bank Parser
+## Phase 1: Common Package & Question Bank Parser ✅
+
+**Status**: COMPLETE (Feb 6, 2026)
 
 **Goal**: Define shared types and parse markdown question banks.
 
 ### Tasks
-- [ ] Define core types in `@quizzquizz/common`:
+- [x] Define core types in `@quizzquizz/common`:
   - Question, Answer, QuestionBank
   - Session, Player, PlayerAnswer
   - API request/response types
   - Game state types
-- [ ] Add Zod schemas for validation
-- [ ] Implement utility functions:
+- [x] Add Zod schemas for validation
+- [x] Implement utility functions:
   - PIN generation (6 digits, no ambiguous characters)
   - Score calculation (Kahoot-style)
   - ID generation
-- [ ] Create `@quizzquizz/question-bank`:
+- [x] Create `@quizzquizz/question-bank`:
   - Markdown parser for question format
   - Question bank loader (read directory of .md files)
   - Validation of parsed questions
   - Question filtering by difficulty/topics/tags
-- [ ] Create sample question banks in `question-banks/` directory
+- [x] Create sample question banks in `question-banks/` directory
 
 ### Deliverable
 CLI command or test that parses a markdown file and outputs structured questions.
 
+**Test Coverage**: 
+- 25 unit tests for common utilities (PIN generation, scoring, validation)
+- 16 unit tests for question bank parser
+- CLI demo tool included
+
+**Notes**: Parser handles multiple correct answers, optional time limits per question, and strict TypeScript compliance.
+
 ---
 
-## Phase 2: API Server - Core Session Management
+## Phase 2: API Server - Core Session Management ✅
+
+**Status**: COMPLETE (Feb 9, 2026)
 
 **Goal**: Basic REST API for creating and managing quiz sessions.
 
 ### Tasks
-- [ ] Set up Hono or Express server in `@quizzquizz/api-server`
-- [ ] Configure SQLite with Drizzle ORM
-- [ ] Create database schema:
+- [x] Set up Hono server in `@quizzquizz/api-server`
+- [x] Configure SQLite with Drizzle ORM
+- [x] Create database schema:
   - sessions table
   - players table
   - player_answers table
-- [ ] Implement session endpoints:
+- [x] Implement session endpoints:
   - `POST /api/sessions` - Create session
   - `GET /api/sessions/:id` - Get session (host view)
   - `DELETE /api/sessions/:id` - Delete session
-- [ ] Implement player endpoints:
+- [x] Implement player endpoints:
   - `POST /api/sessions/join` - Join with PIN
   - `GET /api/sessions/:id/players` - List players in session
-- [ ] Add question bank loading on server start
-- [ ] Implement `GET /api/question-banks` - List available banks
+- [x] Add question bank loading on server start
+- [x] Implement `GET /api/question-banks` - List available banks
 
 ### Deliverable
 API server that can create sessions, have players join via PIN, and list question banks. Testable with curl or REST client.
+
+**Test Coverage**:
+- 26 unit tests for API routes (sessions, players, question banks)
+- 15 E2E tests with Playwright (full session flow, multi-session isolation)
+- REST client test file (test.http) for manual testing
+
+**Infrastructure**:
+- better-sqlite3 successfully built with Node.js v22.22.0 LTS
+- @hono/node-server adapter for HTTP serving
+- In-memory SQLite for tests, file-based for production
+- Host token authentication, PIN-based player joining
+- Cascade deletion of players when session deleted
+
+**Notes**: Required Python 3 dev tools for native module compilation. Playwright automatically manages server lifecycle for E2E tests.
 
 ---
 
