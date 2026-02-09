@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-09
 
+### Fixed (Phase 4D - Critical Bug Fix)
+- **CRITICAL**: Fixed lobby screen navigation failure preventing quiz progression
+- Lobby polling now checks game state FIRST before fetching leaderboard
+- Added null safety for leaderboard operations to prevent undefined errors
+- Reordered polling logic: navigation decision now independent of leaderboard fetch
+- Added try-catch around leaderboard fetch to prevent blocking navigation
+- Fixed Playwright tests: Added `context.setOffline(false)` to 7 tests requiring network
+- Bug: `TypeError: Cannot read properties of undefined (reading 'length')` when leaderboard fetch failed
+- Result: Leaderboard failures no longer prevent lobby → question screen navigation
+
+### Fixed (Phase 4D - Test Suite Polish)
+- Updated test selectors to match actual component text ("Choose Your Name" vs "Enter Your Nickname")
+- Added BaseComponent ready state tracking with `data-ready` attribute
+- Implemented `markAsReady()` method for reliable component mounting signals
+- BaseComponent now handles both sync and async `onMount()` lifecycle
+- Test helper `waitForComponentReady()` ensures components fully mounted before assertions
+- Increased lobby polling wait time in tests (2.5s to allow at least one poll cycle)
+
+### Added (Phase 4D - Test Debugging Infrastructure)
+- Network request/response monitoring in Playwright tests
+- Console error capture for browser-side debugging
+- API response body logging for state endpoint debugging
+- Comprehensive error context in test failure screenshots
+- Debug output for game state, localStorage, and navigation timing
+- Created `vibe/FAILS.md` documenting test failures and root cause analysis
+
+### Technical (Phase 4D - Root Cause Analysis)
+- Identified Playwright browser contexts default to offline mode (`navigator.onLine = false`)
+- Offline indicator correctly showing but revealing test environment issue
+- Lobby polling failed when leaderboard API returned errors due to offline mode
+- Order of operations bug: leaderboard fetch happened before game state check
+- Navigation triggered only after successful leaderboard fetch (incorrect dependency)
+- Test framework: 7/10 tests failing at same point (lobby → question transition)
+- Current status: Critical bug fixed, awaiting test verification
+
 ### Fixed (Phase 4D Test improvements)
 - Playwright E2E tests: Changed from Web Component tag selectors to content-based selectors
 - Added waitForURL() to ensure navigation completes before checking elements
