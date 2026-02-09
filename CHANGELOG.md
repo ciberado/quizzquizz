@@ -39,6 +39,7 @@ All notable changes to this project will be documented in this file, organized b
 - Host token authentication for session operations
 - PIN-based session joining with duplicate nickname prevention
 - REST client test file (test.http) for manual API testing
+- 26 comprehensive unit tests for api-server routes (all passing)
 
 ### Changed
 - Updated package manager from pnpm to npm workspaces
@@ -48,3 +49,14 @@ All notable changes to this project will be documented in this file, organized b
 - Removed accidentally committed .pnpm-store directory (~19k cache files) from git tracking
 - Added .pnpm-store/ to .gitignore to prevent future commits
 - Purged .pnpm-store/ from entire git history using git filter-branch to reclaim disk space
+
+## 2026-02-09
+
+### Fixed
+- Installed full Python 3 standard library (python3 and python3-dev packages)
+- Switched from Node.js v24.13.0 to v22.22.0 LTS for better-sqlite3 compatibility
+- Successfully built better-sqlite3 native module
+
+### Added
+- 26 unit tests for api-server routes (sessions, players, question-banks)
+- Vitest configuration for api-server package
