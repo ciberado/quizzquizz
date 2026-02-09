@@ -6,9 +6,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 4 Complete - Player App MVP Ready (Feb 9, 2026)
+**Current Status**: Phase 4C Complete - Phase 4D Investigation (Feb 9, 2026)
 
-**Completed Phases** (30-34 hours development time):
+**Completed Phases** (28-32 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
@@ -16,12 +16,11 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 4A**: Player App Foundation - Router, state, API client, base components
 - ✅ **Phase 4B**: Join & Lobby Screens - Complete join flow with polling
 - ✅ **Phase 4C**: Question & Answer Screens - Timer, answer selection, waiting screen
-- ✅ **Phase 4D**: Results & Polish - Final leaderboard, offline detection, smooth transitions
 
 **Current Phase**:
-- 🎯 **Phase 5**: Host App (6-9 hours) - "Complete MVP experience"
+- 🎯 **Phase 4D**: Results & Polish (1-2 hrs) - "Complete player experience"
 
-**Upcoming MVP Phases** (Est. 6-14 hours to MVP):
+**Upcoming MVP Phases** (Est. 12-20 hours to MVP):
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience"
   - 5A: Foundation & Session Creation (1-2 hrs)
   - 5B: Lobby & Player Management (1-2 hrs)
@@ -48,25 +47,25 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Phase 15: Enterprise Features (4-5 hrs)
 
 **Test Coverage Summary**: 
-- **156+ tests total** (151 unit + E2E scenarios + 10 UI E2E tests with Playwright)
+- **146+ tests total** (141 unit, 5 E2E scenarios)
 - Common utilities: 25 tests (PIN generation, scoring, validation)
 - Question bank parser: 16 tests (markdown parsing, filtering)
 - API server: 47 unit tests (sessions, players, game flow, question banks)
 - Player app: 12 unit tests (components, state management, router)
-- E2E: 4 comprehensive API scenarios (complete flows, edge cases, isolation)
-- **Playwright UI E2E: 10 comprehensive browser tests** (7/10 passing, 70% coverage)
-  - Complete player flow from join to results
-  - Results screen validation (leaderboard, medals, highlighting)
-  - User interactions (play again, offline detection)
-  - Visual elements (transitions, timers, loading states)
-  - Security (XSS protection testing)
+- E2E: 4 comprehensive scenarios (complete flows, edge cases, isolation)
+- Playwright MCP: Full join flow automation working
 
 **Next Immediate Steps**:
-1. Start Phase 5A: Host app foundation
-2. Implement session creation
-3. Test host and player apps together
+1. **URGENT**: Fix critical lobby navigation bug (see [FAILS.md](FAILS.md) for detailed analysis)
+2. Apply fixes: Reorder polling logic, add browser online mode to E2E tests
+3. Verify 7 failing Playwright tests now pass
+4. Complete Phase 4D: Results & leaderboard screen
+5. Polish animations and transitions
+6. Start Phase 5A: Host app foundation
 
-**MVP Completion Target**: ~55-65 hours total development time from project start
+**Blockers**: 7/10 E2E tests failing - lobby → question screen navigation broken due to polling logic bug
+
+**MVP Completion Target**: ~50-60 hours total development time from project start
 
 ---
 
@@ -383,73 +382,53 @@ During Phase 4 implementation and Playwright MCP testing, several critical issue
 
 ---
 
-### Phase 4D: Results & Polish ✅ COMPLETE (Feb 9, 2026)
+### Phase 4D: Results & Polish (Est. 1-2 hours) - INVESTIGATION PHASE
+
+**⚠️ CRITICAL ISSUES DISCOVERED**: See detailed analysis in [FAILS.md](FAILS.md)
+
+**Status**: E2E testing revealed critical bugs:
+1. **Lobby polling logic bug** - Leaderboard fetch failures blocking navigation to question screen
+2. **Browser context offline mode** - Playwright contexts defaulting to `navigator.onLine = false`
+3. **Unsafe property access** - `leaderboard.entries.length` without null check causing TypeError
+4. **Test failures**: 7/10 Playwright E2E tests failing at lobby → question transition
+
+**Fixes Identified** (awaiting implementation):
+- Reorder lobby polling: Check `gameState.status` **before** fetching leaderboard
+- Add `await context.setOffline(false)` to all E2E tests
+- Use optional chaining: `leaderboard?.entries?.length ?? 0`
+- Separate critical navigation logic from UI enhancements
 
 **Objective**: Players see their performance and final rankings.
 
-- [x] Results screen (`src/components/results-screen.ts`):
-  - Show final quiz results when quiz ends
-  - Display full leaderboard from `/api/sessions/:id/leaderboard`
-  - Show player's rank and total score
-  - Highlight current player in leaderboard
-  - Medal icons for top 3 (🥇🥈🥉)
+- [ ] Results screen (`src/components/results-screen.ts`):
+  - Show question result (correct/incorrect)
+  - Display correct answer(s)
+  - Show score earned for that question
+  - Display mini-leaderboard (top 5 from `/api/sessions/:id/leaderboard`)
+  - Show player's current rank
+  - "Next question" message or final results
+- [ ] Final results screen (`src/components/final-results-screen.ts`):
+  - Full leaderboard display
+  - Highlight player's position
+  - Medal icons for top 3
   - "Play again" button (navigate to join screen)
-  - Loading state with spinner
-  - Error handling with retry button
-  - HTML escaping for XSS protection
-- [x] Polish:
-  - Smooth transitions between screens (fade-in animation)
+- [ ] Polish:
+  - Smooth transitions between screens
   - Loading spinners for API calls
-  - Error reconnection (retry failed requests with exponential backoff)
-  - Offline detection and messaging (banner at top of screen)
-  - Network retry logic in API client (up to 2 retries for network errors)
-  - Online/offline event listeners
-  - Router bug fix (path could be undefined)
-
-**Deliverable**: ✅ Complete player experience from join to final results. Polished, production-ready UI with offline detection and automatic retry. **Comprehensive Playwright E2E test suite with 10 browser automation scenarios.**
-
-**Test Coverage**: 12 unit tests + **10 Playwright E2E tests** (7/10 passing on first run, 70% coverage). Build successful.
-
-**Playwright Test Scenarios**:
-1. Complete player flow: join → lobby → question → waiting → results ⚠️ (navigation timing)
-2. Results screen displays correct leaderboard data ⚠️ (navigation timing)
-3. Results screen shows medal icons for top 3 positions ⚠️ (navigation timing)
-4. Play again button clears state and returns to join screen ⚠️ (navigation timing)
-5. Smooth transitions between screens ⚠️ (navigation timing)
-6. Offline indicator appears when network is offline ✓
-7. Loading state shows spinner while fetching leaderboard ⚠️ (navigation timing)
-8. Error handling shows retry button on leaderboard fetch failure ✓
-9. Countdown timer shows warning when less than 5 seconds ⚠️ (navigation timing)
-10. HTML escaping prevents XSS in nickname display ⚠️ (navigation timing)
-
-**Test Improvements Made**:
-- Switched from Web Component tag selectors to content-based selectors
-- Added URL navigation waiters for route transitions  
-- Increased timeouts for async component rendering
-- Better handling of Web Component hydration timing
-
-**Remaining Work**: 8 tests have navigation timing issues between screens. The tests correctly identify content but there's a timing gap in how Web Components mount and become visible. This is primarily a test flakiness issue, not a production bug - manual testing shows all screens work correctly.
-
-**Files Created**:
-- `src/components/results-screen.ts` - Final leaderboard screen
-- `src/network-utils.ts` - Network utilities for retry and offline detection
-- `src/offline-indicator.ts` - Offline banner component
-- `e2e/player-ui.spec.ts` - **Comprehensive Playwright browser test suite (10 scenarios)**
-- `test-phase-4d.sh` - Bash integration test script for API
-
-**Files Modified**:
-- `src/main.ts` - Import results screen, initialize offline indicator
-- `src/api-client.ts` - Add retry logic with exponential backoff
-- `src/router.ts` - Fix path undefined bug
-- `src/styles.css` - Add results screen and offline indicator styles
-
-**Notes**: Player app is now feature-complete for MVP. All core user flows implemented with error handling, offline detection, and polished UX.
-
----
+  - Error reconnection (retry failed requests)
   - Offline detection and messaging
   - Responsive design testing (mobile & tablet)
 
 **Deliverable**: Complete player experience from join to final results. Polished, production-ready UI.
+
+**Investigation Notes** (Feb 9, 2026):
+- Implemented results-screen and final-results-screen components
+- Added offline indicator and loading states
+- Created comprehensive E2E test suite (10 tests)
+- Tests revealed critical lobby navigation bug preventing progression
+- Root cause: Polling logic order + browser offline mode in tests
+- All fixes identified, ready for implementation phase
+- Full analysis documented in [vibe/FAILS.md](FAILS.md)
 
 **Available API Endpoints for Phase 4**:
 - `POST /api/sessions/join` - Join quiz with PIN + nickname → Returns `{ sessionId, playerId }`
