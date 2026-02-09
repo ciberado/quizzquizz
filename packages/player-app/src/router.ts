@@ -58,14 +58,17 @@ class Router {
    * Handle route changes
    */
   private handleRouteChange(): void {
-    const path = this.getCurrentPath();
+    const fullPath = this.getCurrentPath();
+    
+    // Strip query parameters for route matching
+    const path = fullPath.split('?')[0];
     
     // Avoid re-processing same route
-    if (path === this.currentRoute) {
+    if (fullPath === this.currentRoute) {
       return;
     }
     
-    this.currentRoute = path;
+    this.currentRoute = fullPath;
 
     // Find matching route
     for (const route of this.routes) {

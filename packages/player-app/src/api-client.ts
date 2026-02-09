@@ -97,7 +97,12 @@ class ApiClient {
    */
   async getGameState(sessionId: string, playerId: string): Promise<GameState> {
     return this.fetch<GameState>(
-      `/api/sessions/${sessionId}/state?playerId=${playerId}`
+      `/api/sessions/${sessionId}/state`,
+      {
+        headers: {
+          'X-Player-Id': playerId,
+        },
+      }
     );
   }
 
