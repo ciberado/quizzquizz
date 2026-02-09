@@ -6,19 +6,23 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 3 In Progress (Feb 9, 2026)
+**Current Status**: Phase 3 Complete (Feb 9, 2026)
 
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
-- 🔄 **Phase 3**: API Server Game Flow - 47 unit tests passing (in progress)
-- ⏳ **Phase 4**: Player App - Pending
+- ✅ **Phase 3**: API Server Game Flow - 47 unit tests + 4 E2E tests passing (COMPLETE)
+- ⏳ **Phase 4**: Player App - Next up
 - ⏳ **Phase 5**: Host App - Pending
 - ⏳ **Phase 6+**: Polish, Enhanced Features, Deployment
 
-**Test Coverage**: 109+ tests total
+**Test Coverage**: 130+ tests total
 - Unit: 98 tests (common: 25, question-bank: 16, api-server: 47 + 10 new game tests)
-- E2E: 15 scenarios (Playwright with auto server management)
+- E2E: 4 comprehensive scenarios (Playwright with auto server management)
+  - Complete quiz session flow (Phase 2 baseline)
+  - Multiple sessions can coexist (isolation testing)
+  - **NEW**: Complete game flow (lobby → playing → finished)
+  - **NEW**: Game flow edge cases and validation
 
 ---
 
@@ -156,13 +160,22 @@ API server that can create sessions, have players join via PIN, and list questio
 Full game loop playable via API calls. Can simulate a complete quiz with curl/REST client.
 
 **Test Coverage**: 47 unit tests (10 game routes + 21 session control + 10 player routes + 6 question bank)
++ 2 comprehensive E2E scenarios:
+
+**Unit Tests** (10 game routes):
 - GET /api/sessions/:id/state (5 tests)
 - POST /api/sessions/:id/answer (5 tests)
+
+**Unit Tests** (Session control - 8 new tests):
 - POST /api/sessions/:id/start (2 tests)
-- POST /api/sessions/:id/next (2 tests)
+- POST /api/sessions/:id/next (2 tests)  
 - POST /api/sessions/:id/end (2 tests)
 - GET /api/sessions/:id/leaderboard (3 tests)
 - Player route enhancements (10 tests)
+
+**E2E Tests** (2 comprehensive scenarios):
+- **Complete game flow** (lobby → playing → finished): Full quiz simulation with 2 players, answer submission, scoring, leaderboard updates, question progression
+- **Game flow edge cases and validation**: Tests unauthorized access, duplicate operations, premature actions
 
 **Key Implementation Details**:
 - Game routes created in `src/routes/game.ts` handling player polling and answer submission

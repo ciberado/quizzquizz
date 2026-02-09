@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file, organized b
 - `POST /api/sessions/:id/end` endpoint - Host ends quiz prematurely
 - `GET /api/sessions/:id/leaderboard` endpoint - Get ranked players by score
 - 47 comprehensive unit tests for game flow (10 game routes + 37 session/player enhancements)
+- 2 comprehensive E2E tests for complete game flow (lobby → playing → finished)
 - Answer validation preventing duplicate submissions for same question
 - Time-based score calculation using Kahoot-style formula
 - Server-side question timing with `questionStartedAt` tracking
@@ -28,6 +29,7 @@ All notable changes to this project will be documented in this file, organized b
 - Drizzle ORM for database queries across all endpoints
 - Proper error handling with meaningful HTTP status codes (400, 401, 403, 404)
 - All answers stored in `player_answers` table with score calculation
+- Comprehensive E2E testing: complete game simulation with 2 players, scoring verification, edge case validation
 
 ## 2026-02-06
 

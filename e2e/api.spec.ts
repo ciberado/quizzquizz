@@ -193,5 +193,242 @@ test.describe('QuizzQuizz API E2E Tests', () => {
     await request.delete(`/api/sessions/${session2.id}`, {
       headers: { 'X-Host-Token': session2.hostToken },
     });
+});
+
+  test('complete game flow - lobby to finished', async ({ request }) => {
+    // Create session and join players
+    const createResponse = await request.post('/api/sessions', {
+      data: { questionBankId: 'sample-general-knowledge' },
+    });
+    expect(createResponse.status()).toBe(201);
+    const session = await createResponse.json();
+
+    const player1Response = await request.post('/api/sessions/join', {
+      data: { pin: session.pin, nickname: 'Alice' },
+    });
+    const player1 = await player1Response.json();
+
+    const player2Response = await request.post('/api/sessions/join', {
+      data: { pin: session.pin, nickname: 'Bob' },
+    });
+    const player2 = await player2Response.json();
+
+    console.log(`✓ Session created with 2 players (PIN: ${session.pin})`);
+
+    // Players check initial game state (lobby)
+    const initialStateResponse = await request.get(`/api/sessions/${session.id}/state`, {
+      headers: { 'X-Player-Id': player1.playerId },
+    });
+    expect(initialStateResponse.ok()).toBeTruthy();
+    const initialState = await initialStateResponse.json();
+    expect(initialState.status).toBe('lobby');
+    expect(initialState.currentQuestion).toBeNull();
+    expect(initialState.currentQuestionIndex).toBe(-1);
+    expect(initialState.playerScore).toBe(0);
+    expect(initialState.totalQuestions).toBeGreaterThan(0);
+    console.log(`✓ Initial lobby state verified (${initialState.totalQuestions} questions)`);
+
+    // Check initial leaderboard (empty scores)
+    const initialLeaderboardResponse = await request.get(`/api/sessions/${session.id}/leaderboard`);
+    expect(initialLeaderboardResponse.ok()).toBeTruthy();
+    const initialLeaderboard = await initialLeaderboardResponse.json();
+    expect(initialLeaderboard.leaderboard).toHaveLength(2);
+    expect(initialLeaderboard.leaderboard.every((p: any) => p.score === 0)).toBeTruthy();
+    console.log('✓ Initial leaderboard shows zero scores');
+
+    // Host starts the quiz
+    const startResponse = await request.post(`/api/sessions/${session.id}/start`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+    expect(startResponse.ok()).toBeTruthy();
+    const startData = await startResponse.json();
+    expect(startData.message).toBe('Quiz started');
+    expect(startData.currentQuestionIndex).toBe(0);
+    console.log('✓ Quiz started successfully');
+
+    // Players check game state after start (playing)
+    const playingStateResponse = await request.get(`/api/sessions/${session.id}/state`, {
+      headers: { 'X-Player-Id': player1.playerId },
+    });
+    expect(playingStateResponse.ok()).toBeTruthy();
+    const playingState = await playingStateResponse.json();
+    expect(playingState.status).toBe('playing');
+    expect(playingState.currentQuestion).toBeTruthy();
+    expect(playingState.currentQuestionIndex).toBe(0);
+    expect(playingState.timeRemaining).toBeGreaterThan(0);
+    expect(playingState.currentQuestion.answers).toBeDefined();
+    
+    const firstQuestion = playingState.currentQuestion;
+    console.log(`✓ First question loaded: "${firstQuestion.text.substring(0, 50)}..."`);
+
+    // Player 1 submits correct answer (assuming first correct answer)
+    const correctAnswerId = firstQuestion.correctAnswerIds?.[0] || firstQuestion.answers[0].id;
+    const answer1Response = await request.post(`/api/sessions/${session.id}/answer`, {
+      headers: { 
+        'X-Player-Id': player1.playerId,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        selectedAnswerIds: [correctAnswerId],
+      },
+    });
+    expect(answer1Response.ok()).toBeTruthy();
+    const answer1Data = await answer1Response.json();
+    expect(answer1Data.score).toBeGreaterThanOrEqual(0);
+    console.log(`✓ Player 1 submitted answer (score: ${answer1Data.score})`);
+
+    // Player 2 submits wrong answer
+    const wrongAnswerId = firstQuestion.answers.find((a: any) => a.id !== correctAnswerId)?.id || firstQuestion.answers[1].id;
+    const answer2Response = await request.post(`/api/sessions/${session.id}/answer`, {
+      headers: { 
+        'X-Player-Id': player2.playerId,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        selectedAnswerIds: [wrongAnswerId],
+      },
+    });
+    expect(answer2Response.ok()).toBeTruthy();
+    const answer2Data = await answer2Response.json();
+    console.log(`✓ Player 2 submitted answer (score: ${answer2Data.score})`);
+
+    // Check leaderboard after first question
+    const leaderboardResponse = await request.get(`/api/sessions/${session.id}/leaderboard`);
+    expect(leaderboardResponse.ok()).toBeTruthy();
+    const leaderboard = await leaderboardResponse.json();
+    expect(leaderboard.leaderboard).toHaveLength(2);
+    const topPlayer = leaderboard.leaderboard[0];
+    console.log(`✓ Leaderboard updated - ${topPlayer.nickname} leads with ${topPlayer.score} points`);
+
+    // Try to submit duplicate answer (should fail)
+    const duplicateAnswerResponse = await request.post(`/api/sessions/${session.id}/answer`, {
+      headers: { 
+        'X-Player-Id': player1.playerId,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        selectedAnswerIds: [correctAnswerId],
+      },
+    });
+    expect(duplicateAnswerResponse.status()).toBe(400);
+    console.log('✓ Duplicate answer submission correctly rejected');
+
+    // Host moves to next question
+    const nextResponse = await request.post(`/api/sessions/${session.id}/next`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+    expect(nextResponse.ok()).toBeTruthy();
+    const nextData = await nextResponse.json();
+
+    if (nextData.status === 'finished') {
+      console.log('✓ Quiz finished (only 1 question in bank)');
+    } else {
+      expect(nextData.message).toBe('Moved to next question');
+      expect(nextData.currentQuestionIndex).toBe(1);
+      console.log(`✓ Moved to question ${nextData.currentQuestionIndex + 1}`);
+
+      // Verify new question state
+      const newStateResponse = await request.get(`/api/sessions/${session.id}/state`, {
+        headers: { 'X-Player-Id': player1.playerId },
+      });
+      const newState = await newStateResponse.json();
+      expect(newState.currentQuestionIndex).toBe(1);
+      expect(newState.currentQuestion.id).not.toBe(firstQuestion.id);
+      console.log('✓ New question loaded successfully');
+
+      // Host ends quiz early
+      const endResponse = await request.post(`/api/sessions/${session.id}/end`, {
+        headers: { 'X-Host-Token': session.hostToken },
+      });
+      expect(endResponse.ok()).toBeTruthy();
+      const endData = await endResponse.json();
+      expect(endData.message).toBe('Quiz ended');
+      console.log('✓ Quiz ended by host');
+    }
+
+    // Check final state
+    const finalStateResponse = await request.get(`/api/sessions/${session.id}/state`, {
+      headers: { 'X-Player-Id': player1.playerId },
+    });
+    const finalState = await finalStateResponse.json();
+    expect(finalState.status).toBe('finished');
+    expect(finalState.currentQuestion).toBeNull();
+    console.log('✓ Final state confirmed as finished');
+
+    // Check final leaderboard
+    const finalLeaderboardResponse = await request.get(`/api/sessions/${session.id}/leaderboard`);
+    const finalLeaderboard = await finalLeaderboardResponse.json();
+    expect(finalLeaderboard.leaderboard).toHaveLength(2);
+    console.log('✓ Final leaderboard retrieved');
+
+    // Cleanup
+    await request.delete(`/api/sessions/${session.id}`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+    console.log('✓ Session cleanup completed');
+  });
+
+  test('game flow edge cases and validation', async ({ request }) => {
+    const createResponse = await request.post('/api/sessions', {
+      data: { questionBankId: 'sample-general-knowledge' },
+    });
+    const session = await createResponse.json();
+
+    const playerResponse = await request.post('/api/sessions/join', {
+      data: { pin: session.pin, nickname: 'TestPlayer' },
+    });
+    const player = await playerResponse.json();
+
+    // Try to answer before quiz starts (should fail)
+    const prematureAnswerResponse = await request.post(`/api/sessions/${session.id}/answer`, {
+      headers: { 
+        'X-Player-Id': player.playerId,
+        'Content-Type': 'application/json'
+      },
+      data: { selectedAnswerIds: ['answer1'] },
+    });
+    expect(prematureAnswerResponse.status()).toBe(400);
+    console.log('✓ Answer before start correctly rejected');
+
+    // Try to start quiz twice (should fail second time)
+    await request.post(`/api/sessions/${session.id}/start`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+
+    const secondStartResponse = await request.post(`/api/sessions/${session.id}/start`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+    expect(secondStartResponse.status()).toBe(400);
+    console.log('✓ Double start correctly rejected');
+
+    // Try to end already finished quiz
+    const endResponse = await request.post(`/api/sessions/${session.id}/end`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+    expect(endResponse.ok()).toBeTruthy();
+
+    const secondEndResponse = await request.post(`/api/sessions/${session.id}/end`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
+    expect(secondEndResponse.status()).toBe(400);
+    console.log('✓ Double end correctly rejected');
+
+    // Try unauthorized operations
+    const unauthorizedStartResponse = await request.post(`/api/sessions/${session.id}/start`, {
+      headers: { 'X-Host-Token': 'invalid-token' },
+    });
+    expect(unauthorizedStartResponse.status()).toBe(403);
+
+    const unauthorizedStateResponse = await request.get(`/api/sessions/${session.id}/state`, {
+      headers: { 'X-Player-Id': 'invalid-player' },
+    });
+    expect(unauthorizedStateResponse.status()).toBe(403);
+
+    console.log('✓ Unauthorized operations correctly rejected');
+
+    // Cleanup
+    await request.delete(`/api/sessions/${session.id}`, {
+      headers: { 'X-Host-Token': session.hostToken },
+    });
   });
 });
