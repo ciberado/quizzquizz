@@ -24,6 +24,20 @@ All notable changes to this project will be documented in this file, organized b
 - Extended sessions routes with game control endpoints
 - Updated test setup in game.test.ts and players.test.ts with question bank fixtures
 
+### Documentation
+- **MAJOR UPDATE**: Expanded `vibe/PLAN.md` with comprehensive implementation details:
+  - Phase 4 (Player App) broken into 4 sub-phases (4A-4D) with ~8-11 hour estimate
+  - Phase 5 (Host App) broken into 4 sub-phases (5A-5D) with ~6-9 hour estimate
+  - Phase 6 (Polish) broken into 5 sub-phases (6A-6E) with ~6-8 hour estimate
+  - Phase 7 (Enhanced Features) broken into 5 sub-phases (7A-7E) with detailed task lists
+  - Phase 8 (Deployment) broken into 5 sub-phases (8A-8E) covering Docker, docs, optimization
+  - Added detailed future phases (9-15): User accounts, question types, teams, analytics, marketplace, mobile apps, enterprise
+  - Added "How to Use This Plan" section with vibecoding guidelines
+  - Added testing checklist, code review checklist, progress tracking guide
+  - Added Quick Reference section with commands, ports, and file structure
+  - Progress Summary now shows MVP completion target (~50-60 hours total)
+  - Clearer distinction between completed, ready, in-progress, and future phases
+
 ### Technical
 - Used Hono for routing with Zod validation
 - Drizzle ORM for database queries across all endpoints
