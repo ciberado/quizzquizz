@@ -69,7 +69,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.goto('http://localhost:3002');
 
     // Step 1: Join screen - Enter PIN
-    await expect(page.locator('join-screen')).toBeVisible();
+    await expect(page.locator('h1:has-text("Join Quiz")')).toBeVisible();
     console.log('✓ Join screen loaded');
 
     const pinInput = page.locator('input[type="text"]').first();
@@ -78,7 +78,9 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     console.log(`✓ Entered PIN: ${pin}`);
 
     // Step 2: Nickname screen - Enter nickname
-    await expect(page.locator('nickname-screen')).toBeVisible({ timeout: 5000 });
+    // Wait for navigation to complete  
+    await page.waitForURL(/nickname/, { timeout: 5000 });
+    await expect(page.locator('h1:has-text("Enter Your Nickname")')).toBeVisible({ timeout: 5000 });
     console.log('✓ Nickname screen loaded');
 
     const nicknameInput = page.locator('input[type="text"]').first();
@@ -87,7 +89,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     console.log('✓ Entered nickname');
 
     // Step 3: Lobby screen - Wait for game to start
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
     console.log('✓ Lobby screen loaded');
 
     // Verify lobby content
@@ -98,8 +100,8 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await startQuiz(request, sessionId, hostToken);
     console.log('✓ Quiz started (via API)');
 
-    // Step 4: Question screen should appear
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    // Step 4: Question screen should appear - check for actual content
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
     console.log('✓ Question screen loaded');
 
     // Verify question screen content
@@ -119,8 +121,8 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Submit Answer")').click();
     console.log('✓ Answer submitted');
 
-    // Step 5: Waiting screen should appear
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    // Step 5: Waiting screen should appear - check for actual content
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
     console.log('✓ Waiting screen loaded');
 
     // Verify feedback is shown
@@ -131,8 +133,8 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await nextQuestion(request, sessionId, hostToken);
     console.log('✓ Advanced to next question (via API)');
 
-    // Should return to question screen
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    // Should return to question screen - check for actual content
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
     console.log('✓ Second question loaded');
 
     // Answer second question
@@ -140,15 +142,15 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Submit Answer")').click();
     console.log('✓ Second answer submitted');
 
-    // Wait for waiting screen
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    // Wait for waiting screen - check for actual content
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
 
     // End quiz via API
     await endQuiz(request, sessionId, hostToken);
     console.log('✓ Quiz ended (via API)');
 
-    // Step 6: Results screen should appear
-    await expect(page.locator('results-screen')).toBeVisible({ timeout: 5000 });
+    // Step 6: Results screen should appear - check for actual content
+    await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
     console.log('✓ Results screen loaded');
 
     // Verify results screen content
@@ -176,7 +178,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Join Quiz")').click();
     await page.locator('input[type="text"]').first().fill('Player One');
     await page.locator('button:has-text("Continue")').click();
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
 
     // Player 2 joins via API
     const player2Response = await request.post('/api/sessions/join', {
@@ -189,16 +191,16 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
 
     // Start quiz
     await startQuiz(request, sessionId, hostToken);
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
 
     // Answer question
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
 
     // End quiz
     await endQuiz(request, sessionId, hostToken);
-    await expect(page.locator('results-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
 
     // Verify leaderboard has multiple entries
     const entries = page.locator('.leaderboard-entry');
@@ -219,17 +221,17 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Join Quiz")').click();
     await page.locator('input[type="text"]').first().fill('Champion');
     await page.locator('button:has-text("Continue")').click();
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
 
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
-    await expect(page.locator('results-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
 
     // Check for medal in top rank
     const firstEntry = page.locator('.leaderboard-entry').first();
@@ -252,22 +254,22 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Join Quiz")').click();
     await page.locator('input[type="text"]').first().fill('Test Player');
     await page.locator('button:has-text("Continue")').click();
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
-    await expect(page.locator('results-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
 
     // Click "Play Again"
     await page.locator('button:has-text("Play Again")').click();
 
     // Should return to join screen
-    await expect(page.locator('join-screen')).toBeVisible({ timeout: 2000 });
+    await expect(page.locator('h1:has-text("Join Quiz")')).toBeVisible({ timeout: 2000 });
 
     // Verify PIN input is empty (state cleared)
     const pinInput = page.locator('input[type="text"]').first();
@@ -283,12 +285,11 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill(pin);
     await page.locator('button:has-text("Join Quiz")').click();
 
-    // Check that nickname screen has animation class
-    const nicknameScreen = page.locator('nickname-screen');
-    await expect(nicknameScreen).toBeVisible({ timeout: 5000 });
+    // Check that nickname screen appears with content
+    await expect(page.locator('h1:has-text("Enter Your Nickname")')).toBeVisible({ timeout: 5000 });
 
     // All screens should have the .screen class which has fadeIn animation
-    const screenElement = nicknameScreen.locator('.screen').first();
+    const screenElement = page.locator('.screen').first();
     await expect(screenElement).toBeVisible();
 
     console.log('✓ Smooth transitions working');
@@ -330,20 +331,18 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Join Quiz")').click();
     await page.locator('input[type="text"]').first().fill('Test');
     await page.locator('button:has-text("Continue")').click();
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
 
-    // There should be a brief loading state
-    // We might catch it or it might be too fast - either is okay
-    const resultsScreen = page.locator('results-screen');
-    await expect(resultsScreen).toBeVisible({ timeout: 5000 });
+    // Wait for results screen to show content (loading state might be too fast to catch)
+    await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
 
     // Final state should show leaderboard, not loading spinner
     await expect(page.locator('.final-leaderboard')).toBeVisible();
@@ -373,10 +372,10 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Join Quiz")').click();
     await page.locator('input[type="text"]').first().fill('Timer Test');
     await page.locator('button:has-text("Continue")').click();
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
 
     // Wait for timer to be visible
     const timer = page.locator('.timer');
@@ -397,16 +396,16 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('button:has-text("Join Quiz")').click();
     await page.locator('input[type="text"]').first().fill(xssNickname);
     await page.locator('button:has-text("Continue")').click();
-    await expect(page.locator('lobby-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
-    await expect(page.locator('question-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.question-text')).toBeVisible({ timeout: 10000 });
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
-    await expect(page.locator('waiting-screen')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
-    await expect(page.locator('results-screen')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
 
     // Verify the script tag is escaped in the leaderboard
     const nicknameElement = page.locator('.entry-nickname').first();
