@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-09
 
+### Added (Phase 4A - Player App Foundation)
+- Base Web Component class (`BaseComponent`) with lifecycle hooks and helper methods
+- Hash-based router for SPA navigation with parameter support
+- State management system with localStorage persistence for player reconnection
+- Typed API client with error handling for all player endpoints
+- Mobile-first CSS styling with touch-friendly design
+- Player app shell with placeholder screens for all routes
+- Test script for Phase 4A automated verification
+
+### Technical (Phase 4A)
+- Web Components architecture without frameworks (vanilla TypeScript)
+- Router supports parameterized routes (e.g., `/lobby/:sessionId`)
+- State management uses pub/sub pattern for reactivity
+- API client uses typed imports from `@quizzquizz/common`
+- CSS variables for theming, dark mode support
+- Vite dev server running on port 3002
+- All routes defined: `/join`, `/nickname`, `/lobby/:id`, `/play/:id`, `/results/:id`
+
 ### Added (Phase 3)
 - Game routes module (`src/routes/game.ts`) for handling player polling and answer submission
 - `GET /api/sessions/:id/state` endpoint - Retrieve current game state, active question, and player score
