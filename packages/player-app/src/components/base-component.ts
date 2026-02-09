@@ -2,23 +2,38 @@
  * Base class for Web Components with lifecycle helpers
  */
 export abstract class BaseComponent extends HTMLElement {
+  private _isReady = false;
+
   constructor() {
     super();
   }
 
   connectedCallback(): void {
-    this.onMount();
+    // Render component first
     this.render();
+    
+    // Mark as ready immediately after render (tests can proceed)
+    this.markAsReady();
+    
+    // Then run onMount (which may be async, e.g., start polling)
+    const mountResult = this.onMount();
+    if (mountResult instanceof Promise) {
+      mountResult.catch((error) => {
+        console.error('Error during component mount:', error);
+      });
+    }
   }
 
   disconnectedCallback(): void {
     this.onUnmount();
+    this._isReady = false;
+    this.removeAttribute('data-ready');
   }
 
   /**
    * Called when component is added to DOM
    */
-  protected onMount(): void {
+  protected onMount(): void | Promise<void> {
     // Override in subclasses if needed
   }
 
@@ -27,6 +42,21 @@ export abstract class BaseComponent extends HTMLElement {
    */
   protected onUnmount(): void {
     // Override in subclasses if needed
+  }
+
+  /**
+   * Mark component as ready for testing
+   */
+  protected markAsReady(): void {
+    this._isReady = true;
+    this.setAttribute('data-ready', 'true');
+  }
+
+  /**
+   * Check if component is ready
+   */
+  public get isReady(): boolean {
+    return this._isReady;
   }
 
   /**
