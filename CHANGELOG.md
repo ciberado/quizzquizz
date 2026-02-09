@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-09
 
+### Added (Phase 4D - Playwright E2E Tests)
+- Comprehensive Playwright test suite for player UI (10 test scenarios)
+- E2E test: Complete player flow from join to results screen
+- E2E test: Results screen leaderboard data validation
+- E2E test: Medal icons for top 3 positions
+- E2E test: Play again button functionality
+- E2E test: Smooth screen transitions
+- E2E test: Offline indicator visibility toggling
+- E2E test: Loading states during API calls
+- E2E test: Error handling and retry buttons
+- E2E test: Countdown timer display
+- E2E test: HTML escaping for XSS protection
+- Updated Playwright config to start both API server and player app
+- Separate test project for UI tests vs API tests
+- Bash integration test script for manual API testing
+
+### Fixed (Phase 4D)
+- Lobby screen routing bug: changed `/play/${sessionId}` to `/question/${sessionId}`
+- Ensured consistent routing between lobby polling and question screen navigation
+
+### Technical (Phase 4D Testing)
+- Playwright browser automation with Chromium
+- Screenshot capture on test failures
+- Helper functions for session management via API
+- Test coverage: 7/10 UI tests passing (70% success rate on first implementation)
+- Remaining failures: timing issues with Web Component visibility (awaiting polish)
+
 ### Added (Phase 4D - Results & Polish)
 - Results screen Web Component showing final leaderboard with medal icons
 - Player summary with rank and score statistics

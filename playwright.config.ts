@@ -10,22 +10,41 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
 
   projects: [
     {
       name: 'api-tests',
-      testMatch: '**/*.spec.ts',
+      testMatch: '**/api.spec.ts',
+    },
+    {
+      name: 'ui-tests',
+      testMatch: '**/player-ui.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
     },
   ],
 
-  // Start the API server before running tests
-  webServer: {
-    command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/api-server"',
-    url: 'http://localhost:3000/health',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60000,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  },
+  // Start the API server and player app before running tests
+  webServer: [
+    {
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/api-server"',
+      url: 'http://localhost:3000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/player-app"',
+      url: 'http://localhost:3002',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  ],
 });

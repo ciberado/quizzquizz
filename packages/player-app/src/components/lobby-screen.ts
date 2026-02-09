@@ -104,9 +104,9 @@ export class LobbyScreen extends BaseComponent {
 
       // Check if game has started
       if (gameState.status === 'playing') {
-        // Game started! Stop polling and navigate to play screen
+        // Game started! Stop polling and navigate to question screen
         this.stopPolling();
-        router.navigate(`/play/${this.sessionId}`);
+        router.navigate(`/question/${this.sessionId}`);
       } else if (gameState.status === 'finished') {
         // Game finished (shouldn't happen in lobby but handle it)
         this.stopPolling();
