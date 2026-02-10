@@ -15,10 +15,11 @@ model Session {
   pin                  String   @unique
   hostToken            String   @map("host_token")
   questionBankId       String   @map("question_bank_id")
-  status               String   @default("lobby") // 'lobby' | 'playing' | 'finished'
+  status               String   @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
   currentQuestionIndex Int      @default(-1) @map("current_question_index")
   questionStartedAt    BigInt?  @map("question_started_at") // timestamp in ms
   createdAt            BigInt   @default(0) @map("created_at")
+  expiresAt            BigInt?  @map("expires_at") // timestamp in ms, null = never expires
 
   // Relations
   players Player[]

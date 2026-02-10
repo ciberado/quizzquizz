@@ -21,6 +21,10 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
   const sessionId = generateId();
   const hostToken = generateId();
 
+  // Session expiration: default 24 hours, configurable via env
+  const expirationHours = parseInt(process.env.SESSION_EXPIRATION_HOURS || '24', 10);
+  const expiresAt = BigInt(Date.now() + expirationHours * 60 * 60 * 1000);
+
   try {
     await getPrisma().session.create({
       data: {
@@ -31,6 +35,7 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(Date.now()),
+        expiresAt,
       },
     });
 

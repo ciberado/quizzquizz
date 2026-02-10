@@ -2,6 +2,8 @@
  * Simple state management with pub/sub pattern
  */
 
+import { api } from './api-client';
+
 type Listener<T> = (state: T) => void;
 
 /**
@@ -65,6 +67,11 @@ class StateManager {
       currentQuestionIndex: -1,
     };
     this.clearStorage();
+    
+    // Clear API client cache and cancel pending requests
+    api.clearCache();
+    api.cancelAllRequests();
+    
     this.notifyListeners();
   }
 

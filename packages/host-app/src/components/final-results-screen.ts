@@ -72,12 +72,8 @@ export class FinalResultsScreen extends HTMLElement {
   }
 
   private handleCreateNewQuiz() {
-    // Clear session state
-    state.setState({
-      sessionId: null,
-      hostToken: null,
-      pin: null,
-    });
+    // Clear session state and API cache
+    state.clearState();
     
     router.navigate('/');
   }

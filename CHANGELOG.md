@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Added
+- **Phase 6D: Session Management & Cleanup**: Prevent database bloat and improve resource management
+  - **Database Schema Enhancements**:
+    - Added `expiresAt` field to Session model (BigInt timestamp)
+    - Added 'abandoned' status option to session status enum
+    - Default expiration: 24 hours after session creation
+    - Configurable via `SESSION_EXPIRATION_HOURS` environment variable
+    - Prisma migration: `20260210212431_add_session_expiration`
+    - File: `packages/api-server/prisma/schema.prisma`
+  - **Session Cleanup Background Job**:
+    - Automatic deletion of expired sessions (cascade deletes players/answers)
+    - Marks lobby sessions >1 hour old as 'abandoned'
+    - Runs every 60 minutes (configurable via `CLEANUP_INTERVAL_MINUTES`)
+    - Executes immediately on server startup, then periodically
+    - Logs cleanup operations: "🧹 Cleaned up X expired session(s)"
+    - Files: `packages/api-server/src/{session-cleanup,index}.ts`
+  - **Session Expiration on Creation**:
+    - All new sessions automatically get `expiresAt` timestamp
+    - Default: `Date.now() + 24 hours`
+    - Prevents infinite session accumulation in database
+    - File: `packages/api-server/src/routes/sessions.ts`
+  - **Client-Side State Cleanup**:
+    - **Player App**: `clearState()` now calls `api.clearCache()` and `api.cancelAllRequests()`
+    - **Host App**: `clearState()` now calls `cancelAllRequests()`
+    - Triggered when quiz ends (results screen "Play Again" button)
+    - Clears localStorage, cancels pending requests, clears API caches
+    - Prevents memory leaks and stale data on quiz restart
+    - Files: `packages/{player-app,host-app}/src/state.ts`, results screens
+  - **API Functions**:
+    - `cleanupExpiredSessions()`: Delete sessions past their expiration time
+    - `markAbandonedSessions()`: Mark lobby sessions >1hr old as abandoned
+    - `startCleanupJob(intervalMinutes)`: Start background cleanup with interval
+    - All functions with error handling and logging
+    - File: `packages/api-server/src/session-cleanup.ts`
+
 - **Phase 6C: Polling Optimization**: Reduce network traffic and improve performance
   - **Request Deduplication**:
     - Prevent concurrent requests to same endpoint via AbortController

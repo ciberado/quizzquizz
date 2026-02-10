@@ -9,6 +9,7 @@ import sessionRoutes from './routes/sessions';
 import playerRoutes from './routes/players';
 import gameRoutes from './routes/game';
 import questionBankRoutes from './routes/question-banks';
+import { startCleanupJob } from './session-cleanup';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -53,6 +54,10 @@ function initialize() {
   }
   
   console.log(`✅ Loaded ${banks.length} question bank(s)`);
+  
+  // Start session cleanup job (runs every 60 minutes by default)
+  const cleanupIntervalMinutes = parseInt(process.env.CLEANUP_INTERVAL_MINUTES || '60', 10);
+  startCleanupJob(cleanupIntervalMinutes);
 }
 
 // Initialize before starting

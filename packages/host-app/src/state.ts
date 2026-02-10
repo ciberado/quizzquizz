@@ -3,6 +3,8 @@
  * Stores session information with localStorage persistence
  */
 
+import { cancelAllRequests } from './api-client';
+
 export interface HostState {
   sessionId: string | null;
   hostToken: string | null;
@@ -54,6 +56,10 @@ class StateManager {
       questionBankId: null,
     };
     this.saveToStorage();
+    
+    // Cancel any pending API requests
+    cancelAllRequests();
+    
     this.notifyListeners();
   }
 
