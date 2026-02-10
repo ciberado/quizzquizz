@@ -52,6 +52,12 @@ export class LobbyScreen extends BaseComponent {
   protected render(): void {
     const canStart = this.players.length > 0;
 
+    console.log('🎨 Rendering lobby:', {
+      playerCount: this.players.length,
+      players: this.players.map(p => p.nickname),
+      pin: this.pin,
+    });
+
     this.setContent(`
       <div class="screen">
         <div class="container">
