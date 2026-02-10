@@ -23,6 +23,14 @@ export class LobbyScreen extends BaseComponent {
     this.hostToken = currentState.hostToken || '';
     this.pin = currentState.pin || '';
 
+    // Debug logging
+    console.log('🎮 Lobby Screen - State:', {
+      sessionId: this.sessionId,
+      hasToken: !!this.hostToken,
+      pin: this.pin,
+      fullState: currentState,
+    });
+
     // Validate we have required info
     if (!this.sessionId || !this.hostToken) {
       console.error('Missing session credentials, redirecting to create');
@@ -46,8 +54,8 @@ export class LobbyScreen extends BaseComponent {
         <div class="container">
           <!-- Large PIN Display -->
           <div class="pin-display">
-            <div class="pin-label">Join at localhost:3002 with PIN</div>
-            <div class="pin-code">${this.escapeHtml(this.pin)}</div>
+            <div class="pin-label">Join at localhost:3003 with PIN</div>
+            <div class="pin-code">${this.pin || '(No PIN - Check console)'}</div>
           </div>
 
           <!-- Player List -->
