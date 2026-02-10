@@ -29,7 +29,7 @@ Object.defineProperty(window, 'localStorage', {
 
 // Mock location.hash for routing tests
 delete (window as { location?: unknown }).location;
-window.location = {
+(window as { location: unknown }).location = {
   hash: '',
   href: 'http://localhost:3001/',
 } as Location;

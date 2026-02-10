@@ -8,6 +8,15 @@ import type {
   Player,
 } from '@quizzquizz/common';
 
+// Extended types for API responses (include runtime-only properties)
+interface SessionWithTimeLimit extends Session {
+  currentQuestionTimeLimit: number | null;
+}
+
+interface PlayerWithAnswerStatus extends Player {
+  hasAnswered: boolean;
+}
+
 // Simplified question bank for listing (from API /question-banks endpoint)
 interface QuestionBankSummary {
   id: string;
@@ -112,8 +121,8 @@ export const api = {
   /**
    * Get session details (requires host token)
    */
-  async getSession(sessionId: string, hostToken: string): Promise<Session> {
-    return apiRequest<Session>(`/api/sessions/${sessionId}`, {
+  async getSession(sessionId: string, hostToken: string): Promise<SessionWithTimeLimit> {
+    return apiRequest<SessionWithTimeLimit>(`/api/sessions/${sessionId}`, {
       headers: {
         'X-Host-Token': hostToken,
       },
@@ -123,8 +132,8 @@ export const api = {
   /**
    * Get players in session
    */
-  async getPlayers(sessionId: string): Promise<Player[]> {
-    const response = await apiRequest<{ players: Player[] }>(`/api/sessions/${sessionId}/players`);
+  async getPlayers(sessionId: string): Promise<PlayerWithAnswerStatus[]> {
+    const response = await apiRequest<{ players: PlayerWithAnswerStatus[] }>(`/api/sessions/${sessionId}/players`);
     return response.players;
   },
 
