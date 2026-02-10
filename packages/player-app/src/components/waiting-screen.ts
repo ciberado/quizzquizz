@@ -12,6 +12,7 @@ export class WaitingScreen extends BaseComponent {
   private pollInterval: number | null = null;
   private isCorrect: boolean | null = null;
   private pointsEarned: number = 0;
+  private lastQuestionId: string | null = null; // Track to detect new questions
 
   protected onMount(): void {
     // Get query parameters
@@ -75,14 +76,17 @@ export class WaitingScreen extends BaseComponent {
         return;
       }
 
-      // Check if new question started
-      // Note: This is detected when questionStartedAt changes
-      // We could track the previous questionStartedAt to detect changes more reliably
-      // For now, we'll just check if the question is different from what we expect
+      // Check if new question started (not the same question we came from)
       if (gameState.currentQuestion) {
-        // Navigate back to question screen for new question
-        router.navigate(`/question?sessionId=${currentState.sessionId}`);
-        return;
+        // Initialize lastQuestionId on first poll
+        if (this.lastQuestionId === null) {
+          this.lastQuestionId = gameState.currentQuestion.id;
+        } else if (gameState.currentQuestion.id !== this.lastQuestionId) {
+          // Different question ID - new question started!
+          router.navigate(`/question?sessionId=${currentState.sessionId}`);
+          return;
+        }
+        // Same question - stay on waiting screen
       }
     } catch (error) {
       console.error('Error polling game state:', error);

@@ -15,6 +15,7 @@ export class QuestionScreen extends BaseComponent {
   private selectedAnswerIds: Set<string> = new Set();
   private timeRemaining: number = 0;
   private currentQuestion: GameState['currentQuestion'] = null;
+  private currentQuestionIndex: number = 0; // Track question index for display
   private questionStartedAt: number | null = null;
   private timeLimit: number = 0;
   private hasSubmitted: boolean = false;
@@ -126,6 +127,7 @@ export class QuestionScreen extends BaseComponent {
         if (!this.currentQuestion) {
           // First time loading question data
           this.currentQuestion = gameState.currentQuestion;
+          this.currentQuestionIndex = gameState.currentQuestionIndex;
           this.questionStartedAt = gameState.questionStartedAt;
           this.timeLimit = gameState.timeLimit || 20;
           this.selectedAnswerIds.clear();
@@ -185,7 +187,7 @@ export class QuestionScreen extends BaseComponent {
     // Update question number
     const questionNumberEl = this.querySelector('.question-number');
     if (questionNumberEl) {
-      questionNumberEl.textContent = `Question ${this.currentQuestion ? '?' : '?'}`;
+      questionNumberEl.textContent = `Question ${this.currentQuestionIndex + 1}`;
     }
 
     // Update answers
@@ -287,7 +289,7 @@ export class QuestionScreen extends BaseComponent {
         <div class="question-header">
           <div class="timer">0s</div>
           <div class="question-number">
-            Question ${this.questionStartedAt ? '?' : '?'}
+            Question ${this.currentQuestionIndex + 1}
           </div>
         </div>
 

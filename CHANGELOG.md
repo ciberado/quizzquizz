@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **CRITICAL - Infinite Navigation Loop**: Fixed infinite loop between question and waiting screens causing continuous "Answer already submitted" errors
+  - Problem: Waiting screen navigated back to question whenever ANY question existed, not just NEW questions
+  - Created vicious cycle: timeout → waiting → sees question → back to question → new component → timeout → repeat
+  - Each new component had `hasSubmitted = false`, triggering repeated submissions → "Answer already submitted" errors
+  - Solution: Added `lastQuestionId` tracking in waiting screen to detect question ID changes, not just existence
+  - Screen now stays on waiting until question ID actually changes (host moves to next question)
+  - Files: `packages/player-app/src/components/waiting-screen.ts`
+  
+- **Question Number Display**: Fixed "Question ?" display showing placeholder instead of actual number
+  - Added `currentQuestionIndex` property to track current question index from game state
+  - Updated both initial render template and dynamic update to use `currentQuestionIndex + 1`
+  - Files: `packages/player-app/src/components/question-screen.ts`
+  
 - **Continuous Redrawing Issue**: Fixed player frontend being continuously redrawn
   - Problem: Multiple `setTimeout` calls in error handler weren't tracked or cleared
   - Each failed submit created a new 2-second timeout, causing repeated navigation attempts
