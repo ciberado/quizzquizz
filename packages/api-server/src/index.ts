@@ -59,10 +59,12 @@ function initialize() {
 initialize();
 
 const port = parseInt(process.env.PORT || '3000', 10);
+const hostname = process.env.HOST || '0.0.0.0';
 
-console.log(`🚀 QuizzQuizz API Server starting on http://localhost:${port}...`);
+console.log(`🚀 QuizzQuizz API Server starting on http://${hostname}:${port}...`);
 
 serve({
   fetch: app.fetch,
   port,
+  hostname,
 });
