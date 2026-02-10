@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Host Timer Display**: Fixed timer showing decimal numbers instead of whole seconds
+  - Problem: Elapsed time calculation produced floating point, causing display like "24.372" seconds
+  - Solution: Floor elapsed time when calculating and floor in formatTime() method
+  - Timer now displays clean whole numbers: "25", "24", "23"...
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **CRITICAL - Host Not Advancing to Leaderboard**: Fixed host screen stuck on question after timer expires
   - Problem: Host question display waited for manual "Show Leaderboard" button click instead of auto-navigating
   - Game would halt after question timer expired, requiring manual intervention to proceed

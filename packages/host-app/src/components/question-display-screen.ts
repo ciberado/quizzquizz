@@ -92,18 +92,12 @@ export class QuestionDisplayScreen extends HTMLElement {
       // Calculate time remaining
       if (newGameState.currentQuestion && session.questionStartedAt) {
         const timeLimit = newGameState.currentQuestion.timeLimit ?? 30;
-        const elapsed = (Date.now() - Number(session.questionStartedAt)) / 1000;
+        const elapsed = Math.floor((Date.now() - Number(session.questionStartedAt)) / 1000);
         this.timeRemaining = Math.max(0, timeLimit - elapsed);
         newGameState.timeRemaining = this.timeRemaining;
         
         if (this.timeRemaining > 0 && !this.timerInterval) {
           this.startTimer();
-        } else if (this.timeRemaining <= 0 && !this.autoNavigateTimeout) {
-          // Timer expired from server - trigger auto-navigation
-          this.stopTimer();
-          this.autoNavigateTimeout = window.setTimeout(() => {
-            router.navigate('/leaderboard');
-          }, 3000);
         }
       }
 
@@ -194,7 +188,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private formatTime(seconds: number): string {
-    return seconds.toString();
+    return Math.floor(seconds).toString();
   }
 
   private async handleNextQuestion() {
