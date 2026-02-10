@@ -9,8 +9,10 @@
   --color-surface: #1a1f3a;
   --color-primary: #667eea;
   --color-primary-dark: #5568d3;
+  --color-accent: #f093fb;
   --color-secondary: #764ba2;
   --color-success: #48bb78;
+  --color-success-light: #c6f6d5;
   --color-warning: #ed8936;
   --color-error: #f56565;
   --color-text: #f7fafc;
@@ -22,7 +24,13 @@
   --font-size-base: 20px;
   --font-size-large: 28px;
   --font-size-xlarge: 36px;
+  --font-size-question: 48px; /* Large question text */
   --font-size-pin: 120px; /* Huge PIN display */
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
 
   /* Spacing */
   --spacing-xs: 8px;

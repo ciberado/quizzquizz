@@ -253,42 +253,12 @@ export class LobbyScreen extends BaseComponent {
       
       console.log('✅ Quiz started');
       
-      // Navigate to presenting screen (Phase 5C)
-      // For now, show success message
-      this.setContent(`
-        <div class="screen">
-          <div class="container">
-            <div class="card text-center">
-              <h1>Quiz Started! 🎉</h1>
-              <p style="font-size: var(--font-size-large); margin: var(--spacing-xl) 0;">
-                Phase 5C will implement the question presentation screen.
-              </p>
-              <button type="button" id="back-button" class="secondary">
-                Back to Create
-              </button>
-            </div>
-          </div>
-        </div>
-      `);
-
-      const backButton = this.qs<HTMLButtonElement>('#back-button');
-      if (backButton) {
-        backButton.addEventListener('click', () => {
-          state.clearState();
-          router.navigate('/create');
-        });
-      }
+      // Navigate to question display screen
+      router.navigate(`/question/${this.sessionId}`);
     } catch (error) {
       console.error('Failed to start quiz:', error);
-      
-      if (error instanceof ApiError) {
-        this.showError(`Failed to start quiz: ${error.message}`);
-      } else {
-        this.showError('Could not start quiz. Please try again.');
-      }
-
-      // Restart polling
-      this.startPolling();
+      alert('Failed to start quiz. Please try again.');
+      this.startPolling(); // Resume polling on error
     }
   }
 
