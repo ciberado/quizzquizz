@@ -45,6 +45,19 @@ All notable changes to this project will be documented in this file, organized b
   - Files: `packages/player-app/src/styles.css`
 
 ### Fixed
+- **Mobile Layout Too Wide with Excessive Margins**: Improved mobile-first responsive design
+  - Problem: 2-column grid activated at 640px (too early for most phones)
+  - Excessive side padding (var(--spacing-lg)) wasted screen space on mobile
+  - Max-width constraints preventing full use of available width
+  - Solution: Changed responsive breakpoints and reduced margins
+  - Mobile (< 768px): Single column only, reduced padding to var(--spacing-md)
+  - Removed max-width constraint on mobile (was 800px limiting width)
+  - At 640px-767px: Single column with 600px max-width to prevent stretching
+  - At 768px+: Enable 2-column grid for tablets and desktop
+  - Screen padding reduced from --spacing-lg (2rem) to --spacing-md (1.5rem) on mobile
+  - Impact: Mobile phones now use screen width efficiently, less wasted margin space
+  - Files: `packages/player-app/src/styles.css`
+
 - **Unused Method Cleanup**: Removed unused updateQuestionDisplay() in question-screen component
   - Method was declared but never called, causing TypeScript warning
   - Functionality already handled by full component re-renders
