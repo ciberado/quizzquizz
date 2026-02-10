@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **CRITICAL - Question Detection Logic**: Fixed waiting screen failing to detect new questions
+  - Problem: Waiting screen set `lastQuestionId` to current question on first poll, breaking change detection
+  - Flow was: answer Q001 → waiting → first poll sees Q002 → sets lastQuestionId=Q002 → stays on waiting forever
+  - Solution: Pass answered question ID in URL (`?lastQuestionId=Q001`) when navigating to waiting screen
+  - Waiting screen now correctly detects when question ID changes and navigates to new question
+  - Files: `packages/player-app/src/components/{question-screen,waiting-screen}.ts`
+
 - **CRITICAL - Infinite Navigation Loop**: Fixed infinite loop between question and waiting screens causing continuous "Answer already submitted" errors
   - Problem: Waiting screen navigated back to question whenever ANY question existed, not just NEW questions
   - Created vicious cycle: timeout → waiting → sees question → back to question → new component → timeout → repeat

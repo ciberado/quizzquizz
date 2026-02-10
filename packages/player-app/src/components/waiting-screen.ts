@@ -19,6 +19,7 @@ export class WaitingScreen extends BaseComponent {
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
     const correctParam = params.get('correct');
     const scoreParam = params.get('score');
+    const lastQuestionIdParam = params.get('lastQuestionId');
 
     if (correctParam !== null) {
       this.isCorrect = correctParam === 'true';
@@ -26,6 +27,11 @@ export class WaitingScreen extends BaseComponent {
 
     if (scoreParam !== null) {
       this.pointsEarned = parseInt(scoreParam, 10);
+    }
+
+    // Initialize with the question ID we just answered
+    if (lastQuestionIdParam) {
+      this.lastQuestionId = lastQuestionIdParam;
     }
 
     this.startPolling();
@@ -78,15 +84,12 @@ export class WaitingScreen extends BaseComponent {
 
       // Check if new question started (not the same question we came from)
       if (gameState.currentQuestion) {
-        // Initialize lastQuestionId on first poll
-        if (this.lastQuestionId === null) {
-          this.lastQuestionId = gameState.currentQuestion.id;
-        } else if (gameState.currentQuestion.id !== this.lastQuestionId) {
+        if (this.lastQuestionId && gameState.currentQuestion.id !== this.lastQuestionId) {
           // Different question ID - new question started!
           router.navigate(`/question?sessionId=${currentState.sessionId}`);
           return;
         }
-        // Same question - stay on waiting screen
+        // Same question or no previous question tracked - stay on waiting screen
       }
     } catch (error) {
       console.error('Error polling game state:', error);

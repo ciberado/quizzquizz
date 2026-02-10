@@ -245,7 +245,7 @@ export class QuestionScreen extends BaseComponent {
       );
 
       // Navigate to waiting screen
-      router.navigate(`/waiting?correct=${result.correct}&score=${result.score}`);
+      router.navigate(`/waiting?correct=${result.correct}&score=${result.score}&lastQuestionId=${this.currentQuestion.id}`);
     } catch (error) {
       // Enhanced error logging
       console.error('Error submitting answer:', error);
@@ -270,7 +270,8 @@ export class QuestionScreen extends BaseComponent {
       if (this.errorNavigationTimeout === null) {
         this.errorNavigationTimeout = window.setTimeout(() => {
           this.errorNavigationTimeout = null;
-          router.navigate(`/waiting`);
+          const questionId = this.currentQuestion?.id || '';
+          router.navigate(`/waiting?lastQuestionId=${questionId}`);
         }, 2000);
       }
     }
