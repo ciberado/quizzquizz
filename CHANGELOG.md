@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **TypeScript Compilation Errors**: Fixed type mismatches in host-app
+  - Problem: API returns runtime properties (currentQuestionTimeLimit, hasAnswered) not in shared types
+  - TypeScript compiler errors: Property doesn't exist, type mismatches in filter callbacks
+  - Solution: Extended Session and Player types locally in api-client.ts
+  - Added SessionWithTimeLimit interface extending Session with currentQuestionTimeLimit
+  - Added PlayerWithAnswerStatus interface extending Player with hasAnswered
+  - Updated getSession and getPlayers return types to use extended interfaces
+  - Fixed test-setup.ts window.location type assertion
+  - Impact: TypeScript compilation passes, proper type safety for API responses
+  - Files: `packages/host-app/src/api-client.ts`, `packages/host-app/src/components/question-display-screen.ts`, `packages/host-app/src/test-setup.ts`
+
 - **All Non-Null Assertion Warnings**: Eliminated all 33 ESLint non-null-assertion warnings
   - common: generatePin now validates random bytes before use (no ! operator)
   - host-app: All components use proper destructuring + early returns instead of state.sessionId!
