@@ -67,7 +67,7 @@ export class QuestionDisplayScreen extends HTMLElement {
         ? session.questions[session.currentQuestionIndex]
         : null;
       
-      this.currentGameState = {
+      const newGameState: HostGameState = {
         status: session.status,
         currentQuestion: currentQ ? {
           id: currentQ.id,
@@ -85,24 +85,37 @@ export class QuestionDisplayScreen extends HTMLElement {
       };
       
       // Calculate time remaining
-      if (this.currentGameState?.currentQuestion && session.questionStartedAt) {
-        const timeLimit = this.currentGameState.currentQuestion.timeLimit ?? 30;
+      if (newGameState.currentQuestion && session.questionStartedAt) {
+        const timeLimit = newGameState.currentQuestion.timeLimit ?? 30;
         const elapsed = (Date.now() - Number(session.questionStartedAt)) / 1000;
         this.timeRemaining = Math.max(0, timeLimit - elapsed);
-        this.currentGameState.timeRemaining = this.timeRemaining;
+        newGameState.timeRemaining = this.timeRemaining;
         
-        if (this.timeRemaining > 0) {
+        if (this.timeRemaining > 0 && !this.timerInterval) {
           this.startTimer();
         }
       }
 
       // Get player stats
-      this.playerCount = players.length;
+      const newPlayerCount = players.length;
       // Note: We can't currently track answered count without additional API
       // this.answeredCount = players.filter(p => p.hasAnswered).length;
-      this.answeredCount = 0; // TODO: Add API endpoint for this
+      const newAnsweredCount = 0; // TODO: Add API endpoint for this
 
-      this.render();
+      // Only re-render if something actually changed
+      const stateChanged = 
+        !this.currentGameState ||
+        this.currentGameState.status !== newGameState.status ||
+        this.currentGameState.currentQuestionIndex !== newGameState.currentQuestionIndex ||
+        this.playerCount !== newPlayerCount ||
+        this.answeredCount !== newAnsweredCount;
+
+      if (stateChanged) {
+        this.currentGameState = newGameState;
+        this.playerCount = newPlayerCount;
+        this.answeredCount = newAnsweredCount;
+        this.render();
+      }
     } catch (error) {
       console.error('Failed to load game state:', error);
       this.renderError('Failed to load question. Please try again.');
