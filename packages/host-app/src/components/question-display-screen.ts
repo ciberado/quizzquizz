@@ -169,16 +169,9 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private async handleNextQuestion() {
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
-
-    try {
-      await api.nextQuestion(sessionId, hostToken);
-      // State will update via polling
-    } catch (error) {
-      console.error('Failed to advance question:', error);
-      alert('Failed to advance to next question. Please try again.');
-    }
+    // Navigate to leaderboard instead of directly advancing
+    // Leaderboard will handle the actual next question API call
+    router.navigate('/leaderboard');
   }
 
   private async handleEndQuiz() {
@@ -276,7 +269,7 @@ export class QuestionDisplayScreen extends HTMLElement {
         <div class="controls">
           ${!isTimerActive ? `
             <button class="btn-primary" id="next-button">
-              ${questionNumber < totalQuestions ? 'Next Question' : 'Show Leaderboard'}
+              Show Leaderboard
             </button>
           ` : ''}
           <button class="btn-secondary" id="end-button">End Quiz</button>

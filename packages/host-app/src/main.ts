@@ -6,6 +6,8 @@ import { state } from './state';
 import './components/create-session-screen';
 import './components/lobby-screen';
 import './components/question-display-screen';
+import './components/leaderboard-screen';
+import './components/final-results-screen';
 
 /**
  * QuizzQuizz Host App
@@ -30,6 +32,18 @@ router.on('/lobby/:sessionId', () => {
 
 router.on('/question/:sessionId', () => {
   showScreen('question-display-screen');
+});
+
+router.on('/question', () => {
+  showScreen('question-display-screen');
+});
+
+router.on('/leaderboard', () => {
+  showScreen('leaderboard-screen');
+});
+
+router.on('/results', () => {
+  showScreen('final-results-screen');
 });
 
 // Helper function to show a screen

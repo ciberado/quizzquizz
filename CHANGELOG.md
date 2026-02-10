@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-10
 
+### Added (Phase 5D - Leaderboard & Results) ✅ COMPLETE
+- **Leaderboard Screen**: Rankings display between questions with medals and animations
+- Leaderboard screen component (`packages/host-app/src/components/leaderboard-screen.ts`)
+- Top 10 players prominently displayed with rank, nickname, and score
+- Medal icons for 1st (🥇), 2nd (🥈), 3rd (🥉) place
+- Podium entries with special styling and glow effects
+- "Next Question" button (context-aware: shows when more questions remain)
+- "View Final Results" button (shown after last question)
+- "End Quiz Now" button with confirmation
+- Real-time polling every 2 seconds
+- Smooth animations for leaderboard entries (slide-in effect)
+
+### Added (Final Results Screen)
+- **Final Results Screen**: Complete session summary with winner celebration
+- Final results screen component (`packages/host-app/src/components/final-results-screen.ts`)
+- Winner announcement with trophy icon (🏆) and animated bouncing effect
+- Full leaderboard with all players
+- CSS-based confetti animation (50 pieces, random colors, 4s fall animation)
+- Session summary stats (total players, questions, winning score)
+- Gradient text effects for winner's name and score
+- Pulsing glow animation on winner announcement card
+- "Create New Quiz" button (clears state and returns to home)
+- Complete rankings with rank numbers and medals
+
+### Changed
+- **Question Display Flow**: After timer expires, "Show Leaderboard" button now navigates to leaderboard screen
+- Removed direct "Next Question" button from question display (flow now: question → leaderboard → next question)
+- Leaderboard screen handles quiz advancement and provides better flow visualization
+
 ### Added (Phase 5C - Game Control & Question Display)
 - **Question Display Screen**: Projector-optimized question presenter with live timer
 - Question display screen component (`packages/host-app/src/components/question-display-screen.ts`)

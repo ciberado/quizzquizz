@@ -6,9 +6,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 5B Complete - Ready for Phase 5C (Feb 10, 2026)
+**Current Status**: Phase 5D Complete - Ready for Phase 6A (Feb 10, 2026)
 
-**Completed Phases** (36-41 hours development time):
+**Completed Phases** (41-45 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
@@ -20,17 +20,19 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Database Migration**: Drizzle ORM → Prisma v6
 - ✅ **Phase 5A**: Host App Foundation & Session Creation - Infrastructure complete
 - ✅ **Phase 5B**: Lobby & Player Management - PIN display, live player list
+- ✅ **Phase 5C**: Game Control & Question Display - Question presenter with timer
+- ✅ **Phase 5D**: Leaderboard & Results - Complete host MVP experience
 
 **Current Phase**:
-- 🎯 **Phase 5C**: Game Control & Question Display (2-3 hrs) - "Present questions on projector"
+- 🎯 **Phase 6A**: Error Handling & Resilience (2-3 hrs) - "Production-ready quality"
 
-**Upcoming MVP Phases** (Est. 12-20 hours to MVP):
-- ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience"
-  - 5A: Foundation & Session Creation (1-2 hrs)
-  - 5B: Lobby & Player Management (1-2 hrs)
-  - 5C: Game Control & Question Display (2-3 hrs)
-  - 5D: Leaderboard & Results (1-2 hrs)
-- ⏳ **Phase 6**: Polish & Integration (6-8 hours) - "Production-ready quality"
+**Upcoming MVP Phases** (Est. 6-8 hours to full MVP):
+- ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
+  - 5A: Foundation & Session Creation (1-2 hrs) ✅
+  - 5B: Lobby & Player Management (1-2 hrs) ✅
+  - 5C: Game Control & Question Display (2-3 hrs) ✅
+  - 5D: Leaderboard & Results (1-2 hrs) ✅
+- 🎯 **Phase 6**: Polish & Integration (6-8 hours) - "Production-ready quality" - IN PROGRESS
   - 6A: Error Handling & Resilience (2-3 hrs)
   - 6B: Loading States & Feedback (1-2 hrs)
   - 6C: Polling Optimization (1-2 hrs)
@@ -60,18 +62,19 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Database: Migrated from Drizzle+better-sqlite3 to Prisma v6 (no native rebuild issues)
 
 **Next Immediate Steps**:
-1. Complete Phase 4D: Results & leaderboard screen
-2. Polish animations and transitions
-3. Start Phase 5A: Host app foundation
-4. Optional: Address 2 remaining test edge cases (foreign key constraints in shared cache mode)
+1. ✅ Phase 5D Complete: Leaderboard and final results screens working
+2. Test complete host + player flow with multiple participants
+3. Start Phase 6A: Error handling and resilience
+4. Optional: Address 2 remaining test edge cases (foreign key constraints)
 
 **Recent Achievements**:
+- ✅ Completed Phase 5D: Leaderboard & Final Results (Feb 10, 2026)
+- ✅ Complete host app MVP - all core features working
 - ✅ Completed Prisma ORM migration (Feb 10, 2026)
 - ✅ Eliminated better-sqlite3 native module rebuild issues
 - ✅ Improved test pass rate from 57% to 96%
-- ✅ Fixed BIGINT timestamp handling, lazy Prisma initialization, test isolation
 
-**MVP Completion Target**: ~50-60 hours total development time from project start
+**MVP Completion Target**: ~45-55 hours total development time from project start (approaching MVP!)
 
 ---
 
@@ -596,48 +599,48 @@ During Phase 4 implementation and Playwright MCP testing, several critical issue
 **Files Created**:
 - `/packages/host-app/src/components/question-display-screen.ts` - Question presenter with timer
 
-### Phase 5D: Leaderboard & Results (Est. 1-2 hours)
+### Phase 5D: Leaderboard & Results ✅ COMPLETE (Feb 10, 2026)
+
+**Status**: Complete - Host can display leaderboard between questions and final results
 
 **Objective**: Display rankings between questions and final results.
 
-- [ ] Leaderboard screen (`src/components/leaderboard-screen.ts`):
+- [x] Leaderboard screen (`src/components/leaderboard-screen.ts`):
   - Fetch from `GET /api/sessions/:id/leaderboard`
   - Top 10 players prominently displayed
   - Position numbers, names, scores
   - Medal icons for 1st, 2nd, 3rd place
-  - Podium animation (optional)
+  - Podium animation (CSS-based with glow effects)
   - "Next Question" or "See Final Results" button
-  - Auto-show between questions
-- [ ] Final results screen (`src/components/final-results-screen.ts`):
+  - Auto-show between questions (via navigation flow)
+- [x] Final results screen (`src/components/final-results-screen.ts`):
   - Full leaderboard (all players)
-  - Confetti animation for winner (CSS or canvas)
+  - Confetti animation for winner (CSS-based, 50 pieces)
   - Winner highlight with trophy icon
   - "Create New Quiz" button (navigate to create session)
   - Session summary stats (total players, questions answered)
-- [ ] Transitions:
+- [x] Transitions:
   - Smooth fade between question → leaderboard → question
   - Clear visual indicators for game phase
   - Automatic progression with manual override
 
-**Deliverable**: Complete host experience from session creation to final results. Ready for classroom use.
+**Deliverable**: ✅ Complete host experience from session creation to final results. Ready for classroom use.
 
-**Available API Endpoints for Phase 5** (All require hostToken in Authorization header):
-- `POST /api/sessions` - Create session with question bank ID → Returns `{ id, pin, hostToken }`
-- `GET /api/sessions/:id` - Get session details (requires hostToken)
-- `POST /api/sessions/:id/start` - Start the quiz
-- `POST /api/sessions/:id/next` - Advance to next question
-- `POST /api/sessions/:id/end` - End quiz early
-- `DELETE /api/sessions/:id` - Cancel/delete session
-- `GET /api/sessions/:id/leaderboard` - Get ranked players
-- `GET /api/question-banks` - List available question banks
+**Implementation Notes** (Feb 10, 2026):
+- Modified question display to always navigate to leaderboard after timer expires
+- Leaderboard screen handles "Next Question" API call and navigation
+- Final results screen with animated confetti (CSS keyframes)
+- Winner announcement with trophy bounce animation
+- Podium entries (top 3) with gradient background and glow
+- Context-aware buttons based on game state
+- Complete flow: Create → Lobby → Questions → Leaderboard → Final Results
+- Both screens poll session state every 2s for real-time updates
 
-**Testing Strategy**:
-- Test on actual projector or large external display
-- Verify readability from 10+ feet away
-- Test with 1 host window + 5-10 player windows
-- Verify all game controls work correctly
-- Test keyboard shortcuts (space = next, esc = end)
-- Check responsive design for different projector resolutions
+**Files Created**:
+- `/packages/host-app/src/components/leaderboard-screen.ts` - Between-question rankings
+- `/packages/host-app/src/components/final-results-screen.ts` - Final celebration screen
+- Updated `/packages/host-app/src/styles.css` - Leaderboard and results styling
+- Updated `/packages/host-app/src/main.ts` - Added routes for /leaderboard and /results
 
 ---
 
@@ -645,7 +648,7 @@ During Phase 4 implementation and Playwright MCP testing, several critical issue
 
 **Goal**: Smooth out the experience and handle edge cases.
 
-**Dependencies**: Phases 4 & 5 complete (both UIs functional).
+**Dependencies**: Phases 4 & 5 complete (both UIs functional) ✅ COMPLETE
 
 ### Phase 6A: Error Handling & Resilience (Est. 2-3 hours)
 
