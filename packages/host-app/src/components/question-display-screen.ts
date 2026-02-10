@@ -31,6 +31,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private currentGameState: HostGameState | null = null;
   private timerInterval: number | null = null;
   private timeRemaining: number = 0;
+  private currentTimeLimit: number = 20; // Actual time limit being used for current question
   private playerCount: number = 0;
   private answeredCount: number = 0;
   private autoNavigateTimeout: number | null = null;
@@ -96,6 +97,7 @@ export class QuestionDisplayScreen extends HTMLElement {
       if (newGameState.currentQuestion && session.questionStartedAt) {
         // Use computed timeLimit from API (matches question bank default) instead of hardcoded fallback
         const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
+        this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
         const elapsed = Math.floor((Date.now() - Number(session.questionStartedAt)) / 1000);
         this.timeRemaining = Math.max(0, timeLimit - elapsed);
         newGameState.timeRemaining = this.timeRemaining;
@@ -181,9 +183,8 @@ export class QuestionDisplayScreen extends HTMLElement {
 
     // Update progress bar
     const progressEl = this.querySelector('.timer-progress') as HTMLElement;
-    if (progressEl && this.currentGameState?.currentQuestion) {
-      const totalTime = this.currentGameState.currentQuestion.timeLimit || 30;
-      const percentage = (this.timeRemaining / totalTime) * 100;
+    if (progressEl) {
+      const percentage = (this.timeRemaining / this.currentTimeLimit) * 100;
       progressEl.style.width = `${percentage}%`;
     }
   }
@@ -282,7 +283,7 @@ export class QuestionDisplayScreen extends HTMLElement {
 
         <div class="timer-section ${!isTimerActive ? 'expired' : ''}">
           <div class="timer-bar">
-            <div class="timer-progress" style="width: ${isTimerActive ? (this.timeRemaining / (question.timeLimit || 30)) * 100 : 0}%"></div>
+            <div class="timer-progress" style="width: ${isTimerActive ? (this.timeRemaining / this.currentTimeLimit) * 100 : 0}%"></div>
           </div>
           <div class="timer-value ${this.timeRemaining <= 5 ? 'warning' : ''}">
             ${this.formatTime(this.timeRemaining)}
