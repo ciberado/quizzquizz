@@ -32,6 +32,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private timerInterval: number | null = null;
   private timeRemaining: number = 0;
   private currentTimeLimit: number = 20; // Actual time limit being used for current question
+  private wasTimerActive: boolean = false; // Track timer state to detect when it expires
   private playerCount: number = 0;
   private answeredCount: number = 0;
   private autoNavigateTimeout: number | null = null;
@@ -115,11 +116,16 @@ export class QuestionDisplayScreen extends HTMLElement {
       // Count how many players have answered the current question
       const newAnsweredCount = players.filter(p => p.hasAnswered).length;
 
+      // Check timer state
+      const isTimerActive = this.timeRemaining > 0;
+      const timerStateChanged = this.wasTimerActive !== isTimerActive;
+
       // Check what changed
       const structuralChange = 
         !this.currentGameState ||
         this.currentGameState.status !== newGameState.status ||
-        this.currentGameState.currentQuestionIndex !== newGameState.currentQuestionIndex;
+        this.currentGameState.currentQuestionIndex !== newGameState.currentQuestionIndex ||
+        timerStateChanged; // Timer expiring/starting is a structural change
 
       const statsChanged = 
         this.playerCount !== newPlayerCount ||
@@ -130,6 +136,7 @@ export class QuestionDisplayScreen extends HTMLElement {
         this.currentGameState = newGameState;
         this.playerCount = newPlayerCount;
         this.answeredCount = newAnsweredCount;
+        this.wasTimerActive = isTimerActive;
         this.render();
       } else if (statsChanged) {
         // Only update player stats without full re-render
@@ -158,6 +165,7 @@ export class QuestionDisplayScreen extends HTMLElement {
 
   private startTimer() {
     this.stopTimer(); // Clear any existing timer
+    this.wasTimerActive = true; // Mark timer as active
     
     this.timerInterval = window.setInterval(() => {
       if (this.timeRemaining > 0) {
@@ -165,6 +173,7 @@ export class QuestionDisplayScreen extends HTMLElement {
         this.updateTimerDisplay();
       } else {
         this.stopTimer();
+        this.wasTimerActive = false; // Mark timer as expired
         // Timer expired - render to show correct answers with Continue button
         this.render();
       }
