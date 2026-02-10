@@ -309,7 +309,7 @@ export class LobbyScreen extends BaseComponent {
       '🦄', '🦋', '🐝', '🐙', '🦀',
       '🐧', '🦅', '🦉', '🦆', '🐣',
     ];
-    return emojis[index % emojis.length];
+    return emojis[index % emojis.length] || '🦁';
   }
 }
 

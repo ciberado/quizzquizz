@@ -7,12 +7,10 @@ import type {
   Session,
   Player,
   QuestionBank,
-  GameState,
-  Leaderboard,
 } from '@quizzquizz/common';
 
 // API base URL (configurable via environment)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000';
 
 /**
  * Custom error class for API errors
@@ -171,8 +169,8 @@ export const api = {
   /**
    * Get current game state (for host monitoring)
    */
-  async getGameState(sessionId: string, hostToken: string): Promise<GameState> {
-    return apiRequest<GameState>(`/api/sessions/${sessionId}/state`, {
+  async getGameState(sessionId: string, hostToken: string): Promise<any> {
+    return apiRequest<any>(`/api/sessions/${sessionId}/state`, {
       headers: {
         'X-Host-Token': hostToken,
       },
@@ -182,7 +180,7 @@ export const api = {
   /**
    * Get leaderboard
    */
-  async getLeaderboard(sessionId: string): Promise<Leaderboard> {
-    return apiRequest<Leaderboard>(`/api/sessions/${sessionId}/leaderboard`);
+  async getLeaderboard(sessionId: string): Promise<any> {
+    return apiRequest<any>(`/api/sessions/${sessionId}/leaderboard`);
   },
 };

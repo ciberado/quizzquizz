@@ -12,7 +12,6 @@ interface Route {
 
 class Router {
   private routes: Route[] = [];
-  private currentRoute: string = '';
 
   constructor() {
     // Listen for hash changes
@@ -64,17 +63,15 @@ class Router {
     
     // Strip query parameters for matching
     const pathWithoutQuery = path.split('?')[0];
-    
-    this.currentRoute = path;
 
     // Find matching route
     for (const route of this.routes) {
-      const match = pathWithoutQuery.match(route.pattern);
+      const match = pathWithoutQuery?.match(route.pattern);
       if (match) {
         // Extract params from match groups
         const params: Record<string, string> = {};
         route.keys.forEach((key, index) => {
-          params[key] = match[index + 1];
+          params[key] = match[index + 1] || '';
         });
 
         // Call handler

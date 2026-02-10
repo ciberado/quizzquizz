@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { BaseComponent } from './base-component';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('Base Component', () => {
   it('should render content when connected', () => {

@@ -52,11 +52,10 @@ export class CreateSessionScreen extends BaseComponent {
               <div class="question-banks-grid">
                 ${this.questionBanks.map(bank => `
                   <div class="question-bank-card" data-bank-id="${this.escapeHtml(bank.id)}">
-                    <h3>${this.escapeHtml(bank.name)}</h3>
-                    <p>${this.escapeHtml(bank.description || 'No description')}</p>
+                    <h3>${this.escapeHtml(bank.metadata.name)}</h3>
+                    <p>${this.escapeHtml(bank.metadata.description || 'No description')}</p>
                     <div class="bank-meta">
-                      <span>📝 ${bank.questions.length} questions</span>
-                      ${bank.difficulty ? `<span>⭐ ${this.escapeHtml(bank.difficulty)}</span>` : ''}
+                      <span>📚 ${bank.questions.length} questions</span>
                     </div>
                   </div>
                 `).join('')}
@@ -82,7 +81,7 @@ export class CreateSessionScreen extends BaseComponent {
     // Find the selected bank for display purposes
     const selectedBank = this.questionBanks.find(b => b.id === questionBankId);
     
-    this.showLoading(`Creating quiz with ${selectedBank?.name || 'selected bank'}...`);
+    this.showLoading(`Creating quiz with ${selectedBank?.metadata.name || 'selected bank'}...`);
 
     try {
       const session = await api.createSession(questionBankId);

@@ -4,7 +4,6 @@
  * Projector-optimized with large text
  */
 
-import { BaseComponent } from './base-component';
 import { router } from '../router';
 import { state } from '../state';
 import { api } from '../api-client';
@@ -17,6 +16,9 @@ interface HostGameState {
     text: string;
     answers: Array<{ id: string; text: string }>;
     correctAnswerIds: string[];
+    difficulty?: 'easy' | 'medium' | 'hard';
+    topics?: string[];
+    tags?: string[];
     timeLimit?: number;
   } | null;
   currentQuestionIndex: number;
@@ -24,7 +26,7 @@ interface HostGameState {
   timeRemaining: number | null;
 }
 
-export class QuestionDisplayScreen extends BaseComponent {
+export class QuestionDisplayScreen extends HTMLElement {
   private pollInterval: number | null = null;
   private currentGameState: HostGameState | null = null;
   private timerInterval: number | null = null;
@@ -61,11 +63,22 @@ export class QuestionDisplayScreen extends BaseComponent {
       const players = await api.getPlayers(sessionId);
       
       // Build game state from session data
+      const currentQ = session.currentQuestionIndex >= 0 && session.questions.length > 0
+        ? session.questions[session.currentQuestionIndex]
+        : null;
+      
       this.currentGameState = {
         status: session.status,
-        currentQuestion: session.currentQuestionIndex >= 0 && session.questions.length > 0
-          ? session.questions[session.currentQuestionIndex]
-          : null,
+        currentQuestion: currentQ ? {
+          id: currentQ.id,
+          text: currentQ.text,
+          answers: currentQ.answers,
+          correctAnswerIds: currentQ.correctAnswerIds,
+          difficulty: currentQ.difficulty,
+          topics: currentQ.topics,
+          tags: currentQ.tags,
+          timeLimit: currentQ.timeLimit,
+        } : null,
         currentQuestionIndex: session.currentQuestionIndex,
         totalQuestions: session.questions.length,
         timeRemaining: null, // Calculate from questionStartedAt
