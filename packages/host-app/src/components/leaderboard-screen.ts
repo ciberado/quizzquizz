@@ -47,15 +47,31 @@ export class LeaderboardScreen extends HTMLElement {
     try {
       // Get session status
       const session = await api.getSession(sessionId, hostToken);
-      this.sessionStatus = session.status;
-      this.currentQuestionIndex = session.currentQuestionIndex;
-      this.totalQuestions = session.questions.length;
+      const newSessionStatus = session.status;
+      const newCurrentQuestionIndex = session.currentQuestionIndex;
+      const newTotalQuestions = session.questions.length;
 
       // Get leaderboard data
       const data = await api.getLeaderboard(sessionId);
-      this.leaderboard = data.leaderboard || [];
+      const newLeaderboard = data.leaderboard || [];
       
-      this.render();
+      // Check if anything changed
+      const leaderboardChanged = 
+        this.sessionStatus !== newSessionStatus ||
+        this.currentQuestionIndex !== newCurrentQuestionIndex ||
+        this.totalQuestions !== newTotalQuestions ||
+        this.leaderboard.length !== newLeaderboard.length ||
+        JSON.stringify(this.leaderboard.map(e => ({ rank: e.rank, score: e.score }))) !== 
+        JSON.stringify(newLeaderboard.map(e => ({ rank: e.rank, score: e.score })));
+
+      // Only update and re-render if something changed
+      if (leaderboardChanged) {
+        this.sessionStatus = newSessionStatus;
+        this.currentQuestionIndex = newCurrentQuestionIndex;
+        this.totalQuestions = newTotalQuestions;
+        this.leaderboard = newLeaderboard;
+        this.render();
+      }
     } catch (error) {
       console.error('Error loading leaderboard:', error);
       this.showError();
