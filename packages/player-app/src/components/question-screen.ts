@@ -177,45 +177,6 @@ export class QuestionScreen extends BaseComponent {
     });
   }
 
-  private updateQuestionDisplay(): void {
-    // Update question text
-    const questionTextEl = this.querySelector('.question-text');
-    if (questionTextEl && this.currentQuestion) {
-      questionTextEl.textContent = this.currentQuestion.text;
-    }
-
-    // Update question number
-    const questionNumberEl = this.querySelector('.question-number');
-    if (questionNumberEl) {
-      questionNumberEl.textContent = `Question ${this.currentQuestionIndex + 1}`;
-    }
-
-    // Update answers
-    const answersGrid = this.querySelector('.answers-grid');
-    if (answersGrid && this.currentQuestion) {
-      answersGrid.innerHTML = this.currentQuestion.answers.map((answer) => `
-        <button 
-          class="answer-btn" 
-          data-answer-id="${answer.id}"
-          ${this.hasSubmitted ? 'disabled' : ''}
-        >
-          ${this.escapeHtml(answer.text)}
-        </button>
-      `).join('');
-      
-      // Reattach event listeners to new answer buttons
-      const answerButtons = answersGrid.querySelectorAll('.answer-btn');
-      answerButtons.forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const answerId = (btn as HTMLElement).dataset.answerId;
-          if (answerId) {
-            this.toggleAnswer(answerId);
-          }
-        });
-      });
-    }
-  }
-
   private async submitAnswer(): Promise<void> {
     if (this.hasSubmitted) return; // Prevent double submission
     

@@ -284,20 +284,254 @@ form {
   flex-direction: column;
   gap: var(--spacing-md);
   width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 form input {
   text-align: center;
+  font-size: var(--font-size-lg);
 }
 
 form button + button {
   margin-top: 0;
 }
 
-/* Responsive Design */
+/* Form labels */
+label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+}
+
+/* ========================================
+   Responsive Design
+   Mobile-first approach with breakpoints:
+   - XSmall: 320px-479px (default)
+   - Small: 480px-639px
+   - Medium: 640px-767px
+   - Large: 768px-1023px
+   - XLarge: 1024px+
+   ======================================== */
+
+/* Extra small phones (320px-479px) - optimized defaults */
+@media (max-width: 479px) {
+  :root {
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+  }
+
+  .screen {
+    padding: var(--spacing-md);
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  .question-text {
+    font-size: var(--font-size-lg);
+    padding: var(--spacing-md);
+  }
+
+  .answer-btn {
+    min-height: 70px;
+    padding: var(--spacing-md);
+  }
+
+  .card {
+    padding: var(--spacing-md);
+  }
+
+  /* Compact timer for small screens */
+  .timer {
+    font-size: var(--font-size-xl);
+    min-width: 50px;
+  }
+
+  .question-number {
+    font-size: var(--font-size-sm);
+  }
+
+  /* Smaller PIN display */
+  .pin-badge {
+    font-size: var(--font-size-lg);
+    letter-spacing: 0.1em;
+  }
+}
+
+/* Small phones (480px-639px) */
+@media (min-width: 480px) {
+  :root {
+    --font-size-base: 1.0625rem; /* 17px */
+    --font-size-lg: 1.25rem;
+    --font-size-xl: 1.625rem;
+    --font-size-2xl: 2.25rem;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  .answer-btn {
+    min-height: 90px;
+    font-size: 1.125rem;
+  }
+
+  .question-text {
+    font-size: 1.75rem;
+    padding: var(--spacing-xl) var(--spacing-xl);
+  }
+}
+
+/* Medium phones and small tablets (640px+) */
+@media (min-width: 640px) {
+  .answers-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .question-text {
+    font-size: 1.875rem;
+  }
+}
+
+/* Tablets and larger phones (768px+) */
 @media (min-width: 768px) {
+  :root {
+    --spacing-lg: 2.5rem;
+    --spacing-xl: 4rem;
+  }
+
   .screen {
     padding: var(--spacing-xl);
+  }
+
+  h1 {
+    font-size: 3rem;
+  }
+
+  .answer-btn {
+    min-height: 100px;
+    font-size: 1.25rem;
+    padding: var(--spacing-xl);
+  }
+
+  .question-text {
+    font-size: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .timer {
+    font-size: 2.5rem;
+    min-width: 80px;
+  }
+
+  .answers-grid {
+    gap: var(--spacing-lg);
+    max-width: 1000px;
+  }
+
+  /* Larger modal on tablets */
+  .modal-content {
+    max-width: 600px;
+    padding: var(--spacing-xl);
+  }
+
+  /* Better leaderboard spacing */
+  .leaderboard-list {
+    gap: var(--spacing-md);
+  }
+
+  .leaderboard-entry {
+    padding: var(--spacing-lg);
+  }
+}
+
+/* Large screens (1024px+) */
+@media (min-width: 1024px) {
+  .screen {
+    padding: var(--spacing-xl) calc(var(--spacing-xl) * 2);
+  }
+
+  .question-screen .screen {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .answers-grid {
+    max-width: 1100px;
+    gap: var(--spacing-xl);
+  }
+
+  .answer-btn {
+    min-height: 110px;
+  }
+
+  /* Center content on very large screens */
+  .join-screen form,
+  .waiting-screen,
+  .results-screen {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Better spacing for leaderboard on large screens */
+  .leaderboard-entry {
+    font-size: 1.125rem;
+  }
+
+  .entry-score {
+    font-size: 1.375rem;
+  }
+}
+
+/* Very large screens (1280px+) - prevent excessive width */
+@media (min-width: 1280px) {
+  #app {
+    max-width: 1400px;
+    margin: 0 auto;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .answers-grid {
+    max-width: 1200px;
+  }
+}
+
+/* Landscape phones - optimize for horizontal space */
+@media (max-height: 600px) and (orientation: landscape) {
+  .screen {
+    padding: var(--spacing-md);
+    justify-content: flex-start;
+  }
+
+  .question-header {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .question-text {
+    padding: var(--spacing-md);
+    font-size: var(--font-size-xl);
+  }
+
+  .answers-grid {
+    grid-template-columns: 1fr 1fr;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .answer-btn {
+    min-height: 60px;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  h1 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-sm);
   }
 }
 
