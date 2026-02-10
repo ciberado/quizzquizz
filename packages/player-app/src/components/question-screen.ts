@@ -186,7 +186,19 @@ export class QuestionScreen extends BaseComponent {
       // Navigate to waiting screen
       router.navigate(`/waiting?correct=${result.correct}&score=${result.score}`);
     } catch (error) {
+      // Enhanced error logging
       console.error('Error submitting answer:', error);
+      if (error instanceof Error) {
+        console.error('  Error name:', error.name);
+        console.error('  Error message:', error.message);
+        if ('status' in error) {
+          console.error('  HTTP status:', (error as any).status);
+        }
+        if ('data' in error) {
+          console.error('  Error data:', JSON.stringify((error as any).data, null, 2));
+        }
+      }
+      
       // Show error message but don't retry
       const errorEl = this.querySelector('.error-message');
       if (errorEl) {

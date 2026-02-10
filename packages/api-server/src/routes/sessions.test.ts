@@ -16,7 +16,7 @@ async function request(path: string, options: RequestInit = {}) {
 describe('Session Routes', () => {
   beforeAll(async () => {
     await resetPrismaInstance();
-    process.env.DATABASE_URL = 'file::memory:?cache=shared';
+    process.env.DATABASE_URL = 'file::memory:?cache=sessions';
     await initDatabase();
 
     // Create a sample question bank for testing

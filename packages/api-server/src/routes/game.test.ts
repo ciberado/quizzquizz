@@ -24,7 +24,7 @@ describe('Game Routes', () => {
   beforeAll(async () => {
     // Reset Prisma instance to force using the test DATABASE_URL
     await resetPrismaInstance();
-    process.env.DATABASE_URL = 'file::memory:?cache=shared';
+    process.env.DATABASE_URL = 'file::memory:?cache=game';
     await initDatabase();
 
     // Create a sample question bank for testing
@@ -227,6 +227,7 @@ describe('Game Routes', () => {
         method: 'POST',
         headers: { 'X-Player-Id': playerId },
         body: JSON.stringify({
+          questionId: 'q1',
           selectedAnswerIds: ['a2'], // Correct answer for q1
         }),
       });
@@ -273,6 +274,7 @@ describe('Game Routes', () => {
         method: 'POST',
         headers: { 'X-Player-Id': playerId },
         body: JSON.stringify({
+          questionId: 'q1',
           selectedAnswerIds: ['a1'], // Wrong answer (3 instead of 4)
         }),
       });
@@ -319,6 +321,7 @@ describe('Game Routes', () => {
         method: 'POST',
         headers: { 'X-Player-Id': playerId },
         body: JSON.stringify({
+          questionId: 'q1',
           selectedAnswerIds: ['a2'],
         }),
       });
@@ -329,6 +332,7 @@ describe('Game Routes', () => {
         method: 'POST',
         headers: { 'X-Player-Id': playerId },
         body: JSON.stringify({
+          questionId: 'q1',
           selectedAnswerIds: ['a1'],
         }),
       });
@@ -340,7 +344,7 @@ describe('Game Routes', () => {
     it('should return 401 if player ID is missing', async () => {
       const res = await request('/api/sessions/test-session/answer', {
         method: 'POST',
-        body: JSON.stringify({ selectedAnswerIds: ['a1'] }),
+        body: JSON.stringify({ questionId: 'q1', selectedAnswerIds: ['a1'] }),
       });
       expect(res.status).toBe(401);
     });
@@ -385,6 +389,7 @@ describe('Game Routes', () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          questionId: 'q1',
           selectedAnswerIds: ['a2'],
         }),
       });

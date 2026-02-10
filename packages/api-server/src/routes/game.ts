@@ -2,7 +2,12 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { getPrisma } from '../db';
-import { generateId, calculateScore, isAnswerCorrect } from '@quizzquizz/common';
+import { 
+  generateId, 
+  calculateScore, 
+  isAnswerCorrect,
+  SubmitAnswerRequestSchema 
+} from '@quizzquizz/common';
 import { questionBanks } from '../state';
 
 const gameRoutes = new Hono();
@@ -79,14 +84,10 @@ gameRoutes.get('/:sessionId/state', async (c) => {
 });
 
 // Submit an answer
-const SubmitAnswerSchema = z.object({
-  selectedAnswerIds: z.array(z.string()).min(1),
-});
-
-gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerSchema), async (c) => {
+gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSchema), async (c) => {
   const sessionId = c.req.param('sessionId');
   const playerId = c.req.header('X-Player-Id');
-  const { selectedAnswerIds } = c.req.valid('json');
+  const { questionId, selectedAnswerIds } = c.req.valid('json');
 
   if (!playerId) {
     return c.json({ error: 'Player ID required' }, 401);
@@ -131,6 +132,11 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerSchema), as
     const currentQuestion = questionBank.questions[session.currentQuestionIndex];
     if (!currentQuestion) {
       return c.json({ error: 'Question not found' }, 404);
+    }
+
+    // Validate client's questionId matches current question
+    if (questionId !== currentQuestion.id) {
+      return c.json({ error: 'Question ID does not match current question' }, 400);
     }
 
     const existingAnswer = await getPrisma().playerAnswer.findFirst({
