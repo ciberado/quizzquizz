@@ -270,7 +270,7 @@ export class QuestionScreen extends BaseComponent {
       if (this.errorNavigationTimeout === null) {
         this.errorNavigationTimeout = window.setTimeout(() => {
           this.errorNavigationTimeout = null;
-          const questionId = this.currentQuestion?.id || '';
+          const questionId = this.currentQuestion?.id || 'unknown';
           router.navigate(`/waiting?lastQuestionId=${questionId}`);
         }, 2000);
       }

@@ -84,12 +84,14 @@ export class WaitingScreen extends BaseComponent {
 
       // Check if new question started (not the same question we came from)
       if (gameState.currentQuestion) {
-        if (this.lastQuestionId && gameState.currentQuestion.id !== this.lastQuestionId) {
-          // Different question ID - new question started!
+        // If we don't know the last question ID, or if the current question is different
+        if (!this.lastQuestionId || gameState.currentQuestion.id !== this.lastQuestionId) {
+          // Update tracking and navigate to new question
+          this.lastQuestionId = gameState.currentQuestion.id;
           router.navigate(`/question?sessionId=${currentState.sessionId}`);
           return;
         }
-        // Same question or no previous question tracked - stay on waiting screen
+        // Same question - stay on waiting screen
       }
     } catch (error) {
       console.error('Error polling game state:', error);

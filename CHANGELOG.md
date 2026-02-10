@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **CRITICAL - Player Stuck on Waiting Screen**: Fixed player not advancing to new questions
+  - Problem: Waiting screen condition `if (this.lastQuestionId && id !== this.lastQuestionId)` required BOTH conditions
+  - If `lastQuestionId` was null/undefined/empty, player would never navigate even when new question available
+  - This happened when auto-submit failed or URL parameter was empty
+  - Solution: Changed to `if (!this.lastQuestionId || id !== this.lastQuestionId)` to recover from missing state
+  - Player now navigates to any new question that appears, even if it lost track of previous question
+  - Files: `packages/player-app/src/components/waiting-screen.ts`
+
 - **CRITICAL - Timer Calculation Bug**: Fixed player questions auto-submitting immediately due to missing timestamp
   - Problem: API returned `currentQuestionIndex`, `timeRemaining`, `playerScore` but schema expected `questionStartedAt`, `timeLimit`, `currentQuestionNumber`
   - Player tried to access `gameState.questionStartedAt` which was undefined, causing `elapsed = Date.now() - 0` (huge number)
