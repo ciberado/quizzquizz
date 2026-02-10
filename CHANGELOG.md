@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Timer Expiration Not Showing Correct Answers**: Fixed screen getting stuck at timer=0
+  - Problem: After flickering fix, timer expiring didn't trigger re-render to show correct answers
+  - Screen would show question with timer at "0" but no correct answer highlights or Continue button
+  - Root cause: Structural change detection didn't include timer state transitions (active vs expired)
+  - Only checked for question index changes, not timer expiration
+  - Solution: Added wasTimerActive boolean property to track timer state
+  - Timer state change (active→expired or expired→active) now counts as structural change
+  - Triggers full re-render to show correct answer highlights and Continue button
+  - Impact: Correct answers always appear reliably when timer reaches 0
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **Screen Flickering During Polling**: Eliminated flickering during gameplay
   - Problem: Entire screen re-rendered every 2 seconds when polling detected changes
   - Even small updates (answered count: "2/5" → "3/5") triggered full innerHTML replacement
