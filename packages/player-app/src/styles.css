@@ -306,7 +306,7 @@ label {
   text-align: left;
 }
 
-/* Answers Grid - Base mobile-first styles */
+/* Answers Grid - Base mobile-first styles (single column for all mobile) */
 .answers-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -315,6 +315,21 @@ label {
   width: 100%;
   max-width: none;
   margin: 0 auto;
+}
+
+.answer-btn {
+  padding: var(--spacing-lg);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 80px;
+  width: 100%;
+  text-align: center;
 }
 
 /* ========================================
@@ -425,12 +440,6 @@ label {
     font-size: 3rem;
   }
 
-  .answer-btn {
-    min-height: 100px;
-    font-size: 1.25rem;
-    padding: var(--spacing-xl);
-  }
-
   .question-text {
     font-size: 2rem;
     max-width: 900px;
@@ -442,12 +451,18 @@ label {
     min-width: 80px;
   }
 
-  /* Enable 2-column grid on tablets and larger */
+  /* Enable 2-column grid on tablets and desktops (NOT on mobile) */
   .answers-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr !important;
     gap: var(--spacing-lg);
     max-width: 1000px;
     padding: 0 var(--spacing-lg);
+  }
+
+  .answer-btn {
+    min-height: 100px;
+    font-size: 1.25rem;
+    padding: var(--spacing-xl);
   }
 
   /* Larger modal on tablets */
@@ -518,8 +533,8 @@ label {
   }
 }
 
-/* Landscape phones - optimize for horizontal space */
-@media (max-height: 600px) and (orientation: landscape) {
+/* Landscape phones - optimize for horizontal space (ONLY on actual landscape phones) */
+@media (max-width: 767px) and (max-height: 600px) and (orientation: landscape) {
   .screen {
     padding: var(--spacing-sm);
     justify-content: flex-start;
@@ -534,6 +549,7 @@ label {
     font-size: var(--font-size-xl);
   }
 
+  /* 2 columns OK for landscape phones due to horizontal space */
   .answers-grid {
     grid-template-columns: 1fr 1fr;
     padding: 0 var(--spacing-md);
