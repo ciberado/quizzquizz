@@ -73,7 +73,7 @@ quizzquizz/
 
 #### `@quizzquizz/api-server`
 - REST API endpoints
-- SQLite database with modern approach (Drizzle ORM or similar)
+- SQLite database with Prisma ORM (type-safe, developer-friendly)
 - Session management (create, join, state transitions)
 - Game state management
 - Polling endpoints for real-time updates
@@ -99,8 +99,8 @@ quizzquizz/
 
 ### Backend
 - **Runtime**: Node.js with TypeScript
-- **Framework**: Hono (lightweight, fast) or Express
-- **Database**: SQLite with Drizzle ORM (type-safe, modern)
+- **Framework**: Hono (lightweight, fast)
+- **Database**: SQLite with Prisma v6 ORM (type-safe, auto-generated client)
 - **Validation**: Zod
 
 ### Frontend
@@ -111,7 +111,7 @@ quizzquizz/
 - **State**: Simple pub/sub or signals pattern
 
 ### Monorepo
-- **Package manager**: pnpm with workspaces
+- **Package manager**: npm with workspaces
 - **Build**: TypeScript project references
 - **Shared configs**: ESLint, Prettier, TypeScript
 
@@ -242,6 +242,36 @@ Which of the following are parts of a cell? (Select all that apply)
 - **Input validation**: Strict validation on all inputs
 - **PIN collision**: Ensure unique PINs for active sessions
 - **Answer timing**: Server-side timestamp validation
+
+---
+
+## Technical Decisions & History
+
+### Database ORM Migration (Feb 10, 2026)
+
+**Migrated from**: Drizzle ORM v0.29 + better-sqlite3  
+**Migrated to**: Prisma ORM v6.19 + @prisma/client
+
+**Rationale**:
+- Eliminated native module rebuild issues with better-sqlite3 in dev containers
+- Improved developer experience with Prisma's declarative schema language
+- Better TypeScript integration with auto-generated Prisma Client
+- Simplified database operations with intuitive API
+
+**Implementation Details**:
+- Schema defined in `prisma/schema.prisma` using Prisma Schema Language
+- BigInt types for timestamps (JavaScript milliseconds)
+- Cascading deletes for player/session relationships
+- Lazy Prisma Client initialization for test environment compatibility
+- In-memory SQLite databases for unit tests with manual table creation
+- 96% test pass rate achieved (45/47 tests passing)
+
+**Migration Challenges Solved**:
+- BIGINT column types required for JavaScript timestamp values
+- Added missing `isCorrect` field to PlayerAnswer model
+- Implemented `resetPrismaInstance()` for test isolation
+- Fixed table recreation in shared cache mode (DROP before CREATE)
+- BigInt → Number conversion for JSON API responses
 
 ---
 
