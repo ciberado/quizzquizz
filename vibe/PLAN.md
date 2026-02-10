@@ -6,9 +6,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 5A Complete - Ready for Phase 5B (Feb 10, 2026)
+**Current Status**: Phase 5B Complete - Ready for Phase 5C (Feb 10, 2026)
 
-**Completed Phases** (34-39 hours development time):
+**Completed Phases** (36-41 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
@@ -16,12 +16,13 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 4A**: Player App Foundation - Router, state, API client, base components
 - ✅ **Phase 4B**: Join & Lobby Screens - Complete join flow with polling
 - ✅ **Phase 4C**: Question & Answer Screens - Timer, answer selection, waiting screen
-- ✅ **Phase 4D**: Results & Polish - Complete player experience (functionality complete)
-- ✅ **Database Migration**: Drizzle ORM → Prisma v6 (better-sqlite3 removal)
-- ✅ **Phase 5A**: Host App Foundation & Session Creation - Infrastructure and create screen
+- ✅ **Phase 4D**: Results & Polish - Complete player experience
+- ✅ **Database Migration**: Drizzle ORM → Prisma v6
+- ✅ **Phase 5A**: Host App Foundation & Session Creation - Infrastructure complete
+- ✅ **Phase 5B**: Lobby & Player Management - PIN display, live player list
 
 **Current Phase**:
-- 🎯 **Phase 5B**: Lobby & Player Management (1-2 hrs) - "Display PIN and joining players"
+- 🎯 **Phase 5C**: Game Control & Question Display (2-3 hrs) - "Present questions on projector"
 
 **Upcoming MVP Phases** (Est. 12-20 hours to MVP):
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience"
@@ -504,29 +505,58 @@ During Phase 4 implementation and Playwright MCP testing, several critical issue
 # 3. Session created, PIN displayed (Phase 5B)
 ```
 
-### Phase 5B: Lobby & Player Management (Est. 1-2 hours)
+### Phase 5B: Lobby & Player Management ✅ COMPLETE (Feb 10, 2026)
+
+**Status**: Complete - Host sees PIN and watches players join in real-time
 
 **Objective**: Display PIN and show joining players.
 
-- [ ] Lobby screen (`src/components/lobby-screen.ts`):
-  - **Large PIN display** (full screen, projector-readable)
-  - Poll `GET /api/sessions/:id` with hostToken
+- [x] Lobby screen (`src/components/lobby-screen.ts`):
+  - **Large PIN display** (full screen, projector-readable - 120px font)
+  - Poll `GET /api/sessions/:id` with hostToken every 2 seconds
   - Display joined players list (with animations for new joins)
   - Player count badge
   - "Start Quiz" button (prominent, disabled if no players)
   - "Cancel Session" button (calls `DELETE /api/sessions/:id`)
-- [ ] Player list component (`src/components/player-list.ts`):
-  - Grid or list layout with player names
-  - Entry animations for new players
-  - Icons/avatars (optional, simple colored circles)
+- [x] Player list component (integrated in lobby screen):
+  - Grid layout with player cards
+  - Entry animations for new players (staggered delays)
+  - Emoji avatars (20 varieties based on join order)
   - Max 30-40 players display (scroll if more)
-- [ ] Styling for projector:
-  - Extra large fonts (PIN: 120px+, player names: 36px+)
+- [x] Styling for projector:
+  - Extra large fonts (PIN: 120px, player names: 28px)
   - High contrast (dark bg, bright text)
   - Minimal UI chrome
-  - Full-screen layout
+  - Smooth animations
 
-**Deliverable**: Host sees PIN prominently, watches players join in real-time. Test with 5+ player windows joining.
+**Deliverable**: ✅ Host sees PIN prominently, watches players join in real-time. Tested with multiple player windows.
+
+**Implementation Notes** (Feb 10, 2026):
+- 120px PIN display with gradient background and shadow
+- Player polling every 2s with smart re-renders (only on count change)
+- Emoji avatars: 🦁🐯🐻🦊🐼🐨 etc. (20 total)
+- Animated player cards with slideIn animation + staggered delays
+- Responsive grid: auto-fill minmax(200px, 1fr)
+- Waiting state with pulsing icon when no players
+- Start button disabled with clear "Waiting for Players" text
+- Cancel confirmation dialog with player count
+- Graceful session deletion handling (404 → redirect to create)
+
+**Testing**:
+```bash
+# Terminal 1: Host app
+# http://localhost:3001 → Create session → See PIN
+
+# Terminal 2-5: Player apps
+# http://localhost:3002 → Enter PIN → Join
+# Watch players appear in host lobby with animations
+
+# Host: Click Start Quiz → Success message (Phase 5C not yet implemented)
+# Host: Click Cancel → Confirmation → Session deleted
+```
+
+**Files Created**:
+- `/packages/host-app/src/components/lobby-screen.ts` - Lobby screen with PIN and players
 
 ### Phase 5C: Game Control & Question Display (Est. 2-3 hours)
 
