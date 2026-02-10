@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file, organized b
 - **Server Configuration**: All servers now listen on 0.0.0.0 for dev container accessibility
   - API server, host-app, and player-app now bind to all network interfaces
   - Allows access from host machine when running in dev containers
+  - Added allowed hosts: quizzquizz, quizzquizz.mininube.com
 - **Answer Submission**: Fixed player answer submission validation error
   - API server now uses shared `SubmitAnswerRequestSchema` from common package
   - Added `questionId` validation to ensure it matches the current question
