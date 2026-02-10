@@ -230,9 +230,12 @@ export class LobbyScreen extends BaseComponent {
       this.players = players;
       this.previousPlayerCount = newPlayerCount;
 
-      // Re-render if player count changed
-      if (hasNewPlayers || newPlayerCount === 0) {
-        this.render();
+      // Always re-render to show updated player list
+      this.render();
+
+      // Log new players joining
+      if (hasNewPlayers) {
+        console.log(`✨ New player(s) joined! Total: ${newPlayerCount}`);
       }
     } catch (error) {
       if (error instanceof ApiError) {
