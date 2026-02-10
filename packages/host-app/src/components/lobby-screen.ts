@@ -231,17 +231,23 @@ export class LobbyScreen extends BaseComponent {
       
       // Check if player count changed
       const newPlayerCount = players.length;
-      const hasNewPlayers = newPlayerCount > this.previousPlayerCount;
+      const playerCountChanged = newPlayerCount !== this.previousPlayerCount;
       
-      this.players = players;
-      this.previousPlayerCount = newPlayerCount;
+      // Check if any player IDs changed (someone left/joined)
+      const currentPlayerIds = this.players.map(p => p.id).sort().join(',');
+      const newPlayerIds = players.map(p => p.id).sort().join(',');
+      const playerListChanged = currentPlayerIds !== newPlayerIds;
+      
+      // Only update and re-render if something actually changed
+      if (playerCountChanged || playerListChanged) {
+        this.players = players;
+        this.previousPlayerCount = newPlayerCount;
+        this.render();
 
-      // Always re-render to show updated player list
-      this.render();
-
-      // Log new players joining
-      if (hasNewPlayers) {
-        console.log(`✨ New player(s) joined! Total: ${newPlayerCount}`);
+        // Log new players joining
+        if (playerCountChanged && newPlayerCount > this.previousPlayerCount) {
+          console.log(`✨ New player(s) joined! Total: ${newPlayerCount}`);
+        }
       }
     } catch (error) {
       if (error instanceof ApiError) {
