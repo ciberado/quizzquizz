@@ -35,9 +35,23 @@ interface ApiClientConfig {
 
 class ApiClient {
   private config: ApiClientConfig;
+  private pendingRequests: Map<string, AbortController> = new Map();
+  private etagCache: Map<string, string> = new Map();
+  private responseCache: Map<string, unknown> = new Map();
 
   constructor(config: ApiClientConfig) {
     this.config = config;
+  }
+
+  /**
+   * Cancel a pending request by key
+   */
+  private cancelPendingRequest(key: string): void {
+    const controller = this.pendingRequests.get(key);
+    if (controller) {
+      controller.abort();
+      this.pendingRequests.delete(key);
+    }
   }
 
   /**
@@ -46,24 +60,48 @@ class ApiClient {
   private async fetch<T>(
     path: string,
     options: RequestInit = {},
-    retry: boolean = true
+    retry: boolean = true,
+    useCache: boolean = false
   ): Promise<T> {
+    // Cancel any pending request with the same path (request deduplication)
+    const requestKey = `${options.method || 'GET'}:${path}`;
+    this.cancelPendingRequest(requestKey);
+
     const doFetch = async (): Promise<T> => {
       const url = `${this.config.baseUrl}${path}`;
 
+      // Create AbortController for this request
+      const controller = new AbortController();
+      this.pendingRequests.set(requestKey, controller);
+
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          ...(options.headers as Record<string, string>),
+        };
+
+        // Add ETag if we have one for this path and caching is enabled
+        if (useCache && this.etagCache.has(path)) {
+          headers['If-None-Match'] = this.etagCache.get(path)!;
+        }
+
         const response = await fetch(url, {
           ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-          },
+          headers,
+          signal: controller.signal,
         });
+
+        // Handle 304 Not Modified - return cached response
+        if (response.status === 304 && this.responseCache.has(path)) {
+          this.pendingRequests.delete(requestKey);
+          return this.responseCache.get(path) as T;
+        }
 
         // Parse response body
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
+          this.pendingRequests.delete(requestKey);
           throw new ApiError(
             data.error || `Request failed with status ${response.status}`,
             response.status,
@@ -71,8 +109,23 @@ class ApiClient {
           );
         }
 
+        // Store ETag if present
+        const etag = response.headers.get('ETag');
+        if (useCache && etag) {
+          this.etagCache.set(path, etag);
+          this.responseCache.set(path, data);
+        }
+
+        this.pendingRequests.delete(requestKey);
         return data as T;
       } catch (error) {
+        this.pendingRequests.delete(requestKey);
+        
+        // Don't throw on abort - it's intentional
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new ApiError('Request cancelled', 0);
+        }
+        
         if (error instanceof ApiError) {
           throw error;
         }
@@ -112,6 +165,7 @@ class ApiClient {
 
   /**
    * Get current game state (polling endpoint)
+   * Uses ETag caching to minimize bandwidth
    */
   async getGameState(sessionId: string, playerId: string): Promise<GameState> {
     return this.fetch<GameState>(
@@ -120,7 +174,9 @@ class ApiClient {
         headers: {
           'X-Player-Id': playerId,
         },
-      }
+      },
+      true, // retry on network errors
+      true  // use ETag caching
     );
   }
 
@@ -140,17 +196,40 @@ class ApiClient {
           'X-Player-Id': playerId,
         },
         body: JSON.stringify(request),
-      }
+      },
+      false // don't retry POSTs
     );
   }
 
   /**
    * Get leaderboard for session
+   * Uses ETag caching to minimize bandwidth
    */
   async getLeaderboard(sessionId: string): Promise<LeaderboardResponse> {
     return this.fetch<LeaderboardResponse>(
-      `/api/sessions/${sessionId}/leaderboard`
+      `/api/sessions/${sessionId}/leaderboard`,
+      {},
+      true, // retry on network errors
+      true  // use ETag caching
     );
+  }
+
+  /**
+   * Clear ETag cache (call when leaving session)
+   */
+  clearCache(): void {
+    this.etagCache.clear();
+    this.responseCache.clear();
+  }
+
+  /**
+   * Cancel all pending requests
+   */
+  cancelAllRequests(): void {
+    for (const [key, controller] of this.pendingRequests.entries()) {
+      controller.abort();
+      this.pendingRequests.delete(key);
+    }
   }
 }
 

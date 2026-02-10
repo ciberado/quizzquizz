@@ -6,7 +6,7 @@
 
 import { router } from '../router';
 import { state } from '../state';
-import { api } from '../api-client';
+import { api, cancelAllRequests } from '../api-client';
 
 // Local interface for game state (matches API response)
 interface HostGameState {
@@ -58,6 +58,7 @@ export class QuestionDisplayScreen extends HTMLElement {
       clearTimeout(this.autoNavigateTimeout);
       this.autoNavigateTimeout = null;
     }
+    cancelAllRequests();
   }
 
   private async loadGameState() {

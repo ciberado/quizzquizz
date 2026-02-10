@@ -1,5 +1,5 @@
 import { BaseComponent } from './base-component';
-import { api, ApiError } from '../api-client';
+import { api, ApiError, cancelAllRequests } from '../api-client';
 import { router } from '../router';
 import { state } from '../state';
 import type { Player } from '@quizzquizz/common';
@@ -47,6 +47,7 @@ export class LobbyScreen extends BaseComponent {
 
   protected onUnmount(): void {
     this.stopPolling();
+    cancelAllRequests();
   }
 
   protected render(): void {

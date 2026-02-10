@@ -45,6 +45,22 @@ export class ApiError extends Error {
 }
 
 /**
+ * Request deduplication - track pending requests
+ */
+const pendingRequests = new Map<string, AbortController>();
+
+/**
+ * Cancel a pending request
+ */
+function cancelPendingRequest(key: string): void {
+  const controller = pendingRequests.get(key);
+  if (controller) {
+    controller.abort();
+    pendingRequests.delete(key);
+  }
+}
+
+/**
  * Make an API request with error handling and retry logic
  */
 async function apiRequest<T>(
@@ -52,8 +68,16 @@ async function apiRequest<T>(
   options: RequestInit = {},
   retry: boolean = true
 ): Promise<T> {
+  // Cancel any pending request with the same endpoint and method
+  const requestKey = `${options.method || 'GET'}:${endpoint}`;
+  cancelPendingRequest(requestKey);
+
   const doFetch = async (): Promise<T> => {
     const url = `${API_BASE_URL}${endpoint}`;
+
+    // Create AbortController for this request
+    const controller = new AbortController();
+    pendingRequests.set(requestKey, controller);
 
     try {
       const response = await fetch(url, {
@@ -62,6 +86,7 @@ async function apiRequest<T>(
           'Content-Type': 'application/json',
           ...options.headers,
         },
+        signal: controller.signal,
       });
 
       // Handle non-2xx responses
@@ -73,6 +98,7 @@ async function apiRequest<T>(
           errorData = await response.text();
         }
 
+        pendingRequests.delete(requestKey);
         throw new ApiError(
           `API Error: ${response.statusText}`,
           response.status,
@@ -81,8 +107,17 @@ async function apiRequest<T>(
       }
 
       // Parse JSON response
-      return await response.json();
+      const data = await response.json();
+      pendingRequests.delete(requestKey);
+      return data;
     } catch (error) {
+      pendingRequests.delete(requestKey);
+      
+      // Don't throw on abort - it's intentional
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ApiError('Request cancelled', 0);
+      }
+      
       if (error instanceof ApiError) {
         throw error;
       }
@@ -108,6 +143,16 @@ async function apiRequest<T>(
   }
 
   return doFetch();
+}
+
+/**
+ * Cancel all pending requests (call on unmount/cleanup)
+ */
+export function cancelAllRequests(): void {
+  for (const controller of pendingRequests.values()) {
+    controller.abort();
+  }
+  pendingRequests.clear();
 }
 
 /**

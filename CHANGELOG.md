@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Added
+- **Phase 6C: Polling Optimization**: Reduce network traffic and improve performance
+  - **Request Deduplication**:
+    - Prevent concurrent requests to same endpoint via AbortController
+    - Cancel pending requests when new request to same endpoint is made
+    - Request tracking via `pendingRequests` Map with keys like `GET:/api/sessions/:id`
+    - Applies to both player-app and host-app API clients
+    - Files: `packages/{player-app,host-app}/src/api-client.ts`
+  - **ETag-Based Caching** (Player App only):
+    - HTTP conditional requests using If-None-Match headers
+    - Server returns 304 Not Modified when data unchanged
+    - Caches ETags and responses per endpoint
+    - `useCache` parameter for opt-in caching on getGameState/getLeaderboard
+    - Reduces data transfer for unchanged game states
+    - Files: `packages/player-app/src/api-client.ts`
+  - **Smart State Diffing**:
+    - Deep equality checking to avoid unnecessary DOM updates
+    - Track previous state (e.g., lastPlayerCount, previous player IDs)
+    - Only re-render when relevant data actually changes
+    - Player lobby: Updates only when player count changes
+    - Host lobby: Updates only when player count or IDs change
+    - Files: `packages/{player-app,host-app}/src/state-utils.ts`, lobby screens
+  - **Request Cleanup**:
+    - `cancelAllRequests()` function to abort all pending requests
+    - Called on component unmount (disconnectedCallback/onUnmount)
+    - Prevents memory leaks and unnecessary network traffic
+    - Applied to all polling components: lobby, question-display, leaderboard
+    - Files: All screen components with polling
+  - **Utilities**:
+    - `deepEqual()`: Recursive deep equality check for objects/arrays
+    - `hasChanged()`: Check if specific subset of fields changed
+    - `getStateSignature()`: Quick state comparison via JSON stringification
+    - Files: `packages/{player-app,host-app}/src/state-utils.ts`
+
 - **Phase 6B: Loading States & Visual Feedback**: Professional UI feedback for all user actions
   - **Button Loading States**:
     - Consistent loading animation across all buttons (spinner appears, text hidden)

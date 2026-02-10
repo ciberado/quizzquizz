@@ -12,6 +12,7 @@ export class LobbyScreen extends BaseComponent {
   private pollingInterval: number | null = null;
   private sessionId = '';
   private playerId = '';
+  private lastPlayerCount: number = 0;
 
   protected onMount(): void {
     // Get session info from state
@@ -33,6 +34,8 @@ export class LobbyScreen extends BaseComponent {
   protected onUnmount(): void {
     // Stop polling when leaving screen
     this.stopPolling();
+    // Clear API cache to free memory
+    api.clearCache();
   }
 
   protected render(): void {
@@ -113,7 +116,12 @@ export class LobbyScreen extends BaseComponent {
       try {
         const leaderboard = await api.getLeaderboard(this.sessionId);
         if (this.playerCountElement && leaderboard.entries) {
-          this.playerCountElement.textContent = String(leaderboard.entries.length);
+          const playerCount = leaderboard.entries.length;
+          // Only update DOM if player count actually changed
+          if (playerCount !== this.lastPlayerCount) {
+            this.playerCountElement.textContent = String(playerCount);
+            this.lastPlayerCount = playerCount;
+          }
         }
       } catch (leaderboardError) {
         // Ignore leaderboard errors, don't fail the whole poll

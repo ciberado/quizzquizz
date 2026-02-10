@@ -6,7 +6,7 @@
 
 import { router } from '../router';
 import { state } from '../state';
-import { api } from '../api-client';
+import { api, cancelAllRequests } from '../api-client';
 
 interface LeaderboardEntry {
   rank: number;
@@ -38,6 +38,7 @@ export class LeaderboardScreen extends HTMLElement {
 
   disconnectedCallback() {
     this.stopPolling();
+    cancelAllRequests();
   }
 
   private async loadLeaderboard() {
