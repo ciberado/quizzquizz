@@ -92,11 +92,12 @@ sessionRoutes.get('/:id', async (c) => {
 
     // Don't send hostToken in response, convert BigInt to number
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { hostToken: _, createdAt, questionStartedAt, ...sessionData } = session;
+    const { hostToken: _, createdAt, questionStartedAt, expiresAt, ...sessionData } = session;
     return c.json({
       ...sessionData,
       createdAt: Number(createdAt),
       questionStartedAt: questionStartedAt ? Number(questionStartedAt) : null,
+      expiresAt: expiresAt ? Number(expiresAt) : null,
       currentQuestionTimeLimit, // Add computed time limit for timer sync
       questions, // Include questions from question bank
     });
