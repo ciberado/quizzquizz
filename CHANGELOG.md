@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Added
+- **Phase 6E: Visual Polish & Animations**: Production-quality UX with smooth interactions
+  - **Enhanced CSS Variables**:
+    - Added `--color-primary-light`, `--color-text-secondary` for richer palette
+    - Added `--shadow-xl` for dramatic elevation effects
+    - Added `--transition-fast/base/slow` for consistent animation timing
+    - Applied to both player-app and host-app
+    - Files: `packages/{player-app,host-app}/src/styles.css`
+  - **Smooth Scrolling & Reduced Motion**:
+    - Enabled `scroll-behavior: smooth` on all pages
+    - Full `@media (prefers-reduced-motion: reduce)` support
+    - Respects user accessibility preferences (animations disabled for motion-sensitive users)
+    - Applied to both apps
+  - **Enhanced Button Interactions**:
+    - Better hover effects with `translateY(-3px)` lift
+    - Focus-visible indicators for keyboard navigation (3px outline with offset)
+    - Faster active state transitions (150ms)
+    - Overflow handling for future ripple effects
+    - Player app: Enhanced all buttons, improved secondary button hover
+    - Host app: Enhanced with better lift and shadow progression
+  - **Input Field Polish**:
+    - Hover state with color transition to `--color-primary-light`
+    - Enhanced focus states with scale(1.01) and larger shadow (4px)
+    - Focus-visible indicators matching buttons
+    - Player app only (host app doesn't have many inputs)
+  - **Card Hover Effects**:
+    - Cards lift on hover with `translateY(-2px)`
+    - Shadow progression from `--shadow-md` to `--shadow-lg`
+    - Interactive card variant with larger lift (`translateY(-4px)`)
+    - Smooth transitions using `var(--transition-base)`
+    - Applied to both apps
+  - **Leaderboard Animations**:
+    - Staggered slide-in animations for entries (50-100ms delays)
+    - New `slideInUp` keyframe (player) and enhanced `slideIn` (host)
+    - Hover effects: entries shift horizontally with shadow increase
+    - Score counter animation with scale-up effect (`countUp` keyframe)
+    - Current player highlight with enhanced shadow and scale on hover
+    - Player app: Vertical slide-in from below
+    - Host app: Horizontal slide-in from left with 8px horizontal shift on hover
+  - **Animation Keyframes**:
+    - `slideInUp`: Vertical entry animation (player leaderboard)
+    - `countUp`: Score number scale-up with bounce effect
+    - Enhanced `slideIn`: Horizontal entry with staggered delays (host leaderboard)
+    - All animations respect reduced-motion preferences
+  - **Accessibility Improvements**:
+    - All interactive elements have `:focus-visible` states
+    - Outline offset (2-3px) for better visibility
+    - Focus indicators use `--color-primary-light` for contrast
+    - Reduced motion support disables all animations when requested
+    - Keyboard navigation fully supported with visible focus rings
+  - **Micro-Interactions**:
+    - All transitions use CSS custom properties for consistency
+    - Fast transitions (150ms) for immediate feedback
+    - Base transitions (200ms) for most UI elements
+    - Slow transitions (300ms) for dramatic effects
+    - Transform-based animations for GPU acceleration
+
 - **Phase 6D: Session Management & Cleanup**: Prevent database bloat and improve resource management
   - **Database Schema Enhancements**:
     - Added `expiresAt` field to Session model (BigInt timestamp)
