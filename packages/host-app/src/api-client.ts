@@ -124,7 +124,8 @@ export const api = {
    * Get players in session
    */
   async getPlayers(sessionId: string): Promise<Player[]> {
-    return apiRequest<Player[]>(`/api/sessions/${sessionId}/players`);
+    const response = await apiRequest<{ players: Player[] }>(`/api/sessions/${sessionId}/players`);
+    return response.players;
   },
 
   /**
