@@ -38,6 +38,9 @@ export class LobbyScreen extends BaseComponent {
       return;
     }
 
+    // Re-render with loaded state
+    this.render();
+
     // Start polling for players
     this.startPolling();
   }
