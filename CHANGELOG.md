@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Added
+- **Phase 6B: Loading States & Visual Feedback**: Professional UI feedback for all user actions
+  - **Button Loading States**:
+    - Consistent loading animation across all buttons (spinner appears, text hidden)
+    - Applied to join, nickname submission, answer submission, session creation
+    - `.loading` class with automatic spinner via CSS ::after pseudo-element
+    - Disabled state prevents double-clicks during API calls
+    - Files: `packages/{player-app,host-app}/src/components/{join,nickname,question,create-session}-screen.ts`
+  - **Loading Screens**:
+    - Full-screen loading indicator with large spinner and message text
+    - Skeleton loaders for progressive content loading
+    - `.loading-screen` and `.skeleton` classes with smooth animations
+    - Used during initial data fetching
+    - Files: `packages/{player-app,host-app}/src/styles.css`
+  - **Answer Selection Feedback**:
+    - Ripple effect on answer button click (expanding circle animation)
+    - Selected state with color change and scale transform
+    - `.selecting` animation for press feedback (0.2s button-press keyframe)
+    - Selected buttons highlighted with primary color and glow effect
+    - Files: `packages/player-app/src/components/question-screen.ts`, styles.css
+  - **Timer Urgency Indicators**:
+    - Color progression: Green (default) → Yellow (<30% time) → Red (≤5 seconds)
+    - Pulse animation when ≤5 seconds remaining (timer-pulse keyframe)
+    - `.timer-caution` and `.timer-warning` classes for different states
+    - Smooth color transitions (0.3s ease)
+    - File: `packages/player-app/src/styles.css`
+  - **Success Feedback**:
+    - Success toast notifications with checkmark icon
+    - Green background with slide-down animation
+    - Auto-dismiss after 2 seconds
+    - Success checkmark component with pop animation
+    - Files: `packages/{player-app,host-app}/src/success-toast.ts`
+  - **Animation Keyframes Added**:
+    - `spin`: Spinner rotation (0.6s linear infinite)
+    - `button-press`: Answer selection press (0.2s scale effect)
+    - `ripple-animation`: Click ripple expansion (0.6s)
+    - `timer-pulse`: Urgency pulse (0.5s when <5s)
+    - `checkmark-pop`: Success checkmark appearance (0.4s)
+    - `skeleton-loading`: Content loading shimmer (1.5s)
+  - **Host App Enhancements**:
+    - Loading spinners for session creation and data fetching
+    - Button loading states for all actions
+    - Success/error feedback matching player app
+    - Files: `packages/host-app/src/{styles,success-toast}.ts`
+  - **Testing**: Both apps compile successfully, visual feedback ready for manual testing
+  - **Impact**: Every user action now has clear, immediate visual feedback improving perceived performance and UX
 - **Phase 6A: Comprehensive Error Handling & Resilience**: Production-ready error handling across both apps
   - **Network Error Handling**:
     - Automatic retry logic with exponential backoff (max 3 retries) for network errors

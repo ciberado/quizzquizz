@@ -87,12 +87,17 @@ export class QuestionScreen extends BaseComponent {
     if (timerEl) {
       timerEl.textContent = `${this.timeRemaining}s`;
       
-      // Add warning class when < 5 seconds
-      if (this.timeRemaining < 5) {
-        timerEl.classList.add('timer-warning');
-      } else {
-        timerEl.classList.remove('timer-warning');
+      // Update timer color based on remaining time
+      const percentRemaining = this.timeRemaining / this.timeLimit;
+      
+      timerEl.classList.remove('timer-warning', 'timer-caution');
+      
+      if (this.timeRemaining <= 5) {
+        timerEl.classList.add('timer-warning'); // Red + pulse
+      } else if (percentRemaining <= 0.3) {
+        timerEl.classList.add('timer-caution'); // Yellow
       }
+      // else: green (default)
     }
   }
 
@@ -151,8 +156,11 @@ export class QuestionScreen extends BaseComponent {
     }
   }
 
-  private toggleAnswer(answerId: string): void {
+  private toggleAnswer(answerId: string, button: HTMLElement): void {
     if (this.hasSubmitted) return; // Don't allow changes after submission
+    
+    // Add visual feedback (ripple effect)
+    this.addRippleEffect(button);
     
     if (this.selectedAnswerIds.has(answerId)) {
       this.selectedAnswerIds.delete(answerId);
@@ -161,6 +169,25 @@ export class QuestionScreen extends BaseComponent {
     }
     
     this.updateAnswerButtons();
+    
+    // Enable/disable submit button based on selection
+    this.updateSubmitButton();
+  }
+
+  private addRippleEffect(button: HTMLElement): void {
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    
+    const rect = button.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = '50%';
+    ripple.style.top = '50%';
+    ripple.style.marginLeft = -(size / 2) + 'px';
+    ripple.style.marginTop = -(size / 2) + 'px';
+    
+    button.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
   }
 
   private updateAnswerButtons(): void {
@@ -170,11 +197,20 @@ export class QuestionScreen extends BaseComponent {
       if (answerId) {
         if (this.selectedAnswerIds.has(answerId)) {
           btn.classList.add('selected');
+          btn.classList.add('selecting');
+          setTimeout(() => btn.classList.remove('selecting'), 200);
         } else {
           btn.classList.remove('selected');
         }
       }
     });
+  }
+
+  private updateSubmitButton(): void {
+    const submitBtn = this.querySelector('.submit-btn') as HTMLButtonElement;
+    if (submitBtn) {
+      submitBtn.disabled = this.hasSubmitted || this.selectedAnswerIds.size === 0;
+    }
   }
 
   private async submitAnswer(): Promise<void> {
@@ -188,6 +224,13 @@ export class QuestionScreen extends BaseComponent {
     this.hasSubmitted = true;
     this.stopTimer();
     this.stopPolling();
+
+    // Show loading state on submit button
+    const submitBtn = this.querySelector('.submit-btn');
+    if (submitBtn) {
+      submitBtn.classList.add('loading');
+      (submitBtn as HTMLButtonElement).disabled = true;
+    }
 
     // Disable all answer buttons
     const buttons = this.querySelectorAll('.answer-btn');
@@ -298,7 +341,7 @@ export class QuestionScreen extends BaseComponent {
       btn.addEventListener('click', () => {
         const answerId = (btn as HTMLElement).dataset.answerId;
         if (answerId) {
-          this.toggleAnswer(answerId);
+          this.toggleAnswer(answerId, btn as HTMLElement);
         }
       });
     });

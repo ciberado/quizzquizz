@@ -165,6 +165,65 @@ button.danger {
   color: white;
 }
 
+/* Button Loading State */
+button.loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+
+button.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading Spinner */
+.spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(102, 126, 234, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--color-primary);
+  animation: spin 0.6s linear infinite;
+}
+
+.spinner.large {
+  width: 60px;
+  height: 60px;
+  border-width: 6px;
+}
+
+/* Loading Screen */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--spacing-lg);
+}
+
+.loading-text {
+  font-size: var(--font-size-large);
+  color: var(--color-text-secondary);
+}
+
 /* PIN Display - Extra prominent */
 .pin-display {
   text-align: center;
@@ -818,6 +877,52 @@ button.danger {
 }
 
 .error-toast-message {
+  flex: 1;
+  font-size: var(--font-size-base, 1rem);
+  font-weight: 500;
+}
+
+/* Success Toast Notifications */
+.success-toast-container {
+  position: fixed;
+  top: var(--spacing-md, 1.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 0.5rem);
+  pointer-events: none;
+}
+
+.success-toast {
+  background-color: var(--color-success, #10b981);
+  color: white;
+  padding: var(--spacing-sm, 1rem) var(--spacing-md, 1.5rem);
+  border-radius: var(--border-radius, 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 1rem);
+  min-width: 300px;
+  max-width: 500px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease-in-out;
+}
+
+.success-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.success-toast-icon {
+  font-size: var(--font-size-large, 1.125rem);
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
+.success-toast-message {
   flex: 1;
   font-size: var(--font-size-base, 1rem);
   font-weight: 500;

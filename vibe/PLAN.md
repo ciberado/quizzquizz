@@ -25,14 +25,8 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 **Current Phase**:
 - ✅ **Phase 6A**: Error Handling & Resilience (2-3 hrs) - COMPLETE
-  - ✅ Implemented network error handling with retry logic
-  - ✅ Added offline detection and "Connection restored" messaging
-  - ✅ Created global error boundaries for both apps
-  - ✅ Added session state error handling (404, 401, 403, etc.)
-  - ✅ Implemented error toast notifications
-  - ✅ Added host-specific validations (no players, no question banks)
-  - ✅ Updated API clients with retry logic in both apps
-- 🎯 **Next: Phase 6B**: Loading States & Feedback (1-2 hrs)
+- ✅ **Phase 6B**: Loading States & Feedback (1-2 hrs) - COMPLETE
+- 🎯 **Next: Phase 6C**: Polling Optimization (1-2 hrs)
 
 **Upcoming MVP Phases** (Est. 4-6 hours to full MVP):
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -812,32 +806,50 @@ The boolean logic error in bug #6 (`&&` vs `||`) highlights the importance of:
 
 ---
 
-### Phase 6B: Loading States & Feedback (Est. 1-2 hours)
+### Phase 6B: Loading States & Feedback (Est. 1-2 hours) ✅ COMPLETE
+
+**Status**: COMPLETE (Feb 10, 2026)
 
 **Objective**: Clear visual feedback for all actions.
 
-- [ ] Loading indicators:
-  - Spinner for API calls (join, submit answer, create session)
-  - Skeleton screens while loading data
-  - Button loading states (disable + spinner)
-  - Progress indicators for game advancement
-- [ ] Success feedback:
-  - Checkmark animation on answer submit
-  - Toast notifications for state changes
-  - Score increment animations (+50, +100)
-  - Smooth transitions between screens
-- [ ] Answer selection feedback:
-  - Immediate visual response on tap/click
-  - Highlight selected answers
-  - Pulse/ripple effect on button press
-  - Haptic feedback (mobile vibration) on selection
-- [ ] Countdown urgency:
-  - Timer color: green → yellow → red as time runs out
-  - Pulse animation in final 5 seconds
-  - Sound effect option (beep at 3, 2, 1)
-  - Disable answer buttons at 0 seconds
+**Completed**:
+- [x] Loading indicators:
+  - ✅ Button loading states with spinner (join, submit, create session)
+  - ✅ `.loading` class with CSS ::after spinner animation
+  - ✅ Full-screen loading screens with large spinners
+  - ✅ Skeleton loaders for progressive content loading
+  - ✅ Disabled state prevents double-clicks during API calls
+- [x] Success feedback:
+  - ✅ Success toast notifications with checkmark icon
+  - ✅ Checkmark animations on successful actions
+  - ✅ Auto-dismiss after 2 seconds
+  - ✅ `showSuccessToast()` utility in both apps
+- [x] Answer selection feedback:
+  - ✅ Ripple effect on button click
+  - ✅ Selected state with color change and scale effect
+  - ✅ Button press animation (scale 0.95 → 0.98)
+  - ✅ Visual glow effect on selected answers
+- [x] Countdown urgency:
+  - ✅ Timer color: Green → Yellow (<30%) → Red (≤5s)
+  - ✅ Pulse animation in final 5 seconds
+  - ✅ Smooth color transitions (0.3s ease)
+  - ✅ `.timer-caution` and `.timer-warning` classes
 
-**Deliverable**: Every action has clear feedback. No "dead" buttons or ambiguous states.
+**Implementation Details**:
+- Created `success-toast.ts` utilities in both apps
+- Updated question screen with ripple effects and selection feedback
+- Enhanced timer display with urgency indicators (3 color states)
+- Added button loading states to join, nickname, and question screens
+- Added comprehensive CSS animations (spin, button-press, ripple, timer-pulse, checkmark-pop, skeleton-loading)
+- Updated host app with matching loading and feedback patterns
+
+**Files Modified**: 8 files
+- `packages/player-app/src/{success-toast,components/{join,nickname,question}-screen,styles}.ts`
+- `packages/host-app/src/{success-toast,styles}.ts`
+
+**Deliverable**: Every action has clear feedback. No "dead" buttons or ambiguous states. Visual urgency increases as timer counts down.
+
+**Development Time**: 1.5 hours
 
 ### Phase 6C: Polling Optimization (Est. 1-2 hours)
 

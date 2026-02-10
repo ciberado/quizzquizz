@@ -161,9 +161,13 @@ export class NicknameScreen extends BaseComponent {
   private setLoading(loading: boolean): void {
     if (this.submitButton) {
       this.submitButton.disabled = loading;
-      this.submitButton.innerHTML = loading
-        ? '<span class="spinner"></span> Joining...'
-        : 'Continue';
+      if (loading) {
+        this.submitButton.classList.add('loading');
+        this.submitButton.textContent = 'Joining...';
+      } else {
+        this.submitButton.classList.remove('loading');
+        this.submitButton.textContent = 'Continue';
+      }
     }
     if (this.nicknameInput) {
       this.nicknameInput.disabled = loading;

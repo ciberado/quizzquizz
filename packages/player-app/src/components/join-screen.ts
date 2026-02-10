@@ -111,9 +111,13 @@ export class JoinScreen extends BaseComponent {
   private setLoading(loading: boolean): void {
     if (this.submitButton) {
       this.submitButton.disabled = loading;
-      this.submitButton.innerHTML = loading
-        ? '<span class="spinner"></span> Joining...'
-        : 'Join Quiz';
+      if (loading) {
+        this.submitButton.classList.add('loading');
+        this.submitButton.textContent = 'Joining...';
+      } else {
+        this.submitButton.classList.remove('loading');
+        this.submitButton.textContent = 'Join Quiz';
+      }
     }
     if (this.pinInput) {
       this.pinInput.disabled = loading;
