@@ -7,6 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest --run",
+    "test:coverage": "vitest --coverage",
     "clean": "rm -rf dist *.tsbuildinfo",
     "lint": "eslint src --ext .ts"
   },
@@ -14,7 +18,11 @@
     "@quizzquizz/common": "*"
   },
   "devDependencies": {
+    "@vitest/ui": "^1.0.0",
+    "happy-dom": "^12.10.3",
+    "jsdom": "^23.0.0",
     "typescript": "^5.3.3",
-    "vite": "^5.0.12"
+    "vite": "^5.0.12",
+    "vitest": "^1.0.0"
   }
 }

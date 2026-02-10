@@ -1,0 +1,297 @@
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { api, ApiError } from './api-client';
+
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch as any;
+
+describe('API Client', () => {
+  beforeEach(() => {
+    mockFetch.mockClear();
+  });
+
+  afterEach(() => {
+    mockFetch.mockReset();
+  });
+
+  describe('Error Handling', () => {
+    it('should throw ApiError on non-200 response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({ error: 'Session not found' }),
+      });
+
+      await expect(api.getQuestionBanks()).rejects.toThrow(ApiError);
+    });
+
+    it('should include error data in ApiError', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({ error: 'Invalid question bank ID' }),
+      });
+
+      try {
+        await api.createSession('invalid-id');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).status).toBe(400);
+        expect((error as ApiError).data).toEqual({ error: 'Invalid question bank ID' });
+      }
+    });
+
+    it('should handle network errors', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(api.getQuestionBanks()).rejects.toThrow(ApiError);
+    });
+
+    it('should handle non-JSON error responses', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => {
+          throw new Error('Not JSON');
+        },
+        text: async () => 'Server error occurred',
+      });
+
+      await expect(api.getQuestionBanks()).rejects.toThrow(ApiError);
+    });
+  });
+
+  describe('Question Banks', () => {
+    it('should fetch question banks', async () => {
+      const mockBanks = [
+        { id: 'bank-1', name: 'General Knowledge', questions: [] },
+        { id: 'bank-2', name: 'Science', questions: [] },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBanks,
+      });
+
+      const result = await api.getQuestionBanks();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/question-banks',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+      expect(result).toEqual(mockBanks);
+    });
+  });
+
+  describe('Session Management', () => {
+    it('should create a session', async () => {
+      const mockResponse = {
+        id: 'session-123',
+        pin: '654321',
+        hostToken: 'token-abc',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await api.createSession('bank-1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ questionBankId: 'bank-1' }),
+        })
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should get session with host token', async () => {
+      const mockSession = {
+        id: 'session-123',
+        pin: '654321',
+        status: 'lobby',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSession,
+      });
+
+      const result = await api.getSession('session-123', 'token-abc');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Host-Token': 'token-abc',
+          }),
+        })
+      );
+      expect(result).toEqual(mockSession);
+    });
+
+    it('should delete session with host token', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      await api.deleteSession('session-123', 'token-abc');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'X-Host-Token': 'token-abc',
+          }),
+        })
+      );
+    });
+  });
+
+  describe('Game Control', () => {
+    it('should start quiz with host token', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      await api.startQuiz('session-123', 'token-abc');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123/start',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Host-Token': 'token-abc',
+          }),
+        })
+      );
+    });
+
+    it('should advance to next question', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      await api.nextQuestion('session-123', 'token-abc');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123/next',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Host-Token': 'token-abc',
+          }),
+        })
+      );
+    });
+
+    it('should end quiz', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      await api.endQuiz('session-123', 'token-abc');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123/end',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Host-Token': 'token-abc',
+          }),
+        })
+      );
+    });
+  });
+
+  describe('Player Data', () => {
+    it('should get players in session', async () => {
+      const mockPlayers = [
+        { id: 'player-1', nickname: 'Alice', score: 100 },
+        { id: 'player-2', nickname: 'Bob', score: 50 },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockPlayers,
+      });
+
+      const result = await api.getPlayers('session-123');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123/players',
+        expect.any(Object)
+      );
+      expect(result).toEqual(mockPlayers);
+    });
+
+    it('should get leaderboard', async () => {
+      const mockLeaderboard = {
+        entries: [
+          { playerId: 'player-1', nickname: 'Alice', score: 500, rank: 1 },
+          { playerId: 'player-2', nickname: 'Bob', score: 300, rank: 2 },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockLeaderboard,
+      });
+
+      const result = await api.getLeaderboard('session-123');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123/leaderboard',
+        expect.any(Object)
+      );
+      expect(result).toEqual(mockLeaderboard);
+    });
+  });
+
+  describe('Game State', () => {
+    it('should get game state with host token', async () => {
+      const mockState = {
+        status: 'playing',
+        currentQuestionIndex: 2,
+        currentQuestion: {
+          id: 'q3',
+          text: 'What is 2+2?',
+          answers: [],
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockState,
+      });
+
+      const result = await api.getGameState('session-123', 'token-abc');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/sessions/session-123/state',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Host-Token': 'token-abc',
+          }),
+        })
+      );
+      expect(result).toEqual(mockState);
+    });
+  });
+});

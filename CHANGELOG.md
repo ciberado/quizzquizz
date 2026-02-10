@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-10
 
+### Added (Host App Unit Testing)
+- **Comprehensive Unit Test Suite**: 48+ tests covering host app core functionality
+- Vitest configuration with jsdom environment for host app (`packages/host-app/vitest.config.ts`)
+- Test setup with localStorage mocking and DOM cleanup (`packages/host-app/src/test-setup.ts`)
+- Router tests: Pattern matching, navigation, query parameter parsing (`packages/host-app/src/router.test.ts`)
+- State management tests: localStorage persistence, subscriptions, immutability (`packages/host-app/src/state.test.ts`)
+- API client tests: Error handling, all endpoint methods, authentication (`packages/host-app/src/api-client.test.ts`)
+- Component tests: Lifecycle hooks, event handling, rendering (`packages/host-app/src/components/components.test.ts`)
+- Test scripts: `npm test`, `npm run test:run`, `npm run test:ui`, `npm run test:coverage`
+
 ### Added (Phase 5B - Lobby & Player Management)
 - **Lobby Screen Component**: Large PIN display and live player list
 - Host lobby screen with projector-optimized 120px PIN display (`packages/host-app/src/components/lobby-screen.ts`)
