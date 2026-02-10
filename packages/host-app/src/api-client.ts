@@ -190,7 +190,7 @@ export const api = {
   /**
    * Get leaderboard
    */
-  async getLeaderboard(sessionId: string): Promise<any> {
-    return apiRequest<any>(`/api/sessions/${sessionId}/leaderboard`);
+  async getLeaderboard(sessionId: string): Promise<{ leaderboard: any[] }> {
+    return apiRequest<{ leaderboard: any[] }>(`/api/sessions/${sessionId}/leaderboard`);
   },
 };
