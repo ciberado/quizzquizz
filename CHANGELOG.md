@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Linter Errors**: Fixed all ESLint errors across all packages (11 files)
+  - Removed unused imports (generateId, generatePin, z) from API server tests
+  - Replaced all `any` types with proper TypeScript types throughout codebase
+  - Fixed lexical declaration in switch case (wrapped in braces)
+  - Proper type assertions for test mocks and error handling
+  - Result: 0 errors, only non-null-assertion warnings remaining
+  - Files: Multiple files across api-server, host-app, player-app, question-bank packages
+
 - **Host Answered Count Display**: Fixed misleading "0/2 answered" always showing 0
   - Problem: Host screen showed "0/X answered" but count was hardcoded to 0 (TODO comment)
   - This was misleading UI showing data that wasn't being tracked
