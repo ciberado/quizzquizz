@@ -2,11 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from '../routes/sessions';
 import playerRoutes from '../routes/players';
-import { initDatabase, db } from '../db';
-import { sessions, players } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
+import { generateId, generatePin } from '@quizzquizz/common';
 
 const app = new Hono();
 app.route('/api/sessions', sessionRoutes);
@@ -27,9 +26,10 @@ async function createSession() {
 }
 
 describe('Player Routes', () => {
-  beforeAll(() => {
-    process.env.DB_PATH = ':memory:';
-    initDatabase();
+  beforeAll(async () => {
+    await resetPrismaInstance();
+    process.env.DATABASE_URL = 'file::memory:?cache=shared';
+    await initDatabase();
 
     // Create a sample question bank for testing
     const sampleBank: QuestionBank = {
@@ -59,8 +59,8 @@ describe('Player Routes', () => {
   });
 
   beforeEach(async () => {
-    await db.delete(players);
-    await db.delete(sessions);
+    await getPrisma().player.deleteMany({});
+    await getPrisma().session.deleteMany({});
   });
 
   describe('POST /api/sessions/join', () => {
@@ -185,8 +185,8 @@ describe('Player Routes', () => {
         body: JSON.stringify({ pin: session.pin, nickname: 'Player2' }),
       });
       const player2 = await res2.json();
-      await db.update(players).set({ score: 100 }).where(eq(players.id, player1.playerId));
-      await db.update(players).set({ score: 200 }).where(eq(players.id, player2.playerId));
+      await getPrisma().player.update({ where: { id: player1.playerId }, data: { score: 100 } });
+      await getPrisma().player.update({ where: { id: player2.playerId }, data: { score: 200 } });
       const res = await request(`/api/sessions/${session.id}/players`);
       const data = await res.json();
       expect(data.players[0].nickname).toBe('Player2');

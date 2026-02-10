@@ -15,16 +15,14 @@
   "dependencies": {
     "@hono/node-server": "^1.19.9",
     "@hono/zod-validator": "^0.2.1",
+    "@prisma/client": "^6.19.2",
     "@quizzquizz/common": "0.0.0",
     "@quizzquizz/question-bank": "0.0.0",
-    "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.29.3",
-    "hono": "^4.0.0"
+    "hono": "^4.0.0",
+    "prisma": "^6.19.2"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.9",
     "@types/node": "^20.11.5",
-    "drizzle-kit": "^0.20.13",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.2"

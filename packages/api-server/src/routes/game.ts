@@ -1,9 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { db } from '../db';
-import { sessions, players, playerAnswers } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { getPrisma } from '../db';
 import { generateId, calculateScore, isAnswerCorrect } from '@quizzquizz/common';
 import { questionBanks } from '../state';
 
@@ -20,8 +18,8 @@ gameRoutes.get('/:sessionId/state', async (c) => {
 
   try {
     // Verify session exists
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -29,11 +27,11 @@ gameRoutes.get('/:sessionId/state', async (c) => {
     }
 
     // Verify player is in this session
-    const player = await db.query.players.findFirst({
-      where: and(
-        eq(players.id, playerId),
-        eq(players.sessionId, sessionId)
-      ),
+    const player = await getPrisma().player.findFirst({
+      where: {
+        id: playerId,
+        sessionId,
+      },
     });
 
     if (!player) {
@@ -55,7 +53,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
       
       if (currentQuestion && session.questionStartedAt) {
         const timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
-        const elapsed = (Date.now() - session.questionStartedAt) / 1000;
+        const elapsed = (Date.now() - Number(session.questionStartedAt)) / 1000;
         timeRemaining = Math.max(0, timeLimit - elapsed);
       }
     }
@@ -96,8 +94,8 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerSchema), as
 
   try {
     // Verify session exists and is playing
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -113,11 +111,11 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerSchema), as
     }
 
     // Verify player is in this session
-    const player = await db.query.players.findFirst({
-      where: and(
-        eq(players.id, playerId),
-        eq(players.sessionId, sessionId)
-      ),
+    const player = await getPrisma().player.findFirst({
+      where: {
+        id: playerId,
+        sessionId,
+      },
     });
 
     if (!player) {
@@ -135,11 +133,11 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerSchema), as
       return c.json({ error: 'Question not found' }, 404);
     }
 
-    const existingAnswer = await db.query.playerAnswers.findFirst({
-      where: and(
-        eq(playerAnswers.playerId, playerId),
-        eq(playerAnswers.questionId, currentQuestion.id)
-      ),
+    const existingAnswer = await getPrisma().playerAnswer.findFirst({
+      where: {
+        playerId,
+        questionId: currentQuestion.id,
+      },
     });
 
     if (existingAnswer) {
@@ -150,27 +148,30 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerSchema), as
     const isCorrect = isAnswerCorrect(selectedAnswerIds, currentQuestion.correctAnswerIds);
     const timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
     const timeTaken = session.questionStartedAt
-      ? (Date.now() - session.questionStartedAt) / 1000
+      ? (Date.now() - Number(session.questionStartedAt)) / 1000
       : timeLimit;
     const score = calculateScore(isCorrect, timeTaken, timeLimit);
 
     // Store answer
     const answerId = generateId();
-    await db.insert(playerAnswers).values({
-      id: answerId,
-      playerId,
-      questionId: currentQuestion.id,
-      selectedAnswerIds: JSON.stringify(selectedAnswerIds),
-      submittedAt: Date.now(),
-      score,
+    await getPrisma().playerAnswer.create({
+      data: {
+        id: answerId,
+        playerId,
+        questionId: currentQuestion.id,
+        selectedAnswerIds: JSON.stringify(selectedAnswerIds),
+        isCorrect,
+        submittedAt: BigInt(Date.now()),
+        score,
+      },
     });
 
     // Update player score
     const newScore = player.score + score;
-    await db
-      .update(players)
-      .set({ score: newScore })
-      .where(eq(players.id, playerId));
+    await getPrisma().player.update({
+      where: { id: playerId },
+      data: { score: newScore },
+    });
 
     return c.json({
       correct: isCorrect,

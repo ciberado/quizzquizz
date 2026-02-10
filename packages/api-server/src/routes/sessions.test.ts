@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from '../routes/sessions';
-import { initDatabase, db } from '../db';
-import { sessions, players } from '../db/schema';
+import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
 
@@ -15,9 +14,10 @@ async function request(path: string, options: RequestInit = {}) {
 }
 
 describe('Session Routes', () => {
-  beforeAll(() => {
-    process.env.DB_PATH = ':memory:';
-    initDatabase();
+  beforeAll(async () => {
+    await resetPrismaInstance();
+    process.env.DATABASE_URL = 'file::memory:?cache=shared';
+    await initDatabase();
 
     // Create a sample question bank for testing
     const sampleBank: QuestionBank = {
@@ -59,8 +59,8 @@ describe('Session Routes', () => {
   });
 
   beforeEach(async () => {
-    await db.delete(players);
-    await db.delete(sessions);
+    await getPrisma().player.deleteMany({});
+    await getPrisma().session.deleteMany({});
   });
 
   describe('POST /api/sessions', () => {
@@ -424,11 +424,13 @@ describe('Session Routes', () => {
       const { id } = await createRes.json();
 
       // Add players with different scores
-      await db.insert(players).values([
-        { id: 'p1', sessionId: id, nickname: 'Alice', score: 500 },
-        { id: 'p2', sessionId: id, nickname: 'Bob', score: 800 },
-        { id: 'p3', sessionId: id, nickname: 'Charlie', score: 300 },
-      ]);
+      await getPrisma().player.createMany({
+        data: [
+          { id: 'p1', sessionId: id, nickname: 'Alice', score: 500, joinedAt: BigInt(Date.now()) },
+          { id: 'p2', sessionId: id, nickname: 'Bob', score: 800, joinedAt: BigInt(Date.now()) },
+          { id: 'p3', sessionId: id, nickname: 'Charlie', score: 300, joinedAt: BigInt(Date.now()) },
+        ],
+      });
 
       const res = await request(`/api/sessions/${id}/leaderboard`);
 

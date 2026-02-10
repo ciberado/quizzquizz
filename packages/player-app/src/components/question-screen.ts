@@ -246,9 +246,7 @@ export class QuestionScreen extends BaseComponent {
             Submit Answer
           </button>
           <p class="hint">
-            ${this.currentQuestion.correctAnswerIds.length > 1 
-              ? 'Select all correct answers' 
-              : 'Select one answer'}
+            Select one or more answers
           </p>
         </div>
 

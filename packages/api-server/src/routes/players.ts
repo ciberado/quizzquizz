@@ -1,9 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { db } from '../db';
-import { sessions, players } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { getPrisma } from '../db';
 import { generateId } from '@quizzquizz/common';
 
 const playerRoutes = new Hono();
@@ -20,8 +18,8 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
 
   try {
     // Find session by PIN
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.pin, pin),
+    const session = await getPrisma().session.findUnique({
+      where: { pin },
     });
 
     if (!session) {
@@ -33,9 +31,11 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
     }
 
     // Check for duplicate nickname in this session
-    const existingPlayer = await db.query.players.findFirst({
-      where: (players, { and, eq }) =>
-        and(eq(players.sessionId, session.id), eq(players.nickname, nickname)),
+    const existingPlayer = await getPrisma().player.findFirst({
+      where: {
+        sessionId: session.id,
+        nickname,
+      },
     });
 
     if (existingPlayer) {
@@ -44,12 +44,14 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
 
     // Create player
     const playerId = generateId();
-    await db.insert(players).values({
-      id: playerId,
-      sessionId: session.id,
-      nickname,
-      score: 0,
-      joinedAt: Date.now(),
+    await getPrisma().player.create({
+      data: {
+        id: playerId,
+        sessionId: session.id,
+        nickname,
+        score: 0,
+        joinedAt: BigInt(Date.now()),
+      },
     });
 
     return c.json(
@@ -72,8 +74,8 @@ playerRoutes.get('/:sessionId/players', async (c) => {
 
   try {
     // Verify session exists
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -81,9 +83,12 @@ playerRoutes.get('/:sessionId/players', async (c) => {
     }
 
     // Get all players
-    const sessionPlayers = await db.query.players.findMany({
-      where: eq(players.sessionId, sessionId),
-      orderBy: (players, { desc }) => [desc(players.score), players.joinedAt],
+    const sessionPlayers = await getPrisma().player.findMany({
+      where: { sessionId },
+      orderBy: [
+        { score: 'desc' },
+        { joinedAt: 'asc' },
+      ],
     });
 
     return c.json({
@@ -91,7 +96,7 @@ playerRoutes.get('/:sessionId/players', async (c) => {
         id: p.id,
         nickname: p.nickname,
         score: p.score,
-        joinedAt: p.joinedAt,
+        joinedAt: Number(p.joinedAt),
       })),
     });
   } catch (error) {

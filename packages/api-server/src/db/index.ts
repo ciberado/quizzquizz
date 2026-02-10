@@ -1,67 +1,97 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from './schema';
+import { PrismaClient } from '@prisma/client';
 
-const dbPath = process.env.DB_PATH || './quizzquizz.db';
+// Prisma Client instance - lazily initialized
+let prismaInstance: PrismaClient | null = null;
 
-// Create database connection
-const sqlite = new Database(dbPath);
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+}
 
-// Enable foreign keys
-sqlite.pragma('foreign_keys = ON');
+// Getter to always access current instance (creates on first access)
+export function getPrisma(): PrismaClient {
+  if (!prismaInstance) {
+    prismaInstance = createPrismaClient();
+  }
+  return prismaInstance;
+}
 
-// Create drizzle instance
-export const db = drizzle(sqlite, { schema });
+// Force recreate Prisma instance (useful for tests that change DATABASE_URL)
+export async function resetPrismaInstance() {
+  if (prismaInstance) {
+    await prismaInstance.$disconnect();
+    prismaInstance = null;
+  }
+}
 
-// Type for the sqlite connection
-export type SqliteConnection = Database.Database;
+// Export lazy getters for compatibility
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get: (_, prop) => getPrisma()[prop as keyof PrismaClient],
+});
 
-// Initialize database schema
-export function initDatabase() {
+// Legacy export name for compatibility during migration  
+export const db = prisma;
+
+// Initialize database connection
+export async function initDatabase() {
   console.log('📦 Initializing database...');
   
-  // Create sessions table
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      pin TEXT NOT NULL UNIQUE,
-      host_token TEXT NOT NULL,
-      question_bank_id TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'lobby',
-      current_question_index INTEGER NOT NULL DEFAULT -1,
-      question_started_at INTEGER,
-      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    )
-  `);
-
-  // Create players table
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS players (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-      nickname TEXT NOT NULL,
-      score INTEGER NOT NULL DEFAULT 0,
-      joined_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    )
-  `);
-
-  // Create player_answers table
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS player_answers (
-      id TEXT PRIMARY KEY,
-      player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      question_id TEXT NOT NULL,
-      selected_answer_ids TEXT NOT NULL,
-      submitted_at INTEGER NOT NULL,
-      score INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-
-  console.log('✅ Database initialized');
+  // Get or create Prisma instance (will use current DATABASE_URL)
+  const client = getPrisma();
+  
+  // With Prisma, schema is managed via `prisma db push` or migrations
+  // For testing with in-memory database, we need to create tables manually
+  if (process.env.DATABASE_URL?.includes(':memory:')) {
+    // Enable foreign key constraints
+    await client.$executeRawUnsafe(`PRAGMA foreign_keys = ON`);
+    
+    // Drop existing tables to ensure clean schema (important with shared cache)
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS player_answers`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS players`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS sessions`);
+    
+    // Create tables for in-memory SQLite with correct BIGINT types
+    await client.$executeRawUnsafe(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        pin TEXT NOT NULL UNIQUE,
+        host_token TEXT NOT NULL,
+        question_bank_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'lobby',
+        current_question_index INTEGER NOT NULL DEFAULT -1,
+        question_started_at BIGINT,
+        created_at BIGINT NOT NULL DEFAULT 0
+      )
+    `);
+    
+    await client.$executeRawUnsafe(`
+      CREATE TABLE players (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        nickname TEXT NOT NULL,
+        score INTEGER NOT NULL DEFAULT 0,
+        joined_at BIGINT NOT NULL DEFAULT 0
+      )
+    `);
+    
+    await client.$executeRawUnsafe(`
+      CREATE TABLE player_answers (
+        id TEXT PRIMARY KEY,
+        player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        question_id TEXT NOT NULL,
+        selected_answer_ids TEXT NOT NULL,
+        is_correct BOOLEAN NOT NULL,
+        score INTEGER NOT NULL,
+        submitted_at BIGINT NOT NULL DEFAULT 0
+      )
+    `);
+  }
+  console.log('✅ Database initialized (using Prisma)');
 }
 
-// Don't export sqlite directly to avoid type issues
-// Export a function to get the raw connection if needed
-export function getSqlite(): SqliteConnection {
-  return sqlite;
+// Cleanup function for graceful shutdown
+export async function disconnectDatabase() {
+  await prismaInstance.$disconnect();
 }
+

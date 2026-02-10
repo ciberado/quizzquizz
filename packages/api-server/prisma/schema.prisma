@@ -1,0 +1,56 @@
+// Prisma schema for QuizzQuizz
+// Migrated from Drizzle ORM + better-sqlite3
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                   String   @id
+  pin                  String   @unique
+  hostToken            String   @map("host_token")
+  questionBankId       String   @map("question_bank_id")
+  status               String   @default("lobby") // 'lobby' | 'playing' | 'finished'
+  currentQuestionIndex Int      @default(-1) @map("current_question_index")
+  questionStartedAt    BigInt?  @map("question_started_at") // timestamp in ms
+  createdAt            BigInt   @default(0) @map("created_at")
+
+  // Relations
+  players Player[]
+
+  @@map("sessions")
+}
+
+model Player {
+  id        String   @id
+  sessionId String   @map("session_id")
+  nickname  String
+  score     Int      @default(0)
+  joinedAt  BigInt   @default(0) @map("joined_at")
+
+  // Relations
+  session Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answers PlayerAnswer[]
+
+  @@map("players")
+}
+
+model PlayerAnswer {
+  id                String  @id
+  playerId          String  @map("player_id")
+  questionId        String  @map("question_id")
+  selectedAnswerIds String  @map("selected_answer_ids") // JSON array as string
+  isCorrect         Boolean @map("is_correct")
+  submittedAt       BigInt  @map("submitted_at")
+  score             Int     @default(0)
+
+  // Relations
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@map("player_answers")
+}

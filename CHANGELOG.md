@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## 2026-02-10
+
+### Fixed (Prisma Migration Edge Cases)
+- Fixed in-memory database timestamp column types (INTEGER → BIGINT) to support BigInt values
+- Added `isCorrect` field to PlayerAnswer Prisma schema (was missing after migration)
+- Implemented lazy Prisma Client initialization to respect test environment DATABASE_URL
+- Added `resetPrismaInstance()` function for test isolation
+- Fixed table recreation in shared cache mode by dropping tables before creating
+- Regenerated Prisma Client after schema updates
+- **Test Status**: 45/47 tests passing (96%) - 2 edge case failures remaining
+
+### Changed (Major Refactor - Database ORM Migration)
+- **Replaced better-sqlite3 + Drizzle ORM with Prisma ORM** (Feb 10, 2026)
+- Migrated from Drizzle v0.29 to Prisma v6.19 for better TypeScript support and developer experience
+- Converted all database operations from Drizzle query API to Prisma Client
+- Updated schema definition from Drizzle schema files to Prisma schema language
+- Fixed BigInt serialization issues in API responses (timestamps now properly converted to numbers)
+- Updated test suite to use Prisma-compatible in-memory database initialization
+
+### Technical (Database Migration)
+- Database schema now defined in `prisma/schema.prisma` with declarative syntax
+- Removed `src/db/schema.ts` (replaced by Prisma-generated types)
+- Updated `src/db/index.ts` to export `PrismaClient` instance
+- Added raw SQL execution for in-memory test database initialization
+- All route handlers converted to Prisma Client API:
+  - `db.insert(table).values()` → `prisma.table.create({ data: {} })`
+  - `db.update(table).set().where()` → `prisma.table.update({ where: {}, data: {} })`
+  - `db.delete(table).where()` → `prisma.table.delete({ where: {} })`
+  - `db.query.table.findFirst()` → `prisma.table.findFirst({ where: {} })`
+  - `db.query.table.findMany()` → `prisma.table.findMany({ where: {} })`
+- Timestamp fields (createdAt, joinedAt, questionStartedAt) now use BigInt type
+- Added BigInt → Number conversion in API responses for JSON serialization
+- Updated all test files with Prisma-compatible database operations
+- Removed dependencies: better-sqlite3, drizzle-orm, drizzle-kit
+- Added dependencies: @prisma/client@^6.19, prisma@^6.19
+
+### Configuration
+- Added `/workspaces/quizzquizz/packages/api-server/prisma/schema.prisma` schema file
+- Added `/workspaces/quizzquizz/packages/api-server/.env` with DATABASE_URL
+- Test environment now uses `file::memory:?cache=shared` for in-memory SQLite
+- Production uses file-based SQLite via `DATABASE_URL` environment variable
+
+### Breaking Changes
+- Database initialization is now async: `await initDatabase()` required
+- Schema changes must be applied via `npx prisma db push` or migrations
+- Type generation via `npx prisma generate` needed after schema changes
+- Environment variable changed from `DB_PATH` to `DATABASE_URL`
+
+### Migration Notes
+- Prisma provides better TypeScript inference and autocomplete
+- Eliminates need for better-sqlite3 native module rebuilds (frequent issue in dev containers)
+- Cleaner query API with intuitive method chaining
+- Built-in migration system for schema versioning
+- Better error messages and validation
+- Some test failures remain (5/47) - to be addressed in follow-up commit
+
 ## 2026-02-09
 
 ### Changed (Documentation)

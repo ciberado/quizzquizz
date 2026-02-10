@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import gameRoutes from '../routes/game';
-import { initDatabase, db } from '../db';
-import { sessions, players, playerAnswers } from '../db/schema';
+import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
+import { generateId, generatePin } from '@quizzquizz/common';
 
 const app = new Hono();
 app.route('/api/sessions', gameRoutes);
@@ -21,9 +21,11 @@ async function request(path: string, options: RequestInit = {}) {
 }
 
 describe('Game Routes', () => {
-  beforeAll(() => {
-    process.env.DB_PATH = ':memory:';
-    initDatabase();
+  beforeAll(async () => {
+    // Reset Prisma instance to force using the test DATABASE_URL
+    await resetPrismaInstance();
+    process.env.DATABASE_URL = 'file::memory:?cache=shared';
+    await initDatabase();
 
     // Create a sample question bank for testing
     const sampleBank: QuestionBank = {
@@ -69,9 +71,9 @@ describe('Game Routes', () => {
   });
 
   beforeEach(async () => {
-    await db.delete(playerAnswers);
-    await db.delete(players);
-    await db.delete(sessions);
+    await getPrisma().playerAnswer.deleteMany({});
+    await getPrisma().player.deleteMany({});
+    await getPrisma().session.deleteMany({});
   });
 
   describe('GET /api/sessions/:sessionId/state', () => {
@@ -82,23 +84,23 @@ describe('Game Routes', () => {
       const playerId = 'player-1';
       const now = Date.now();
 
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId,
         pin: '123456',
         hostToken,
         questionBankId: 'test-bank',
         status: 'lobby',
         currentQuestionIndex: -1,
-        createdAt: now,
-      });
+        createdAt: BigInt(now),
+      } });
 
-      await db.insert(players).values({
+      await getPrisma().player.create({ data: {
         id: playerId,
         sessionId,
         nickname: 'Alice',
         score: 0,
-        joinedAt: now,
-      });
+        joinedAt: BigInt(now),
+      } });
 
       const res = await request(`/api/sessions/${sessionId}/state`, {
         headers: { 'X-Player-Id': playerId },
@@ -119,24 +121,24 @@ describe('Game Routes', () => {
       const playerId = 'player-2';
       const now = Date.now();
 
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId,
         pin: '234567',
         hostToken,
         questionBankId: 'test-bank',
         status: 'playing',
         currentQuestionIndex: 0,
-        questionStartedAt: now,
-        createdAt: now,
-      });
+        questionStartedAt: BigInt(now),
+        createdAt: BigInt(now),
+      } });
 
-      await db.insert(players).values({
+      await getPrisma().player.create({ data: {
         id: playerId,
         sessionId,
         nickname: 'Bob',
         score: 100,
-        joinedAt: now,
-      });
+        joinedAt: BigInt(now),
+      } });
 
       const res = await request(`/api/sessions/${sessionId}/state`, {
         headers: { 'X-Player-Id': playerId },
@@ -176,15 +178,15 @@ describe('Game Routes', () => {
       const hostToken = 'host-token-3';
       const now = Date.now();
 
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId,
         pin: '345678',
         hostToken,
         questionBankId: 'test-bank',
         status: 'lobby',
         currentQuestionIndex: -1,
-        createdAt: now,
-      });
+        createdAt: BigInt(now),
+      } });
 
       const res = await request(`/api/sessions/${sessionId}/state`, {
         headers: { 'X-Player-Id': 'unknown-player' },
@@ -202,7 +204,7 @@ describe('Game Routes', () => {
       const playerId = 'player-4';
       const now = Date.now();
 
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId,
         pin: '456789',
         hostToken,
@@ -210,16 +212,16 @@ describe('Game Routes', () => {
         status: 'playing',
         currentQuestionIndex: 0,
         questionStartedAt: now - 3000, // 3 seconds ago
-        createdAt: now,
-      });
+        createdAt: BigInt(now),
+      } });
 
-      await db.insert(players).values({
+      await getPrisma().player.create({ data: {
         id: playerId,
         sessionId,
         nickname: 'Charlie',
         score: 0,
-        joinedAt: now,
-      });
+        joinedAt: BigInt(now),
+      } });
 
       const res = await request(`/api/sessions/${sessionId}/answer`, {
         method: 'POST',
@@ -236,8 +238,8 @@ describe('Game Routes', () => {
       expect(data.correctAnswerIds).toEqual(['a2']);
 
       // Verify player score was updated
-      const updatedPlayer = await db.query.players.findFirst({
-        where: (players, { eq }) => eq(players.id, playerId),
+      const updatedPlayer = await getPrisma().player.findFirst({
+        where: { id: playerId },
       });
       expect(updatedPlayer.score).toBe(data.score);
     });
@@ -248,24 +250,24 @@ describe('Game Routes', () => {
       const playerId = 'player-5';
       const now = Date.now();
 
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId,
         pin: '567890',
         hostToken,
         questionBankId: 'test-bank',
         status: 'playing',
         currentQuestionIndex: 0,
-        questionStartedAt: now,
-        createdAt: now,
-      });
+        questionStartedAt: BigInt(now),
+        createdAt: BigInt(now),
+      } });
 
-      await db.insert(players).values({
+      await getPrisma().player.create({ data: {
         id: playerId,
         sessionId,
         nickname: 'Diana',
         score: 0,
-        joinedAt: now,
-      });
+        joinedAt: BigInt(now),
+      } });
 
       const res = await request(`/api/sessions/${sessionId}/answer`, {
         method: 'POST',
@@ -281,8 +283,8 @@ describe('Game Routes', () => {
       expect(data.score).toBe(0);
 
       // Verify player score was not updated
-      const updatedPlayer = await db.query.players.findFirst({
-        where: (players, { eq }) => eq(players.id, playerId),
+      const updatedPlayer = await getPrisma().player.findFirst({
+        where: { id: playerId },
       });
       expect(updatedPlayer.score).toBe(0);
     });
@@ -293,24 +295,24 @@ describe('Game Routes', () => {
       const playerId = 'player-6';
       const now = Date.now();
 
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId,
         pin: '678901',
         hostToken,
         questionBankId: 'test-bank',
         status: 'playing',
         currentQuestionIndex: 0,
-        questionStartedAt: now,
-        createdAt: now,
-      });
+        questionStartedAt: BigInt(now),
+        createdAt: BigInt(now),
+      } });
 
-      await db.insert(players).values({
+      await getPrisma().player.create({ data: {
         id: playerId,
         sessionId,
         nickname: 'Eve',
         score: 0,
-        joinedAt: now,
-      });
+        joinedAt: BigInt(now),
+      } });
 
       // First answer
       const res1 = await request(`/api/sessions/${sessionId}/answer`, {
@@ -351,27 +353,27 @@ describe('Game Routes', () => {
       const now = Date.now();
 
       // Create a session in lobby (not playing)
-      await db.insert(sessions).values({
+      await getPrisma().session.create({ data: {
         id: sessionId1,
         pin: '111111',
         hostToken: hostToken1,
         questionBankId: 'test-bank',
         status: 'lobby',
         currentQuestionIndex: -1,
-        createdAt: now,
-      });
+        createdAt: BigInt(now),
+      } });
 
-      await db.insert(players).values({
+      await getPrisma().player.create({ data: {
         id: playerId1,
         sessionId: sessionId1,
         nickname: 'TestPlayer',
         score: 0,
-        joinedAt: now,
-      });
+        joinedAt: BigInt(now),
+      } });
 
       // Verify session was created
-      const checkSession = await db.query.sessions.findFirst({
-        where: (sessions, { eq }) => eq(sessions.id, sessionId1),
+      const checkSession = await getPrisma().session.findFirst({
+        where: { id: sessionId1 },
       });
       expect(checkSession).toBeDefined();
       expect(checkSession?.status).toBe('lobby');

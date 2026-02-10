@@ -1,9 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { db } from '../db';
-import { sessions, players } from '../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { getPrisma } from '../db';
 import { generateId, generatePin } from '@quizzquizz/common';
 import { questionBanks } from '../state';
 
@@ -24,14 +22,16 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
   const hostToken = generateId();
 
   try {
-    await db.insert(sessions).values({
-      id: sessionId,
-      pin,
-      hostToken,
-      questionBankId,
-      status: 'lobby',
-      currentQuestionIndex: -1,
-      createdAt: Date.now(),
+    await getPrisma().session.create({
+      data: {
+        id: sessionId,
+        pin,
+        hostToken,
+        questionBankId,
+        status: 'lobby',
+        currentQuestionIndex: -1,
+        createdAt: BigInt(Date.now()),
+      },
     });
 
     return c.json(
@@ -60,8 +60,8 @@ sessionRoutes.get('/:id', async (c) => {
   }
 
   try {
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -72,10 +72,14 @@ sessionRoutes.get('/:id', async (c) => {
       return c.json({ error: 'Invalid host token' }, 403);
     }
 
-    // Don't send hostToken in response
+    // Don't send hostToken in response, convert BigInt to number
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { hostToken: _, ...sessionData } = session;
-    return c.json(sessionData);
+    const { hostToken: _, createdAt, questionStartedAt, ...sessionData } = session;
+    return c.json({
+      ...sessionData,
+      createdAt: Number(createdAt),
+      questionStartedAt: questionStartedAt ? Number(questionStartedAt) : null,
+    });
   } catch (error) {
     console.error('Error fetching session:', error);
     return c.json({ error: 'Failed to fetch session' }, 500);
@@ -92,8 +96,8 @@ sessionRoutes.delete('/:id', async (c) => {
   }
 
   try {
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -104,7 +108,7 @@ sessionRoutes.delete('/:id', async (c) => {
       return c.json({ error: 'Invalid host token' }, 403);
     }
 
-    await db.delete(sessions).where(eq(sessions.id, sessionId));
+    await getPrisma().session.delete({ where: { id: sessionId } });
 
     return c.json({ message: 'Session deleted' });
   } catch (error) {
@@ -123,8 +127,8 @@ sessionRoutes.post('/:id/start', async (c) => {
   }
 
   try {
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -146,14 +150,14 @@ sessionRoutes.post('/:id/start', async (c) => {
     }
 
     // Start quiz: move to first question
-    await db
-      .update(sessions)
-      .set({
+    await getPrisma().session.update({
+      where: { id: sessionId },
+      data: {
         status: 'playing',
         currentQuestionIndex: 0,
-        questionStartedAt: Date.now(),
-      })
-      .where(eq(sessions.id, sessionId));
+        questionStartedAt: BigInt(Date.now()),
+      },
+    });
 
     return c.json({ message: 'Quiz started', currentQuestionIndex: 0 });
   } catch (error) {
@@ -172,8 +176,8 @@ sessionRoutes.post('/:id/next', async (c) => {
   }
 
   try {
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -199,14 +203,14 @@ sessionRoutes.post('/:id/next', async (c) => {
     // Check if we've reached the end
     if (nextIndex >= questionBank.questions.length) {
       // End the quiz
-      await db
-        .update(sessions)
-        .set({
+      await getPrisma().session.update({
+        where: { id: sessionId },
+        data: {
           status: 'finished',
           currentQuestionIndex: -1,
           questionStartedAt: null,
-        })
-        .where(eq(sessions.id, sessionId));
+        },
+      });
 
       return c.json({
         message: 'Quiz finished',
@@ -215,13 +219,13 @@ sessionRoutes.post('/:id/next', async (c) => {
     }
 
     // Move to next question
-    await db
-      .update(sessions)
-      .set({
+    await getPrisma().session.update({
+      where: { id: sessionId },
+      data: {
         currentQuestionIndex: nextIndex,
-        questionStartedAt: Date.now(),
-      })
-      .where(eq(sessions.id, sessionId));
+        questionStartedAt: BigInt(Date.now()),
+      },
+    });
 
     return c.json({
       message: 'Moved to next question',
@@ -243,8 +247,8 @@ sessionRoutes.post('/:id/end', async (c) => {
   }
 
   try {
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -260,14 +264,14 @@ sessionRoutes.post('/:id/end', async (c) => {
     }
 
     // End the quiz
-    await db
-      .update(sessions)
-      .set({
+    await getPrisma().session.update({
+      where: { id: sessionId },
+      data: {
         status: 'finished',
         currentQuestionIndex: -1,
         questionStartedAt: null,
-      })
-      .where(eq(sessions.id, sessionId));
+      },
+    });
 
     return c.json({ message: 'Quiz ended' });
   } catch (error) {
@@ -282,8 +286,8 @@ sessionRoutes.get('/:id/leaderboard', async (c) => {
 
   try {
     // Verify session exists
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.id, sessionId),
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
     });
 
     if (!session) {
@@ -291,9 +295,12 @@ sessionRoutes.get('/:id/leaderboard', async (c) => {
     }
 
     // Get all players ranked by score
-    const ranking = await db.query.players.findMany({
-      where: eq(players.sessionId, sessionId),
-      orderBy: [desc(players.score), players.joinedAt],
+    const ranking = await getPrisma().player.findMany({
+      where: { sessionId },
+      orderBy: [
+        { score: 'desc' },
+        { joinedAt: 'asc' },
+      ],
     });
 
     const leaderboard = ranking.map((p, index) => ({
