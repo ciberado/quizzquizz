@@ -4,6 +4,7 @@ import { state } from './state';
 
 // Import screen components
 import './components/create-session-screen';
+import './components/lobby-screen';
 
 /**
  * QuizzQuizz Host App
@@ -20,6 +21,10 @@ router.on('/', () => {
 
 router.on('/create', () => {
   showScreen('create-session-screen');
+});
+
+router.on('/lobby/:sessionId', () => {
+  showScreen('lobby-screen');
 });
 
 // Helper function to show a screen

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-10
 
+### Added (Phase 5B - Lobby & Player Management)
+- **Lobby Screen Component**: Large PIN display and live player list
+- Host lobby screen with projector-optimized 120px PIN display (`packages/host-app/src/components/lobby-screen.ts`)
+- Live player polling every 2 seconds with animated player cards
+- Player join animations with emoji avatars
+- Start Quiz button (disabled until players join)
+- Cancel Session button with confirmation dialog
+- Responsive player grid layout (auto-fill columns)
+- Player count and waiting state indicators
+
 ### Added (Phase 5A - Host App Foundation)
 - **Host App Infrastructure**: Complete foundation for host interface
 - Router with hash-based navigation (`packages/host-app/src/router.ts`)
