@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Host Answered Count Display**: Fixed misleading "0/2 answered" always showing 0
+  - Problem: Host screen showed "0/X answered" but count was hardcoded to 0 (TODO comment)
+  - This was misleading UI showing data that wasn't being tracked
+  - Solution: Implemented answer tracking in players API endpoint
+  - Players endpoint now returns `hasAnswered` boolean for current question
+  - Queries PlayerAnswer table to check if player submitted answer for current question ID
+  - Host now displays actual count: "2/5 answered" when 2 of 5 players have submitted
+  - Impact: Host can now see real-time progress of how many players have answered
+  - Files: `packages/api-server/src/routes/players.ts`, `packages/host-app/src/components/question-display-screen.ts`
+
 - **CRITICAL - Timer Desync Between Host and Players**: Fixed 10-second timer difference
   - Problem: Host timer showed 23 seconds while player timers showed 13 seconds (10 sec gap)
   - Root cause: Host used hardcoded 30-second fallback, player used question bank's default (20 seconds)

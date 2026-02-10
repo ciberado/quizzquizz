@@ -91,12 +91,39 @@ playerRoutes.get('/:sessionId/players', async (c) => {
       ],
     });
 
+    // Get current question ID if quiz is playing
+    let currentQuestionId: string | null = null;
+    if (session.status === 'playing' && session.currentQuestionIndex >= 0) {
+      // We need to get the question ID from the question bank
+      // For now, we'll query PlayerAnswer to get unique question IDs
+      // This is a workaround since question IDs are in-memory
+      const { questionBanks } = await import('../state');
+      const questionBank = questionBanks.get(session.questionBankId);
+      if (questionBank && questionBank.questions[session.currentQuestionIndex]) {
+        currentQuestionId = questionBank.questions[session.currentQuestionIndex].id;
+      }
+    }
+
+    // Get answered status for current question
+    let answeredPlayerIds = new Set<string>();
+    if (currentQuestionId) {
+      const answers = await getPrisma().playerAnswer.findMany({
+        where: {
+          questionId: currentQuestionId,
+          playerId: { in: sessionPlayers.map(p => p.id) },
+        },
+        select: { playerId: true },
+      });
+      answeredPlayerIds = new Set(answers.map(a => a.playerId));
+    }
+
     return c.json({
       players: sessionPlayers.map((p) => ({
         id: p.id,
         nickname: p.nickname,
         score: p.score,
         joinedAt: Number(p.joinedAt),
+        hasAnswered: answeredPlayerIds.has(p.id),
       })),
     });
   } catch (error) {
