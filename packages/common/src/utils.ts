@@ -18,8 +18,12 @@ export function generatePin(): string {
   let pin = '';
   
   for (let i = 0; i < 6; i++) {
-    const randomIndex = randomBytes(1)[0]! % chars.length;
-    pin += chars[randomIndex]!;
+    const randomByte = randomBytes(1)[0];
+    if (randomByte === undefined) throw new Error('Failed to generate random byte');
+    const randomIndex = randomByte % chars.length;
+    const char = chars[randomIndex];
+    if (char === undefined) throw new Error('Failed to get character');
+    pin += char;
   }
   
   return pin;

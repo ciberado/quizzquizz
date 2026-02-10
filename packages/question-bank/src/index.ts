@@ -95,7 +95,7 @@ function parseQuestion(
   const lines = section.split('\n').filter((line) => line.trim());
   if (lines.length === 0) return null;
 
-  const question: Partial<ParsedQuestion> = {
+  const question: Partial<ParsedQuestion> & { answers: Answer[]; topics: string[]; tags: string[] } = {
     id: questionId,
     answers: [],
     difficulty: 'medium',
@@ -177,8 +177,8 @@ function parseQuestion(
     const match = line.match(/^-\s+\[([x\s])\]\s+(.+)$/);
     if (match && match[1] && match[2]) {
       const [, checked, text] = match;
-      const answerId = `${questionId}_A${question.answers!.length + 1}`;
-      question.answers!.push({
+      const answerId = `${questionId}_A${question.answers.length + 1}`;
+      question.answers.push({
         id: answerId,
         text: text.trim(),
         isCorrect: checked.toLowerCase() === 'x',
@@ -186,7 +186,7 @@ function parseQuestion(
     }
   }
 
-  if (question.answers!.length === 0) {
+  if (question.answers.length === 0) {
     return null;
   }
 
@@ -315,14 +315,16 @@ export function filterQuestions(
   }
 
   if (options.topics && options.topics.length > 0) {
+    const topicsToFilter = options.topics;
     filtered = filtered.filter((q) =>
-      q.topics.some((t) => options.topics!.includes(t))
+      q.topics.some((t) => topicsToFilter.includes(t))
     );
   }
 
   if (options.tags && options.tags.length > 0) {
+    const tagsToFilter = options.tags;
     filtered = filtered.filter((q) =>
-      q.tags.some((t) => options.tags!.includes(t))
+      q.tags.some((t) => tagsToFilter.includes(t))
     );
   }
 

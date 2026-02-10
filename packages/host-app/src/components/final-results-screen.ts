@@ -41,8 +41,11 @@ export class FinalResultsScreen extends HTMLElement {
   }
 
   private async loadFinalResults() {
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) {
+      router.navigate('/');
+      return;
+    }
 
     try {
       // Get session details
@@ -113,7 +116,8 @@ export class FinalResultsScreen extends HTMLElement {
   private getRandomColor(): string {
     const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#ffd93d', '#6bcf7f', '#a29bfe'];
     const index = Math.floor(Math.random() * colors.length);
-    return colors[index]!; // Non-null assertion since we know the array is non-empty
+    const color = colors[index];
+    return color ?? colors[0] ?? '#ff6b6b'; // Fallback to known values
   }
 
   private render() {

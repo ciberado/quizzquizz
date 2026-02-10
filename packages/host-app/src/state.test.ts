@@ -70,8 +70,9 @@ describe('State Management', () => {
       
       const stored = localStorage.getItem('quizzquizz_host_state');
       expect(stored).toBeTruthy();
+      if (!stored) throw new Error('State not stored');
       
-      const parsed = JSON.parse(stored!);
+      const parsed = JSON.parse(stored);
       expect(parsed.sessionId).toBe('session-123');
       expect(parsed.pin).toBe('654321');
     });
@@ -115,7 +116,9 @@ describe('State Management', () => {
       state.clearState();
       
       const stored = localStorage.getItem('quizzquizz_host_state');
-      const parsed = JSON.parse(stored!);
+      expect(stored).toBeTruthy();
+      if (!stored) throw new Error('State not stored');
+      const parsed = JSON.parse(stored);
       expect(parsed.sessionId).toBeNull();
     });
   });

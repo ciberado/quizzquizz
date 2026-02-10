@@ -81,12 +81,13 @@ What is the answer?
     const bank = parseQuestionBank(markdown, 'test');
     const q = bank.questions[0];
     expect(q).toBeDefined();
+    if (!q) throw new Error('Question not defined');
 
-    expect(q!.id).toBe('Q001');
-    expect(q!.difficulty).toBe('hard');
-    expect(q!.topics).toEqual(['advanced']);
-    expect(q!.tags).toEqual(['complex', 'tricky']);
-    expect(q!.timeLimit).toBe(45);
+    expect(q.id).toBe('Q001');
+    expect(q.difficulty).toBe('hard');
+    expect(q.topics).toEqual(['advanced']);
+    expect(q.tags).toEqual(['complex', 'tricky']);
+    expect(q.timeLimit).toBe(45);
   });
 
   it('should identify correct answers', () => {
@@ -118,11 +119,12 @@ Multiple correct answers?
     const bank = parseQuestionBank(markdown, 'test');
     const q = bank.questions[0];
     expect(q).toBeDefined();
+    if (!q) throw new Error('Question not defined');
 
-    expect(q!.correctAnswerIds).toHaveLength(2);
-    expect(q!.answers).toHaveLength(4);
-    expect(q!.correctAnswerIds).toContain('Q001_A1');
-    expect(q!.correctAnswerIds).toContain('Q001_A3');
+    expect(q.correctAnswerIds).toHaveLength(2);
+    expect(q.answers).toHaveLength(4);
+    expect(q.correctAnswerIds).toContain('Q001_A1');
+    expect(q.correctAnswerIds).toContain('Q001_A3');
   });
 
   it('should handle questions without optional metadata', () => {
@@ -152,9 +154,10 @@ Simple question?
     const bank = parseQuestionBank(markdown, 'minimal');
     const q = bank.questions[0];
     expect(q).toBeDefined();
+    if (!q) throw new Error('Question not defined');
 
-    expect(q!.timeLimit).toBeUndefined();
-    expect(q!.difficulty).toBe('medium');
+    expect(q.timeLimit).toBeUndefined();
+    expect(q.difficulty).toBe('medium');
   });
 
   it('should throw error for missing metadata section', () => {

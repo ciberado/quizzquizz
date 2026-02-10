@@ -59,8 +59,11 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private async loadGameState() {
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) {
+      router.navigate('/');
+      return;
+    }
 
     try {
       // Get session state from API (we'll use the player state endpoint for now)
@@ -207,8 +210,8 @@ export class QuestionDisplayScreen extends HTMLElement {
     const confirmed = confirm('Are you sure you want to end the quiz? This will show the final leaderboard.');
     if (!confirmed) return;
 
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) return;
 
     try {
       await api.endQuiz(sessionId, hostToken);

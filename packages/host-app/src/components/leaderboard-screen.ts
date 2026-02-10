@@ -41,8 +41,11 @@ export class LeaderboardScreen extends HTMLElement {
   }
 
   private async loadLeaderboard() {
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) {
+      router.navigate('/');
+      return;
+    }
 
     try {
       // Get session status
@@ -99,8 +102,8 @@ export class LeaderboardScreen extends HTMLElement {
   }
 
   private async handleNextQuestion() {
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) return;
 
     try {
       await api.nextQuestion(sessionId, hostToken);
@@ -120,8 +123,8 @@ export class LeaderboardScreen extends HTMLElement {
       return;
     }
 
-    const sessionId = state.getState().sessionId!;
-    const hostToken = state.getState().hostToken!;
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) return;
 
     try {
       await api.endQuiz(sessionId, hostToken);
