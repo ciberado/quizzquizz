@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-10
 
+### Fixed
+- **Answer Submission**: Fixed player answer submission validation error
+  - API server now uses shared `SubmitAnswerRequestSchema` from common package
+  - Added `questionId` validation to ensure it matches the current question
+  - Fixed test suite isolation by using separate in-memory DB cache per suite
+  - All answer submission API tests now passing (5/5)
+- **Error Logging**: Improved player app error logging for answer submission
+  - Shows error name, message, HTTP status, and response data
+  - Makes debugging API errors much easier
+
 ### Added (Phase 5D - Leaderboard & Results) ✅ COMPLETE
 - **Leaderboard Screen**: Rankings display between questions with medals and animations
 - Leaderboard screen component (`packages/host-app/src/components/leaderboard-screen.ts`)
