@@ -45,6 +45,23 @@ All notable changes to this project will be documented in this file, organized b
   - Files: `packages/player-app/src/styles.css`
 
 ### Fixed
+- **Responsive Grid Still Broken - Always 2 Columns**: Added CSS priority enforcement
+  - Problem AFTER previous fixes: Grid stuck showing 2 columns even on mobile phones
+  - Issue: Landscape media query was too broad, affecting non-landscape views
+  - Landscape query only checked max-height + orientation, not width
+  - Could trigger on tablets or wide viewports unintentionally
+  - Solution 1: Added `!important` to 768px media query 2-column rule as final safeguard
+  - Solution 2: Fixed landscape media query to be more specific:
+    - OLD: `@media (max-height: 600px) and (orientation: landscape)`
+    - NEW: `@media (max-width: 767px) and (max-height: 600px) and (orientation: landscape)`
+    - Now ONLY applies to actual small phones in landscape orientation
+  - Solution 3: Reorganized CSS - moved .answer-btn next to .answers-grid for clarity
+  - Impact: Responsive design now definitively works
+  - Mobile portrait (< 768px): Single column ✓
+  - Tablet/desktop (≥ 768px): Two columns ✓  
+  - Landscape phones: Two columns (appropriate for horizontal space) ✓
+  - Files: `packages/player-app/src/styles.css`
+
 - **CRITICAL: 2-Column Grid Not Working on Wide Screens**: Fixed CSS cascade issue
   - Problem: Single column stuck on all screen sizes, even desktop/tablets
   - Root cause: Base `.answers-grid` definition placed AFTER media queries in CSS file
