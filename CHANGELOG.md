@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Screen Flickering During Polling**: Eliminated flickering during gameplay
+  - Problem: Entire screen re-rendered every 2 seconds when polling detected changes
+  - Even small updates (answered count: "2/5" → "3/5") triggered full innerHTML replacement
+  - Caused visible flicker and disrupted user experience during active gameplay
+  - Solution: Separated structural changes from data-only changes
+  - Structural changes (question change, status change) still do full re-render
+  - Data-only changes (answered count) use updatePlayerStats() to update just that element
+  - Impact: Smooth, flicker-free updates during gameplay, better UX
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **Timer Progress Bar Starting Position**: Fixed progress bar not starting at 100%
   - Problem: Progress bar started at ~66% instead of full width
   - Root cause: Progress bar calculated using fallback 30s, actual time limit was 20s
