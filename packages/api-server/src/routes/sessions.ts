@@ -72,6 +72,10 @@ sessionRoutes.get('/:id', async (c) => {
       return c.json({ error: 'Invalid host token' }, 403);
     }
 
+    // Load questions from question bank
+    const questionBank = questionBanks.get(session.questionBankId);
+    const questions = questionBank ? questionBank.questions : [];
+
     // Don't send hostToken in response, convert BigInt to number
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { hostToken: _, createdAt, questionStartedAt, ...sessionData } = session;
@@ -79,6 +83,7 @@ sessionRoutes.get('/:id', async (c) => {
       ...sessionData,
       createdAt: Number(createdAt),
       questionStartedAt: questionStartedAt ? Number(questionStartedAt) : null,
+      questions, // Include questions from question bank
     });
   } catch (error) {
     console.error('Error fetching session:', error);
