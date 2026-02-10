@@ -110,9 +110,10 @@ describe('Game Routes', () => {
       const data = await res.json();
       expect(data.status).toBe('lobby');
       expect(data.currentQuestion).toBeNull();
-      expect(data.currentQuestionIndex).toBe(-1);
+      expect(data.currentQuestionNumber).toBe(0);
       expect(data.totalQuestions).toBe(2);
-      expect(data.playerScore).toBe(0);
+      expect(data.questionStartedAt).toBeNull();
+      expect(data.timeLimit).toBeNull();
     });
 
     it('should return current question during playing state', async () => {
@@ -150,11 +151,10 @@ describe('Game Routes', () => {
       expect(data.currentQuestion).toBeDefined();
       expect(data.currentQuestion.id).toBe('q1');
       expect(data.currentQuestion.text).toBe('What is 2+2?');
-      expect(data.currentQuestionIndex).toBe(0);
+      expect(data.currentQuestionNumber).toBe(1);
       expect(data.totalQuestions).toBe(2);
-      expect(data.playerScore).toBe(100);
-      expect(data.timeRemaining).toBeLessThanOrEqual(10);
-      expect(data.timeRemaining).toBeGreaterThan(0);
+      expect(data.questionStartedAt).toBeGreaterThan(0);
+      expect(data.timeLimit).toBe(10);
     });
 
     it('should return 401 if player ID is missing', async () => {

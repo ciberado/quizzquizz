@@ -51,15 +51,15 @@ gameRoutes.get('/:sessionId/state', async (c) => {
 
     // Get current question (if any)
     let currentQuestion = null;
-    let timeRemaining = null;
+    let questionStartedAt = null;
+    let timeLimit = null;
     
     if (session.status === 'playing' && session.currentQuestionIndex >= 0) {
       currentQuestion = questionBank.questions[session.currentQuestionIndex];
       
-      if (currentQuestion && session.questionStartedAt) {
-        const timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
-        const elapsed = (Date.now() - Number(session.questionStartedAt)) / 1000;
-        timeRemaining = Math.max(0, timeLimit - elapsed);
+      if (currentQuestion) {
+        timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
+        questionStartedAt = session.questionStartedAt ? Number(session.questionStartedAt) : null;
       }
     }
 
@@ -72,10 +72,10 @@ gameRoutes.get('/:sessionId/state', async (c) => {
         difficulty: currentQuestion.difficulty,
         timeLimit: currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit,
       } : null,
-      currentQuestionIndex: session.currentQuestionIndex,
+      questionStartedAt,
+      timeLimit,
       totalQuestions: questionBank.questions.length,
-      timeRemaining,
-      playerScore: player.score,
+      currentQuestionNumber: session.currentQuestionIndex + 1,
     });
   } catch (error) {
     console.error('Error fetching game state:', error);

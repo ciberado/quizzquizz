@@ -127,7 +127,7 @@ export class QuestionScreen extends BaseComponent {
         if (!this.currentQuestion) {
           // First time loading question data
           this.currentQuestion = gameState.currentQuestion;
-          this.currentQuestionIndex = gameState.currentQuestionIndex;
+          this.currentQuestionIndex = (gameState.currentQuestionNumber || 1) - 1; // Convert 1-based to 0-based
           this.questionStartedAt = gameState.questionStartedAt;
           this.timeLimit = gameState.timeLimit || 20;
           this.selectedAnswerIds.clear();

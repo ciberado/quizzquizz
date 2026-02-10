@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **CRITICAL - Timer Calculation Bug**: Fixed player questions auto-submitting immediately due to missing timestamp
+  - Problem: API returned `currentQuestionIndex`, `timeRemaining`, `playerScore` but schema expected `questionStartedAt`, `timeLimit`, `currentQuestionNumber`
+  - Player tried to access `gameState.questionStartedAt` which was undefined, causing `elapsed = Date.now() - 0` (huge number)
+  - Timer calculated as `timeRemaining = max(0, 25 - huge_number) = 0`, triggering instant auto-submit
+  - Solution: Updated API to return `questionStartedAt`, `timeLimit`, `currentQuestionNumber` as per GameState schema
+  - Players now have proper countdown timers (25 seconds for questions)
+  - Files: `packages/api-server/src/routes/game.ts`, `packages/player-app/src/components/question-screen.ts`
+
 - **CRITICAL - Question Detection Logic**: Fixed waiting screen failing to detect new questions
   - Problem: Waiting screen set `lastQuestionId` to current question on first poll, breaking change detection
   - Flow was: answer Q001 → waiting → first poll sees Q002 → sets lastQuestionId=Q002 → stays on waiting forever
