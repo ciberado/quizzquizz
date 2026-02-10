@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **CRITICAL - Timer Desync Between Host and Players**: Fixed 10-second timer difference
+  - Problem: Host timer showed 23 seconds while player timers showed 13 seconds (10 sec gap)
+  - Root cause: Host used hardcoded 30-second fallback, player used question bank's default (20 seconds)
+  - When questions don't specify timeLimit, host defaults to 30s, player to bank's 20s
+  - Solution: Sessions API now returns `currentQuestionTimeLimit` with correct computed value
+  - Host now uses same timeLimit calculation as players (question.timeLimit || bank.defaultTimeLimit)
+  - Impact: Both host and players now use identical time limits, synchronized countdown
+  - Files: `packages/api-server/src/routes/sessions.ts`, `packages/host-app/src/components/question-display-screen.ts`
+
 - **Host Timer Lag**: Fixed host waiting 5 seconds longer than players before advancing to leaderboard
   - Problem: 3-second auto-navigation delay + 2-second polling interval created ~5 second gap
   - Players would auto-submit and wait, but host lagged behind showing correct answers

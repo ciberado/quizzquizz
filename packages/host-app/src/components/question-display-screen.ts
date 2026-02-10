@@ -91,7 +91,8 @@ export class QuestionDisplayScreen extends HTMLElement {
       
       // Calculate time remaining
       if (newGameState.currentQuestion && session.questionStartedAt) {
-        const timeLimit = newGameState.currentQuestion.timeLimit ?? 30;
+        // Use computed timeLimit from API (matches question bank default) instead of hardcoded fallback
+        const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
         const elapsed = Math.floor((Date.now() - Number(session.questionStartedAt)) / 1000);
         this.timeRemaining = Math.max(0, timeLimit - elapsed);
         newGameState.timeRemaining = this.timeRemaining;

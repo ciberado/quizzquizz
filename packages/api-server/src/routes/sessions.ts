@@ -76,6 +76,15 @@ sessionRoutes.get('/:id', async (c) => {
     const questionBank = questionBanks.get(session.questionBankId);
     const questions = questionBank ? questionBank.questions : [];
 
+    // Calculate current question's time limit (same logic as game state endpoint)
+    let currentQuestionTimeLimit = null;
+    if (session.status === 'playing' && session.currentQuestionIndex >= 0 && questionBank) {
+      const currentQ = questionBank.questions[session.currentQuestionIndex];
+      if (currentQ) {
+        currentQuestionTimeLimit = currentQ.timeLimit || questionBank.metadata.defaultTimeLimit;
+      }
+    }
+
     // Don't send hostToken in response, convert BigInt to number
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { hostToken: _, createdAt, questionStartedAt, ...sessionData } = session;
@@ -83,6 +92,7 @@ sessionRoutes.get('/:id', async (c) => {
       ...sessionData,
       createdAt: Number(createdAt),
       questionStartedAt: questionStartedAt ? Number(questionStartedAt) : null,
+      currentQuestionTimeLimit, // Add computed time limit for timer sync
       questions, // Include questions from question bank
     });
   } catch (error) {
