@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **CRITICAL - Host Not Advancing to Leaderboard**: Fixed host screen stuck on question after timer expires
+  - Problem: Host question display waited for manual "Show Leaderboard" button click instead of auto-navigating
+  - Game would halt after question timer expired, requiring manual intervention to proceed
+  - Players would be stuck on waiting screen with "The host will advance to the next question soon"
+  - Solution: Added automatic navigation to leaderboard 3 seconds after timer expires
+  - Auto-navigation triggered both by local timer countdown and server timestamp detection
+  - 3-second delay allows time to display correct answers before transition
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **CRITICAL - Player Stuck on Waiting Screen**: Fixed player not advancing to new questions
   - Problem: Waiting screen condition `if (this.lastQuestionId && id !== this.lastQuestionId)` required BOTH conditions
   - If `lastQuestionId` was null/undefined/empty, player would never navigate even when new question available

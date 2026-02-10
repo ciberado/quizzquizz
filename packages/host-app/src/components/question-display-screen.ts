@@ -33,6 +33,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private timeRemaining: number = 0;
   private playerCount: number = 0;
   private answeredCount: number = 0;
+  private autoNavigateTimeout: number | null = null;
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -51,6 +52,10 @@ export class QuestionDisplayScreen extends HTMLElement {
   disconnectedCallback() {
     this.stopPolling();
     this.stopTimer();
+    if (this.autoNavigateTimeout) {
+      clearTimeout(this.autoNavigateTimeout);
+      this.autoNavigateTimeout = null;
+    }
   }
 
   private async loadGameState() {
@@ -93,6 +98,12 @@ export class QuestionDisplayScreen extends HTMLElement {
         
         if (this.timeRemaining > 0 && !this.timerInterval) {
           this.startTimer();
+        } else if (this.timeRemaining <= 0 && !this.autoNavigateTimeout) {
+          // Timer expired from server - trigger auto-navigation
+          this.stopTimer();
+          this.autoNavigateTimeout = window.setTimeout(() => {
+            router.navigate('/leaderboard');
+          }, 3000);
         }
       }
 
@@ -144,8 +155,13 @@ export class QuestionDisplayScreen extends HTMLElement {
         this.updateTimerDisplay();
       } else {
         this.stopTimer();
-        // Timer expired - show answer reveal button
+        // Timer expired - render to show correct answers
         this.render();
+        
+        // Auto-navigate to leaderboard after 3 seconds
+        this.autoNavigateTimeout = window.setTimeout(() => {
+          router.navigate('/leaderboard');
+        }, 3000);
       }
     }, 1000);
   }
