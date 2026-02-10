@@ -102,12 +102,9 @@ export class QuestionDisplayScreen extends HTMLElement {
         
         if (this.timeRemaining > 0 && !this.timerInterval) {
           this.startTimer();
-        } else if (this.timeRemaining <= 0 && !this.autoNavigateTimeout) {
-          // Timer already expired from server - trigger auto-navigation immediately
+        } else if (this.timeRemaining <= 0) {
+          // Timer already expired from server - just stop timer and show correct answers
           this.stopTimer();
-          this.autoNavigateTimeout = window.setTimeout(() => {
-            router.navigate('/leaderboard');
-          }, 1000);
         }
       }
 
@@ -158,13 +155,8 @@ export class QuestionDisplayScreen extends HTMLElement {
         this.updateTimerDisplay();
       } else {
         this.stopTimer();
-        // Timer expired - render to show correct answers
+        // Timer expired - render to show correct answers with Continue button
         this.render();
-        
-        // Auto-navigate to leaderboard after 1 second (brief moment to see correct answers)
-        this.autoNavigateTimeout = window.setTimeout(() => {
-          router.navigate('/leaderboard');
-        }, 1000);
       }
     }, 1000);
   }
