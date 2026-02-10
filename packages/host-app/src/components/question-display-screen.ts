@@ -111,7 +111,7 @@ export class QuestionDisplayScreen extends HTMLElement {
       // Get player stats
       const newPlayerCount = players.length;
       // Count how many players have answered the current question
-      const newAnsweredCount = players.filter((p: any) => p.hasAnswered).length;
+      const newAnsweredCount = players.filter((p: { hasAnswered?: boolean }) => p.hasAnswered).length;
 
       // Only re-render if something actually changed
       const stateChanged = 

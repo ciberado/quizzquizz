@@ -179,8 +179,8 @@ export const api = {
   /**
    * Get current game state (for host monitoring)
    */
-  async getGameState(sessionId: string, hostToken: string): Promise<any> {
-    return apiRequest<any>(`/api/sessions/${sessionId}/state`, {
+  async getGameState(sessionId: string, hostToken: string): Promise<unknown> {
+    return apiRequest<unknown>(`/api/sessions/${sessionId}/state`, {
       headers: {
         'X-Host-Token': hostToken,
       },
@@ -190,7 +190,7 @@ export const api = {
   /**
    * Get leaderboard
    */
-  async getLeaderboard(sessionId: string): Promise<{ leaderboard: any[] }> {
-    return apiRequest<{ leaderboard: any[] }>(`/api/sessions/${sessionId}/leaderboard`);
+  async getLeaderboard(sessionId: string): Promise<{ leaderboard: Array<{ rank: number; nickname: string; score: number; playerId: string }> }> {
+    return apiRequest<{ leaderboard: Array<{ rank: number; nickname: string; score: number; playerId: string }> }>(`/api/sessions/${sessionId}/leaderboard`);
   },
 };

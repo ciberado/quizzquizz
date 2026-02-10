@@ -11,7 +11,7 @@ export class OfflineIndicator {
 
   constructor() {
     // Skip in test environments (Playwright sets window.playwright)
-    if ((window as any).playwright) {
+    if ((window as { playwright?: unknown }).playwright) {
       console.log('[OfflineIndicator] Skipping in test environment');
       return;
     }

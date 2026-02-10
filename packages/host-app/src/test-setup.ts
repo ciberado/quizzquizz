@@ -28,11 +28,11 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 // Mock location.hash for routing tests
-delete (window as any).location;
+delete (window as { location?: unknown }).location;
 window.location = {
   hash: '',
   href: 'http://localhost:3001/',
-} as any;
+} as Location;
 
 // Clear localStorage before each test
 beforeEach(() => {

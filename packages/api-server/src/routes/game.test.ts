@@ -4,7 +4,6 @@ import gameRoutes from '../routes/game';
 import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
-import { generateId, generatePin } from '@quizzquizz/common';
 
 const app = new Hono();
 app.route('/api/sessions', gameRoutes);

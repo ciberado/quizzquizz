@@ -253,10 +253,10 @@ export class QuestionScreen extends BaseComponent {
         console.error('  Error name:', error.name);
         console.error('  Error message:', error.message);
         if ('status' in error) {
-          console.error('  HTTP status:', (error as any).status);
+          console.error('  HTTP status:', (error as { status: number }).status);
         }
         if ('data' in error) {
-          console.error('  Error data:', JSON.stringify((error as any).data, null, 2));
+          console.error('  Error data:', JSON.stringify((error as { data: unknown }).data, null, 2));
         }
       }
       

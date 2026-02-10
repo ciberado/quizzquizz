@@ -65,12 +65,13 @@ function parseMetadata(content: string): ParsedMetadata {
       case 'Topics':
         metadata.topics = trimmedValue.split(',').map((t) => t.trim());
         break;
-      case 'Default Time Limit':
+      case 'Default Time Limit': {
         const timeMatch = trimmedValue.match(/(\d+)/);
         if (timeMatch && timeMatch[1]) {
           metadata.defaultTimeLimit = parseInt(timeMatch[1], 10);
         }
         break;
+      }
       case 'Description':
         metadata.description = trimmedValue;
         break;

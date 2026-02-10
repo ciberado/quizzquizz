@@ -166,7 +166,7 @@ describe('Component Lifecycle', () => {
     
     customElements.define(tagName, PollingComponent);
     
-    const element = document.createElement(tagName) as any;
+    const element = document.createElement(tagName) as unknown as InstanceType<typeof PollingComponent>;
     document.body.appendChild(element);
     
     expect(element.hasActiveInterval()).toBe(true);
