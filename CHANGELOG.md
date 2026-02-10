@@ -45,6 +45,21 @@ All notable changes to this project will be documented in this file, organized b
   - Files: `packages/player-app/src/styles.css`
 
 ### Fixed
+- **CRITICAL: 2-Column Grid Not Working on Wide Screens**: Fixed CSS cascade issue
+  - Problem: Single column stuck on all screen sizes, even desktop/tablets
+  - Root cause: Base `.answers-grid` definition placed AFTER media queries in CSS file
+  - CSS cascade rules: Later declarations override earlier ones
+  - Media query at 768px set `grid-template-columns: 1fr 1fr` (2 columns)
+  - But base rule after media queries set `grid-template-columns: 1fr` (1 column)
+  - Base rule overrode the responsive rules, breaking responsive design
+  - Solution: Moved base `.answers-grid` to BEFORE responsive section (proper mobile-first order)
+  - Removed duplicate definition from Question Screen Styles section
+  - Proper CSS architecture: Base styles → Media queries progressively enhance
+  - Impact: Responsive design now fully functional
+  - < 768px: Single column (mobile phones)
+  - ≥ 768px: Two columns (tablets, desktop) ✓ NOW WORKS CORRECTLY
+  - Files: `packages/player-app/src/styles.css`
+
 - **Mobile Layout Too Wide with Excessive Margins**: Improved mobile-first responsive design
   - Problem: 2-column grid activated at 640px (too early for most phones)
   - Excessive side padding (var(--spacing-lg)) wasted screen space on mobile
