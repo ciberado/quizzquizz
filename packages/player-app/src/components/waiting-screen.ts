@@ -90,7 +90,7 @@ export class WaitingScreen extends BaseComponent {
     }
   }
 
-  protected render(): string {
+  protected render(): void {
     let feedbackHtml = '';
     
     if (this.isCorrect !== null) {
@@ -113,7 +113,7 @@ export class WaitingScreen extends BaseComponent {
       }
     }
 
-    return `
+    const html = `
       <div class="screen waiting-screen">
         ${feedbackHtml || '<div class="feedback"><h2>Answer Submitted</h2></div>'}
         
@@ -127,6 +127,9 @@ export class WaitingScreen extends BaseComponent {
         </div>
       </div>
     `;
+    
+    this.setContent(html);
+    this.attachEventListeners();
   }
 
   protected attachEventListeners(): void {

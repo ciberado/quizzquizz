@@ -43,6 +43,10 @@ router.on('/question/:sessionId', () => {
   showScreen('question-screen');
 });
 
+router.on('/question', () => {
+  showScreen('question-screen');
+});
+
 router.on('/waiting', () => {
   showScreen('waiting-screen');
 });

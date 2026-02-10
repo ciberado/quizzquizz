@@ -212,20 +212,15 @@ export class QuestionScreen extends BaseComponent {
     }
   }
 
-  protected render(): string {
-    if (!this.currentQuestion) {
-      return `
+  protected render(): void {
+    const html = !this.currentQuestion ? `
         <div class="screen question-screen">
           <div class="loading">
             <div class="spinner"></div>
             <p>Waiting for question...</p>
           </div>
         </div>
-      `;
-    }
-
-    
-    return `
+      ` : `
       <div class="screen question-screen">
         <div class="question-header">
           <div class="timer">0s</div>
@@ -265,6 +260,9 @@ export class QuestionScreen extends BaseComponent {
         <div class="error-message"></div>
       </div>
     `;
+    
+    this.setContent(html);
+    this.attachEventListeners();
   }
 
   protected attachEventListeners(): void {

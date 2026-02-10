@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Player Question Screen Blank Bug**: Fixed critical bug where player screen appeared blank during questions
+  - Issue: `question-screen`, `waiting-screen`, and `results-screen` components returned HTML strings but never called `setContent()`
+  - Root cause: Mismatch between `BaseComponent.render()` signature (void) and component implementations (returning string)
+  - Solution: Changed all three components to call `this.setContent(html)` and `this.attachEventListeners()` instead of returning strings
+  - Added `/question` route (without sessionId parameter) to router to handle query parameter format
+  - Players can now see questions, answers, and interact with the UI during gameplay
+- **Router Compatibility**: Added support for `/question` route with query parameters
+  - Router now handles both `/question/:sessionId` (path params) and `/question?sessionId=...` (query params)
+  - Prevents "No route matched" warnings in console
 - **Server Configuration**: All servers now listen on 0.0.0.0 for dev container accessibility
   - API server, host-app, and player-app now bind to all network interfaces
   - Allows access from host machine when running in dev containers

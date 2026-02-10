@@ -44,12 +44,14 @@ export class ResultsScreen extends BaseComponent {
     this.render();
   }
 
-  protected render(): string {
+  protected render(): void {
     const currentState = state.getState();
     const playerId = currentState.playerId;
 
+    let html = '';
+
     if (this.loading) {
-      return `
+      html = `
         <div class="screen results-screen">
           <div class="loading-container">
             <div class="spinner"></div>
@@ -57,10 +59,13 @@ export class ResultsScreen extends BaseComponent {
           </div>
         </div>
       `;
+      this.setContent(html);
+      this.attachEventListeners();
+      return;
     }
 
     if (this.error) {
-      return `
+      html = `
         <div class="screen results-screen">
           <div class="error-container">
             <div class="error-icon">⚠️</div>
@@ -71,6 +76,9 @@ export class ResultsScreen extends BaseComponent {
           </div>
         </div>
       `;
+      this.setContent(html);
+      this.attachEventListeners();
+      return;
     }
 
     // Find player's position
@@ -115,7 +123,7 @@ export class ResultsScreen extends BaseComponent {
       `;
     }
 
-    return `
+    html = `
       <div class="screen results-screen">
         <div class="results-container">
           <h1>🏆 Quiz Complete!</h1>
@@ -135,6 +143,9 @@ export class ResultsScreen extends BaseComponent {
         </div>
       </div>
     `;
+    
+    this.setContent(html);
+    this.attachEventListeners();
   }
 
   protected attachEventListeners(): void {
