@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-10
 
+### Added (Phase 5C - Game Control & Question Display)
+- **Question Display Screen**: Projector-optimized question presenter with live timer
+- Question display screen component (`packages/host-app/src/components/question-display-screen.ts`)
+- Large question text (48px, projector-readable)
+- 2x2 answer grid with A/B/C/D labels (32px font)
+- Countdown timer with progress bar animation
+- Player stats display (X/Y answered count)
+- Answer reveal after timer expires (green highlight + checkmark animation)
+- Next Question / Show Leaderboard button (context-aware)
+- End Quiz button with confirmation
+- Real-time polling every 2 seconds
+- Smooth animations for timer warning and answer reveals
+
 ### Added (Host App Unit Testing)
 - **Comprehensive Unit Test Suite**: 48+ tests covering host app core functionality
 - Vitest configuration with jsdom environment for host app (`packages/host-app/vitest.config.ts`)
