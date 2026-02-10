@@ -306,6 +306,17 @@ label {
   text-align: left;
 }
 
+/* Answers Grid - Base mobile-first styles */
+.answers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  padding: 0 var(--spacing-md);
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+}
+
 /* ========================================
    Responsive Design
    Mobile-first approach with breakpoints:
@@ -602,16 +613,6 @@ label {
   padding: var(--spacing-xl) var(--spacing-lg);
   text-align: center;
   line-height: 1.6;
-}
-
-.answers-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-md);
-  padding: 0 var(--spacing-md);
-  width: 100%;
-  max-width: none;
-  margin: 0 auto;
 }
 
 .answer-btn {
