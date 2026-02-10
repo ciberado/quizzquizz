@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **All Non-Null Assertion Warnings**: Eliminated all 33 ESLint non-null-assertion warnings
+  - common: generatePin now validates random bytes before use (no ! operator)
+  - host-app: All components use proper destructuring + early returns instead of state.sessionId!
+  - host-app: getRandomColor uses nullish coalescing (??) instead of array[index]!
+  - host-app: Test files use type guards (if (!x) throw Error) instead of assertions
+  - question-bank: Changed Partial<ParsedQuestion> type to guarantee answers array is non-null
+  - question-bank: Removed all ! operators from answers.length and answers.push()
+  - question-bank: filterQuestions uses local variables instead of options.topics!/tags!
+  - Result: **0 errors, 0 warnings** - completely clean lint output across all 5 packages
+  - Files: 7 files across common, host-app, question-bank packages
+
 - **Linter Errors**: Fixed all ESLint errors across all packages (11 files)
   - Removed unused imports (generateId, generatePin, z) from API server tests
   - Replaced all `any` types with proper TypeScript types throughout codebase
