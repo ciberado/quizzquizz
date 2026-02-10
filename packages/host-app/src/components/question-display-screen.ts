@@ -98,6 +98,12 @@ export class QuestionDisplayScreen extends HTMLElement {
         
         if (this.timeRemaining > 0 && !this.timerInterval) {
           this.startTimer();
+        } else if (this.timeRemaining <= 0 && !this.autoNavigateTimeout) {
+          // Timer already expired from server - trigger auto-navigation immediately
+          this.stopTimer();
+          this.autoNavigateTimeout = window.setTimeout(() => {
+            router.navigate('/leaderboard');
+          }, 1000);
         }
       }
 
@@ -152,10 +158,10 @@ export class QuestionDisplayScreen extends HTMLElement {
         // Timer expired - render to show correct answers
         this.render();
         
-        // Auto-navigate to leaderboard after 3 seconds
+        // Auto-navigate to leaderboard after 1 second (brief moment to see correct answers)
         this.autoNavigateTimeout = window.setTimeout(() => {
           router.navigate('/leaderboard');
-        }, 3000);
+        }, 1000);
       }
     }, 1000);
   }

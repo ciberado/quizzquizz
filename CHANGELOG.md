@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Host Timer Lag**: Fixed host waiting 5 seconds longer than players before advancing to leaderboard
+  - Problem: 3-second auto-navigation delay + 2-second polling interval created ~5 second gap
+  - Players would auto-submit and wait, but host lagged behind showing correct answers
+  - Solution: Reduced auto-navigation delay from 3 seconds to 1 second (brief glimpse of correct answers)
+  - Added immediate navigation trigger when polling detects timer already expired
+  - Host now advances within ~1-2 seconds of timer expiring, matching player experience better
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **Host Timer Display**: Fixed timer showing decimal numbers instead of whole seconds
   - Problem: Elapsed time calculation produced floating point, causing display like "24.372" seconds
   - Solution: Floor elapsed time when calculating and floor in formatTime() method
