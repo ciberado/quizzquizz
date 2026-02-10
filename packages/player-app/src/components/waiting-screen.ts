@@ -2,6 +2,7 @@ import { BaseComponent } from './base-component';
 import { state } from '../state';
 import { api } from '../api-client';
 import { router } from '../router';
+import { handleApiError, isSessionEndError } from '../error-handler';
 
 /**
  * Waiting Screen Component
@@ -95,7 +96,15 @@ export class WaitingScreen extends BaseComponent {
       }
     } catch (error) {
       console.error('Error polling game state:', error);
-      // Continue polling even on error
+      
+      // Handle session end errors (404, 401, 403)
+      if (isSessionEndError(error)) {
+        this.stopPolling();
+        handleApiError(error, 'Polling game state');
+        return;
+      }
+      
+      // Continue polling for other errors (network issues, etc.)
     }
   }
 

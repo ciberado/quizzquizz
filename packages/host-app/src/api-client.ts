@@ -7,6 +7,7 @@ import type {
   Session,
   Player,
 } from '@quizzquizz/common';
+import { retryWithBackoff, isNetworkError } from './network-utils';
 
 // Extended types for API responses (include runtime-only properties)
 interface SessionWithTimeLimit extends Session {
@@ -44,52 +45,69 @@ export class ApiError extends Error {
 }
 
 /**
- * Make an API request with error handling
+ * Make an API request with error handling and retry logic
  */
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retry: boolean = true
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const doFetch = async (): Promise<T> => {
+    const url = `${API_BASE_URL}${endpoint}`;
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
 
-    // Handle non-2xx responses
-    if (!response.ok) {
-      let errorData: unknown;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = await response.text();
+      // Handle non-2xx responses
+      if (!response.ok) {
+        let errorData: unknown;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = await response.text();
+        }
+
+        throw new ApiError(
+          `API Error: ${response.statusText}`,
+          response.status,
+          errorData
+        );
       }
 
+      // Parse JSON response
+      return await response.json();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      // Network or parsing error
       throw new ApiError(
-        `API Error: ${response.statusText}`,
-        response.status,
-        errorData
+        error instanceof Error ? error.message : 'Network error',
+        0
       );
     }
+  };
 
-    // Parse JSON response
-    return await response.json();
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    // Network or parsing error
-    throw new ApiError(
-      error instanceof Error ? error.message : 'Network error',
-      0
-    );
+  // Retry network errors automatically
+  if (retry) {
+    return retryWithBackoff(doFetch, {
+      maxRetries: 2,
+      initialDelay: 1000,
+      shouldRetry: (error) => {
+        // Only retry network errors, not 4xx/5xx responses
+        return isNetworkError(error);
+      },
+    });
   }
+
+  return doFetch();
 }
 
 /**

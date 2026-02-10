@@ -1,6 +1,8 @@
 import './styles.css';
 import { router } from './router';
 import { state } from './state';
+import { OfflineIndicator } from './offline-indicator';
+import { ErrorBoundary } from './error-boundary';
 
 // Import screen components
 import './components/create-session-screen';
@@ -13,6 +15,12 @@ import './components/final-results-screen';
  * QuizzQuizz Host App
  * Web Components-based host interface for projector display
  */
+
+// Initialize error boundary (catches unhandled errors)
+new ErrorBoundary();
+
+// Initialize offline indicator
+new OfflineIndicator();
 
 // Load saved state from localStorage
 state.loadFromStorage();

@@ -1,7 +1,8 @@
 import { BaseComponent } from './base-component';
-import { api, ApiError } from '../api-client';
+import { api } from '../api-client';
 import { router } from '../router';
 import { state } from '../state';
+import { handleApiError, getErrorMessage } from '../error-handler';
 
 // Use a simpler type for the question bank summary (from GET /api/question-banks)
 interface QuestionBankSummary {
@@ -27,12 +28,8 @@ export class CreateSessionScreen extends BaseComponent {
       this.render();
     } catch (error) {
       console.error('Failed to load question banks:', error);
-      
-      if (error instanceof ApiError) {
-        this.showError(`Failed to load question banks: ${error.message}`);
-      } else {
-        this.showError('Could not connect to server. Please check if the API server is running.');
-      }
+      handleApiError(error, 'Loading question banks');
+      this.showError('Could not load question banks. Please check if the API server is running.');
     }
   }
 
@@ -112,13 +109,9 @@ export class CreateSessionScreen extends BaseComponent {
       router.navigate(`/lobby/${session.id}`);
     } catch (error) {
       console.error('Failed to create session:', error);
+      handleApiError(error, 'Creating session');
       this.render(); // Re-render to show banks again
-      
-      if (error instanceof ApiError) {
-        this.showError(`Failed to create session: ${error.message}`);
-      } else {
-        this.showError('Could not create session. Please try again.');
-      }
+      this.showError(`Failed to create session: ${getErrorMessage(error)}`);
     }
   }
 }

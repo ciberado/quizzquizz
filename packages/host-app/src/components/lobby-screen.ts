@@ -98,7 +98,7 @@ export class LobbyScreen extends BaseComponent {
               type="button" 
               id="start-button" 
               class="primary"
-              ${!canStart ? 'disabled' : ''}
+              ${!canStart ? 'disabled title="At least one player must join before starting"' : ''}
             >
               ${canStart ? 'Start Quiz' : 'Waiting for Players'}
             </button>
@@ -106,6 +106,11 @@ export class LobbyScreen extends BaseComponent {
               Cancel Session
             </button>
           </div>
+          ${!canStart ? `
+            <p class="help-text" style="text-align: center; margin-top: var(--spacing-md); color: var(--color-text-secondary);">
+              💡 Share the PIN with players to let them join
+            </p>
+          ` : ''}
         </div>
       </div>
     `);

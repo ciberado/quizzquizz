@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Added
+- **Phase 6A: Comprehensive Error Handling & Resilience**: Production-ready error handling across both apps
+  - **Network Error Handling**:
+    - Automatic retry logic with exponential backoff (max 3 retries) for network errors
+    - Retry only for true network failures, not HTTP 4xx/5xx errors
+    - Network utilities (retry, offline detection, error classification) in both apps
+    - Files: `packages/{player-app,host-app}/src/network-utils.ts`
+  - **Offline Detection & Feedback**:
+    - Offline indicator component with "Connection restored" message when coming back online
+    - Real-time monitoring of browser online/offline status
+    - Automatic initialization in both apps' main.ts
+    - CSS animations for smooth show/hide transitions
+    - Files: `packages/{player-app,host-app}/src/offline-indicator.ts`
+  - **Global Error Boundary**:
+    - Catches all unhandled errors and promise rejections
+    - Displays user-friendly error screen with "Restart App" and "Go to Home" options
+    - Shows error details in development mode only
+    - Cleans up state and allows recovery without losing progress
+    - Files: `packages/{player-app,host-app}/src/error-boundary.ts`
+  - **Session State Error Handling**:
+    - HTTP 404: "Quiz not found or has ended" → auto-navigate to home after 2s
+    - HTTP 401/403: "Session expired" → clear state and return to join/create screen
+    - HTTP 409: Shows conflict error message (duplicate action)
+    - HTTP 429: "Too many requests. Please wait a moment."
+    - HTTP 500/502/503: "Server error. Please try again." (allows retry)
+    - Error toast notifications with auto-dismiss (3s duration)
+    - Files: `packages/{player-app,host-app}/src/error-handler.ts`
+  - **Host-Specific Validations**:
+    - "Start Quiz" button disabled when no players joined (with tooltip)
+    - Help text: "💡 Share the PIN with players to let them join"
+    - Question banks error screen with instructions when none available
+    - Better error messages for session creation failures
+    - File: `packages/host-app/src/components/{lobby-screen,create-session-screen}.ts`
+  - **API Client Enhancements**:
+    - Host app API client now uses retry logic (matching player app)
+    - Proper error classification (network vs server errors)
+    - Consistent error types across both apps (ApiError class)
+    - Files: `packages/host-app/src/api-client.ts`
+  - **Styling**:
+    - Error toast animations (slide-down from top, auto-fade out)
+    - Error screen styles (centered, with icon, actions)
+    - Offline indicator (top banner, warning color, smooth transitions)
+    - Files: `packages/{player-app,host-app}/src/styles.css`
+  - **Testing**: Both apps build successfully with TypeScript strict mode
+  - **Impact**: App now handles network failures, server errors, and edge cases gracefully without crashes
 - **Comprehensive Responsive Design for Player App**: Mobile-first design with 7 breakpoints
   - **XSmall (320px-479px)**: Optimized for small phones with compact layouts
     - Reduced spacing (1rem/1.5rem/2rem) to maximize screen space

@@ -1019,3 +1019,131 @@ label {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* Error Screen Styles */
+.error-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  z-index: 10000;
+}
+
+.error-container {
+  max-width: 500px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.error-title {
+  font-size: var(--font-size-2xl);
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 700;
+}
+
+.error-message {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.6;
+}
+
+.error-details {
+  text-align: left;
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-sm);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.error-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text);
+  padding: var(--spacing-xs);
+  user-select: none;
+}
+
+.error-details summary:hover {
+  color: var(--color-primary);
+}
+
+.error-details pre {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--color-bg);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-actions .btn {
+  min-width: 150px;
+}
+
+/* Error Toast Notifications */
+.error-toast-container {
+  position: fixed;
+  top: var(--spacing-md);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  pointer-events: none;
+}
+
+.error-toast {
+  background-color: var(--color-error);
+  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 300px;
+  max-width: 500px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease-in-out;
+}
+
+.error-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.error-toast-icon {
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
+.error-toast-message {
+  flex: 1;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}

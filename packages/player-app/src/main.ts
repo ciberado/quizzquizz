@@ -2,6 +2,7 @@ import './styles.css';
 import { router } from './router';
 import { state } from './state';
 import { OfflineIndicator } from './offline-indicator';
+import { ErrorBoundary } from './error-boundary';
 
 // Import screen components
 import './components/join-screen';
@@ -15,6 +16,9 @@ import './components/results-screen';
  * QuizzQuizz Player App
  * Web Components-based player interface
  */
+
+// Initialize error boundary (catches unhandled errors)
+new ErrorBoundary();
 
 // Initialize offline indicator
 new OfflineIndicator();

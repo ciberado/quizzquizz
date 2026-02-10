@@ -639,10 +639,123 @@ button.danger {
   padding: var(--spacing-xl);
 }
 
+/* Offline Indicator */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--color-warning, #f59e0b);
+  color: white;
+  padding: var(--spacing-xs, 0.5rem) var(--spacing-sm, 1rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs, 0.5rem);
+  font-weight: 600;
+  font-size: var(--font-size-small, 0.875rem);
+  z-index: 9999;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.offline-indicator.visible {
+  transform: translateY(0);
+}
+
+.offline-icon {
+  font-size: var(--font-size-large, 1.125rem);
+}
+
+.offline-text {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* Error screen (shared) */
 .error-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-background, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md, 1.5rem);
+  z-index: 10000;
+}
+
+.error-container {
+  max-width: 600px;
   text-align: center;
-  padding: var(--spacing-xl);
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-lg, 2rem);
+}
+
+.error-title {
+  font-size: var(--font-size-xlarge, 2rem);
+  color: var(--color-text, #1f2937);
+  margin-bottom: var(--spacing-md, 1.5rem);
+  font-weight: 700;
+}
+
+.error-message {
+  font-size: var(--font-size-large, 1.125rem);
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: var(--spacing-lg, 2rem);
+  line-height: 1.6;
+}
+
+.error-details {
+  text-align: left;
+  margin-bottom: var(--spacing-lg, 2rem);
+  padding: var(--spacing-sm, 1rem);
+  background-color: var(--color-light-gray, #f3f4f6);
+  border-radius: var(--border-radius, 0.5rem);
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.error-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+  padding: var(--spacing-xs, 0.5rem);
+  user-select: none;
+}
+
+.error-details summary:hover {
+  color: var(--color-primary, #6366f1);
+}
+
+.error-details pre {
+  margin-top: var(--spacing-sm, 1rem);
+  padding: var(--spacing-sm, 1rem);
+  background-color: var(--color-background, #ffffff);
+  border-radius: var(--border-radius, 0.5rem);
+  overflow-x: auto;
+  font-size: var(--font-size-small, 0.875rem);
+  color: var(--color-error, #ef4444);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--spacing-sm, 1rem);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-actions .btn {
+  min-width: 150px;
+  padding: var(--spacing-md, 1.5rem) var(--spacing-lg, 2rem);
+  font-size: var(--font-size-large, 1.125rem);
 }
 
 .error-screen h1 {
@@ -664,4 +777,50 @@ button.danger {
   border: none;
   cursor: pointer;
 }
+
+/* Error Toast Notifications */
+.error-toast-container {
+  position: fixed;
+  top: var(--spacing-md, 1.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 0.5rem);
+  pointer-events: none;
+}
+
+.error-toast {
+  background-color: var(--color-error, #ef4444);
+  color: white;
+  padding: var(--spacing-sm, 1rem) var(--spacing-md, 1.5rem);
+  border-radius: var(--border-radius, 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 1rem);
+  min-width: 300px;
+  max-width: 500px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease-in-out;
+}
+
+.error-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.error-toast-icon {
+  font-size: var(--font-size-large, 1.125rem);
+  flex-shrink: 0;
+}
+
+.error-toast-message {
+  flex: 1;
+  font-size: var(--font-size-base, 1rem);
+  font-weight: 500;
+}
+
 
