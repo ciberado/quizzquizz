@@ -2,14 +2,22 @@ import { BaseComponent } from './base-component';
 import { api, ApiError } from '../api-client';
 import { router } from '../router';
 import { state } from '../state';
-import type { QuestionBank } from '@quizzquizz/common';
+
+// Use a simpler type for the question bank summary (from GET /api/question-banks)
+interface QuestionBankSummary {
+  id: string;
+  name: string;
+  description?: string;
+  topics?: string[];
+  questionCount: number;
+}
 
 /**
  * Create Session Screen
  * Host selects a question bank and creates a new quiz session
  */
 export class CreateSessionScreen extends BaseComponent {
-  private questionBanks: QuestionBank[] = [];
+  private questionBanks: QuestionBankSummary[] = [];
 
   protected async onMount(): Promise<void> {
     this.showLoading('Loading question banks...');
@@ -52,10 +60,10 @@ export class CreateSessionScreen extends BaseComponent {
               <div class="question-banks-grid">
                 ${this.questionBanks.map(bank => `
                   <div class="question-bank-card" data-bank-id="${this.escapeHtml(bank.id)}">
-                    <h3>${this.escapeHtml(bank.metadata.name)}</h3>
-                    <p>${this.escapeHtml(bank.metadata.description || 'No description')}</p>
+                    <h3>${this.escapeHtml(bank.name)}</h3>
+                    <p>${this.escapeHtml(bank.description || 'No description')}</p>
                     <div class="bank-meta">
-                      <span>📚 ${bank.questions.length} questions</span>
+                      <span>📚 ${bank.questionCount} questions</span>
                     </div>
                   </div>
                 `).join('')}
@@ -81,7 +89,7 @@ export class CreateSessionScreen extends BaseComponent {
     // Find the selected bank for display purposes
     const selectedBank = this.questionBanks.find(b => b.id === questionBankId);
     
-    this.showLoading(`Creating quiz with ${selectedBank?.metadata.name || 'selected bank'}...`);
+    this.showLoading(`Creating quiz with ${selectedBank?.name || 'selected bank'}...`);
 
     try {
       const session = await api.createSession(questionBankId);

@@ -6,8 +6,16 @@
 import type {
   Session,
   Player,
-  QuestionBank,
 } from '@quizzquizz/common';
+
+// Simplified question bank for listing (from API /question-banks endpoint)
+interface QuestionBankSummary {
+  id: string;
+  name: string;
+  description?: string;
+  topics?: string[];
+  questionCount: number;
+}
 
 // API base URL (configurable via environment)
 const API_BASE_URL = 'http://localhost:3000';
@@ -82,8 +90,9 @@ export const api = {
   /**
    * Get list of available question banks
    */
-  async getQuestionBanks(): Promise<QuestionBank[]> {
-    return apiRequest<QuestionBank[]>('/api/question-banks');
+  async getQuestionBanks(): Promise<QuestionBankSummary[]> {
+    const response = await apiRequest<{ questionBanks: QuestionBankSummary[] }>('/api/question-banks');
+    return response.questionBanks;
   },
 
   /**
