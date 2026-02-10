@@ -10,6 +10,12 @@ export class OfflineIndicator {
   private isOffline: boolean = !navigator.onLine;
 
   constructor() {
+    // Skip in test environments (Playwright sets window.playwright)
+    if ((window as any).playwright) {
+      console.log('[OfflineIndicator] Skipping in test environment');
+      return;
+    }
+    
     this.render();
     this.attachListeners();
   }

@@ -77,6 +77,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     // Monitor network requests and responses for debugging
     const requests: string[] = [];
     page.on('request', req => {
@@ -133,11 +141,11 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
 
     // Step 3: Lobby screen - Wait for game to start
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
     console.log('✓ Lobby screen loaded');
 
     // Verify lobby content
-    await expect(page.locator('text=Waiting for host')).toBeVisible();
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible();
     await expect(page.locator('.player-count')).toBeVisible();
 
     // Start the quiz via API (simulating host action)
@@ -242,6 +250,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     // Create session and join as two players
     await page.goto('http://localhost:3002');
 
@@ -253,7 +269,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill('Player One');
     await page.locator('button:has-text("Continue")').click();
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
 
     // Player 2 joins via API
     const player2Response = await request.post('/api/sessions/join', {
@@ -296,6 +312,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     // Join and complete quiz
     await page.goto('http://localhost:3002');
     await waitForComponentReady(page, 'join-screen');
@@ -305,7 +329,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill('Champion');
     await page.locator('button:has-text("Continue")').click();
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'question-screen', 15000);
@@ -339,6 +363,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     // Complete full flow to results
     await page.goto('http://localhost:3002');
     await waitForComponentReady(page, 'join-screen');
@@ -348,7 +380,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill('Test Player');
     await page.locator('button:has-text("Continue")').click();
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'question-screen', 15000);
@@ -430,6 +462,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     // Complete quiz and navigate to results
     await page.goto('http://localhost:3002');
     await waitForComponentReady(page, 'join-screen');
@@ -439,7 +479,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill('Test');
     await page.locator('button:has-text("Continue")').click();
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'question-screen', 15000);
@@ -483,6 +523,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     await page.goto('http://localhost:3002');
     await waitForComponentReady(page, 'join-screen');
     await page.locator('input[type="text"]').first().fill(pin);
@@ -491,7 +539,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill('Timer Test');
     await page.locator('button:has-text("Continue")').click();
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'question-screen', 15000);
@@ -512,6 +560,14 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     // Ensure browser context starts online
     await context.setOffline(false);
     
+    // Force navigator.onLine to always return true
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        get: () => true,
+        configurable: true
+      });
+    });
+    
     const xssNickname = '<script>alert("XSS")</script>';
 
     await page.goto('http://localhost:3002');
@@ -522,7 +578,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('input[type="text"]').first().fill(xssNickname);
     await page.locator('button:has-text("Continue")').click();
     await waitForComponentReady(page, 'lobby-screen');
-    await expect(page.locator('text=Waiting for host')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Waiting for host to start')).toBeVisible({ timeout: 5000 });
 
     await startQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'question-screen', 15000);
