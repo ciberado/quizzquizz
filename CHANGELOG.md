@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Continuous Redrawing Issue**: Fixed player frontend being continuously redrawn
+  - Problem: Multiple `setTimeout` calls in error handler weren't tracked or cleared
+  - Each failed submit created a new 2-second timeout, causing repeated navigation attempts
+  - Solution: Track error navigation timeout and clear it on unmount, prevent duplicate timeouts
+  - Added `onUnmount()` cleanup to properly stop polling, timer, and pending timeouts
+  - Only render question screen once when data loads, not on every poll cycle
 - **Player Question Screen Blank Bug**: Fixed critical bug where player screen appeared blank during questions
   - Issue: `question-screen`, `waiting-screen`, and `results-screen` components returned HTML strings but never called `setContent()`
   - Root cause: Mismatch between `BaseComponent.render()` signature (void) and component implementations (returning string)
