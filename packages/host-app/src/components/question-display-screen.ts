@@ -115,19 +115,27 @@ export class QuestionDisplayScreen extends HTMLElement {
       // Count how many players have answered the current question
       const newAnsweredCount = players.filter(p => p.hasAnswered).length;
 
-      // Only re-render if something actually changed
-      const stateChanged = 
+      // Check what changed
+      const structuralChange = 
         !this.currentGameState ||
         this.currentGameState.status !== newGameState.status ||
-        this.currentGameState.currentQuestionIndex !== newGameState.currentQuestionIndex ||
+        this.currentGameState.currentQuestionIndex !== newGameState.currentQuestionIndex;
+
+      const statsChanged = 
         this.playerCount !== newPlayerCount ||
         this.answeredCount !== newAnsweredCount;
 
-      if (stateChanged) {
+      if (structuralChange) {
+        // Full re-render needed for structural changes
         this.currentGameState = newGameState;
         this.playerCount = newPlayerCount;
         this.answeredCount = newAnsweredCount;
         this.render();
+      } else if (statsChanged) {
+        // Only update player stats without full re-render
+        this.playerCount = newPlayerCount;
+        this.answeredCount = newAnsweredCount;
+        this.updatePlayerStats();
       }
     } catch (error) {
       console.error('Failed to load game state:', error);
@@ -191,6 +199,14 @@ export class QuestionDisplayScreen extends HTMLElement {
 
   private formatTime(seconds: number): string {
     return Math.floor(seconds).toString();
+  }
+
+  private updatePlayerStats() {
+    // Update only the answered count display without full re-render
+    const answeredCountEl = this.querySelector('.answered-count');
+    if (answeredCountEl) {
+      answeredCountEl.textContent = `${this.answeredCount}/${this.playerCount}`;
+    }
   }
 
   private async handleNextQuestion() {
