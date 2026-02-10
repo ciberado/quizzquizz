@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Host Auto-Navigation After Timer**: Removed automatic navigation to leaderboard
+  - Problem: Correct answers screen auto-navigated after 1 second, too fast to review
+  - Host couldn't see or discuss correct answers with audience
+  - Solution: Removed auto-navigation, now shows manual "Show Leaderboard" button
+  - Timer expires → correct answers highlighted → host clicks button when ready
+  - Impact: Better game pacing control, time to discuss answers before moving on
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **TypeScript Compilation Errors**: Fixed type mismatches in host-app
   - Problem: API returns runtime properties (currentQuestionTimeLimit, hasAnswered) not in shared types
   - TypeScript compiler errors: Property doesn't exist, type mismatches in filter callbacks
