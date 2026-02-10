@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-10
 
 ### Fixed
+- **Timer Progress Bar Starting Position**: Fixed progress bar not starting at 100%
+  - Problem: Progress bar started at ~66% instead of full width
+  - Root cause: Progress bar calculated using fallback 30s, actual time limit was 20s
+  - When timeRemaining=20 and bar uses 30s base: 20/30=66% instead of 20/20=100%
+  - Solution: Added currentTimeLimit property to store actual time limit being used
+  - Progress bar now uses same time limit as countdown timer
+  - Impact: Progress bar correctly starts at 100% and animates down to 0%
+  - Files: `packages/host-app/src/components/question-display-screen.ts`
+
 - **Host Auto-Navigation After Timer**: Removed automatic navigation to leaderboard
   - Problem: Correct answers screen auto-navigated after 1 second, too fast to review
   - Host couldn't see or discuss correct answers with audience
