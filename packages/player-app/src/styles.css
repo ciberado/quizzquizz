@@ -1328,15 +1328,9 @@ label {
 }
 
 .question-review-list {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
-}
-
-@media (min-width: 900px) {
-  .question-review-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .question-review-card {
