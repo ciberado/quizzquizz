@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-11
 
 ### Added
-- **Phase 6F: Player Post-Game Review** (IN PROGRESS): Enhanced results screen with complete game review
+- **Phase 6F: Player Post-Game Review** (COMPLETE): Enhanced results screen with complete game review
   - **Type Definitions** (`@quizzquizz/common`):
     - `QuestionReviewItem`: Question details with player's answer and correct answers
     - `RelativeLeaderboardEntry`: Leaderboard entry with `isCurrentPlayer` flag
@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file, organized b
     - Returns stats (accuracy, score, rank), relative leaderboard (1 above + you + 1 below), and all questions with answers
     - Database query optimization (single pass ranking calculation)
     - Works with both 'finished' and 'playing' session states
-    - Unit tests: 4 tests (2 passing: authentication, 404 handling)
+    - Unit tests: 4 tests (all passing - authentication, 404 handling, complete review, relative leaderboard)
     - Files: `packages/api-server/src/routes/game.ts`, `src/routes/player-review.test.ts`
   - **Player App API Client**:
     - `getPlayerReview()` method with type-safe response
@@ -44,13 +44,15 @@ All notable changes to this project will be documented in this file, organized b
     - **Relative Leaderboard**: Compact styling matching existing leaderboard patterns
     - Mobile-responsive with touch-friendly targets
     - Files: `packages/player-app/src/styles.css` (+200 lines)
-  - **Bug Fix**: Added missing `expires_at` column to test database schema
-    - Fixes: "Column expires_at does not exist" error in tests
-    - Files: `packages/api-server/src/db/index.ts`
+  - **Bug Fixes**:
+    - Added missing `expires_at` column to test database schema
+    - Fixed route mounting order (gameRoutes before sessionRoutes to avoid catch-all conflicts)
+    - Files: `packages/api-server/src/db/index.ts`, `packages/api-server/src/index.ts`
 
 ### Changed
 - Results screen now uses `getPlayerReview()` instead of `getLeaderboard()` API call
 - Player app state cleanup now includes `api.cancelAllRequests()` and `api.clearCache()` calls
+- API route mounting order changed to prevent route conflicts (gameRoutes → sessionRoutes → playerRoutes)
 
 ## 2026-02-10
 

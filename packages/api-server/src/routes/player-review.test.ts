@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from '../routes/sessions';
+import playerRoutes from '../routes/players';
 import gameRoutes from '../routes/game';
 import { getPrisma, initDatabase, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
 
 // Mount routes like in the main app
+// IMPORTANT: gameRoutes must be mounted BEFORE sessionRoutes
+// because sessionRoutes has GET /:id which would catch /players/:playerId/review
 const app = new Hono();
-app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', gameRoutes);
+app.route('/api/sessions', sessionRoutes);
+app.route('/api/sessions', playerRoutes);
 
 const request = async (path: string, options: RequestInit = {}) => {
   const req = new Request(`http://localhost${path}`, {
@@ -21,6 +25,7 @@ const request = async (path: string, options: RequestInit = {}) => {
   });
   const res = await app.fetch(req);
   const data = await res.json();
+  
   return { res, data };
 };
 
@@ -84,7 +89,7 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionBankId: 'test-bank-1' }),
     });
-    const session = createRes.data as { sessionId: string; hostToken: string; pin: string };
+    const session = createRes.data as { id: string; hostToken: string; pin: string };
 
     // Join as player
     const joinRes = await request('/api/sessions/join', {
@@ -95,13 +100,13 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     const player = joinRes.data as { playerId: string; sessionId: string };
 
     // Start quiz
-    await request(`/api/sessions/${session.sessionId}/start`, {
+    await request(`/api/sessions/${session.id}/start`, {
       method: 'POST',
       headers: { 'X-Host-Token': session.hostToken },
     });
 
     // Submit answer for first question
-    await request(`/api/sessions/${session.sessionId}/answer`, {
+    await request(`/api/sessions/${session.id}/answer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -115,13 +120,13 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
 
     // End quiz
     await getPrisma().session.update({
-      where: { id: session.sessionId },
+      where: { id: session.id },
       data: { status: 'finished' },
     });
 
     // Get player review
     const { res, data } = await request(
-      `/api/sessions/${session.sessionId}/players/${player.playerId}/review`,
+      `/api/sessions/${session.id}/players/${player.playerId}/review`,
       {
         method: 'GET',
         headers: { 'X-Player-Id': player.playerId },
@@ -186,7 +191,7 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionBankId: 'test-bank-1' }),
     });
-    const session = createRes.data as { sessionId: string; hostToken: string; pin: string };
+    const session = createRes.data as { id: string; hostToken: string; pin: string };
 
     // Join 3 players
     const player1 = (
@@ -229,13 +234,13 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
 
     // Mark session as finished
     await getPrisma().session.update({
-      where: { id: session.sessionId },
+      where: { id: session.id },
       data: { status: 'finished' },
     });
 
     // Get Player2's review (middle player)
     const { res, data } = await request(
-      `/api/sessions/${session.sessionId}/players/${player2.playerId}/review`,
+      `/api/sessions/${session.id}/players/${player2.playerId}/review`,
       {
         method: 'GET',
         headers: { 'X-Player-Id': player2.playerId },
@@ -270,11 +275,11 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionBankId: 'test-bank-1' }),
     });
-    const session = createRes.data as { sessionId: string };
+    const session = createRes.data as { id: string };
 
     // Try to access without X-Player-Id header
     const { res, data } = await request(
-      `/api/sessions/${session.sessionId}/players/fake-player-id/review`,
+      `/api/sessions/${session.id}/players/fake-player-id/review`,
       {
         method: 'GET',
       }

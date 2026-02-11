@@ -29,9 +29,11 @@ app.get('/health', (c) => {
 });
 
 // API routes
+// IMPORTANT: Mount gameRoutes first to ensure specific routes like
+// /:sessionId/players/:playerId/review match before catch-all /:id in sessionRoutes
+app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/state, /answer, and /players/:id/review patterns
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
-app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/state and /answer patterns
 app.route('/api/question-banks', questionBankRoutes);
 
 // Initialize on startup
