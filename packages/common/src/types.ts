@@ -209,3 +209,31 @@ export const PlayerReviewResponseSchema = z.object({
 });
 
 export type PlayerReviewResponse = z.infer<typeof PlayerReviewResponseSchema>;
+
+// Question bank preview with filtering
+export const QuestionPreviewPaginationSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  totalQuestions: z.number(),
+  totalPages: z.number(),
+  hasNextPage: z.boolean(),
+  hasPrevPage: z.boolean(),
+});
+
+export type QuestionPreviewPagination = z.infer<typeof QuestionPreviewPaginationSchema>;
+
+export const QuestionPreviewFiltersSchema = z.object({
+  difficulty: z.string().nullable(),
+  topic: z.string().nullable(),
+  tag: z.string().nullable(),
+});
+
+export type QuestionPreviewFilters = z.infer<typeof QuestionPreviewFiltersSchema>;
+
+export const QuestionPreviewResponseSchema = z.object({
+  questions: z.array(QuestionSchema),
+  pagination: QuestionPreviewPaginationSchema,
+  filters: QuestionPreviewFiltersSchema,
+});
+
+export type QuestionPreviewResponse = z.infer<typeof QuestionPreviewResponseSchema>;

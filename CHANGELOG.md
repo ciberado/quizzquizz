@@ -4,6 +4,54 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-11
 
+### Added
+- **[Phase 7A]** Advanced Question Bank Management - Question preview and configuration
+  - **[api-server]** New endpoint `GET /api/question-banks/:id/questions` with filtering and pagination
+    - Filter by difficulty (easy, medium, hard - comma-separated for multiple)
+    - Filter by topic (comma-separated for multiple)
+    - Filter by tag (comma-separated for multiple)
+    - Pagination support (page, limit query params)
+    - Returns questions with metadata and pagination info
+  - **[common]** Added TypeScript types for question preview responses
+    - `QuestionPreviewResponse` with questions, pagination, and filters
+    - `QuestionPreviewPagination` with page, limit, total, and navigation flags
+    - `QuestionPreviewFilters` for active filter state
+  - **[host-app]** New Question Preview Screen for session configuration
+    - Preview all questions from a question bank before creating session
+    - Filter questions by difficulty (checkboxes: easy, medium, hard)
+    - Filter questions by topics (multi-select from available topics)
+    - Paginated question list (10 per page, configurable)
+    - Question cards show: text, answers (with correct highlighted), difficulty, time limit, topics
+    - "Select all questions" mode (default) or manual individual selection
+    - Random order toggle for question sequencing
+    - Clear filters button when filters are active
+    - Selected question count displayed in create button
+    - Validation: Requires at least 1 question selected
+  - **[host-app]** Updated Create Session Screen
+    - Changed from immediate session creation to navigation to preview screen
+    - Question bank cards now navigate to `/preview/:bankId`
+  - **[host-app]** Added CSS styles for question preview components
+    - Badge styles for difficulty (easy=green, medium=orange, hard=red)
+    - Question preview card styles with selection state
+    - Filter panel styling with checkbox groups
+    - Pagination controls
+    - Responsive adjustments for mobile/smaller screens
+  - **[e2e]** 15 comprehensive Playwright tests for question preview feature
+    - Navigation tests, filter tests, selection mode tests
+    - Session creation with filters and manual selection
+    - Pagination tests, metadata display tests
+    - All tests passing
+
+### Fixed
+- **[host-app]** Fixed question preview screen using relative URLs without base URL
+  - Changed fetch calls to use absolute URLs (http://localhost:3000)
+  - Avoids 404 errors and HTML responses being parsed as JSON
+- **[host-app]** Fixed select-all mode not clearing selections when switching to manual mode
+  - Now clears `selectedQuestionIds` when unchecking "Use all questions"
+  - Allows proper manual selection workflow
+- **[api-server]** Added port 3003 to CORS allowed origins
+  - Supports development when default ports are occupied
+
 ### Changed
 - **[api-server]** Updated CORS configuration for Tailscale access
   - Added explicit allowed origins: localhost:3001, localhost:3002, and quizzquizz.snow-burbot.ts.net

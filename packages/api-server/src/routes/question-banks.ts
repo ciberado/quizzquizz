@@ -28,4 +28,73 @@ questionBankRoutes.get('/:id', (c) => {
   return c.json(bank);
 });
 
+// Get questions from a bank with filtering and pagination
+questionBankRoutes.get('/:id/questions', (c) => {
+  const bankId = c.req.param('id');
+  const bank = questionBanks.get(bankId);
+
+  if (!bank) {
+    return c.json({ error: 'Question bank not found' }, 404);
+  }
+
+  // Parse query parameters
+  const url = new URL(c.req.url);
+  const page = parseInt(url.searchParams.get('page') || '1', 10);
+  const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+  const difficulty = url.searchParams.get('difficulty'); // 'easy', 'medium', 'hard', or comma-separated
+  const topic = url.searchParams.get('topic'); // single topic or comma-separated
+  const tag = url.searchParams.get('tag'); // single tag or comma-separated
+
+  // Filter questions
+  let filteredQuestions = [...bank.questions];
+
+  // Filter by difficulty
+  if (difficulty) {
+    const difficulties = difficulty.split(',').map((d) => d.trim().toLowerCase());
+    filteredQuestions = filteredQuestions.filter((q) =>
+      difficulties.includes(q.difficulty)
+    );
+  }
+
+  // Filter by topic
+  if (topic) {
+    const topics = topic.split(',').map((t) => t.trim());
+    filteredQuestions = filteredQuestions.filter((q) =>
+      topics.some((t) => q.topics.includes(t))
+    );
+  }
+
+  // Filter by tag
+  if (tag) {
+    const tags = tag.split(',').map((t) => t.trim());
+    filteredQuestions = filteredQuestions.filter((q) =>
+      tags.some((t) => q.tags.includes(t))
+    );
+  }
+
+  // Calculate pagination
+  const totalQuestions = filteredQuestions.length;
+  const totalPages = Math.ceil(totalQuestions / limit);
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedQuestions = filteredQuestions.slice(startIndex, endIndex);
+
+  return c.json({
+    questions: paginatedQuestions,
+    pagination: {
+      page,
+      limit,
+      totalQuestions,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+    filters: {
+      difficulty: difficulty || null,
+      topic: topic || null,
+      tag: tag || null,
+    },
+  });
+});
+
 export default questionBankRoutes;

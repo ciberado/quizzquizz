@@ -34,6 +34,14 @@ export default defineConfig({
         viewport: { width: 1920, height: 1080 }, // Larger viewport for host/projector
       },
     },
+    {
+      name: 'question-preview-tests',
+      testMatch: '**/question-preview.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
   ],
 
   // Start the API server and host/player apps before running tests

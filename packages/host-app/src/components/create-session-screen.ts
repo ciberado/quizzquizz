@@ -76,44 +76,14 @@ export class CreateSessionScreen extends BaseComponent {
       card.addEventListener('click', () => {
         const bankId = card.getAttribute('data-bank-id');
         if (bankId) {
-          this.createSession(bankId);
+          // Navigate to preview screen instead of immediate creation
+          router.navigate(`/preview/${bankId}`);
         }
       });
     });
   }
 
-  private async createSession(questionBankId: string): Promise<void> {
-    // Find the selected bank for display purposes
-    const selectedBank = this.questionBanks.find(b => b.id === questionBankId);
-    
-    this.showLoading(`Creating quiz with ${selectedBank?.name || 'selected bank'}...`);
-
-    try {
-      const session = await api.createSession(questionBankId);
-
-      // Store session info in state (CRITICAL: store hostToken!)
-      state.setState({
-        sessionId: session.id,
-        hostToken: session.hostToken,
-        pin: session.pin,
-        questionBankId,
-      });
-
-      console.log('✅ Session created:', {
-        id: session.id,
-        pin: session.pin,
-        hasToken: !!session.hostToken,
-      });
-
-      // Navigate to lobby
-      router.navigate(`/lobby/${session.id}`);
-    } catch (error) {
-      console.error('Failed to create session:', error);
-      handleApiError(error, 'Creating session');
-      this.render(); // Re-render to show banks again
-      this.showError(`Failed to create session: ${getErrorMessage(error)}`);
-    }
-  }
+  // Removed createSession method - now handled in question-preview-screen
 }
 
 // Register custom element

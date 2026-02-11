@@ -6,6 +6,7 @@ import { ErrorBoundary } from './error-boundary';
 
 // Import screen components
 import './components/create-session-screen';
+import './components/question-preview-screen';
 import './components/lobby-screen';
 import './components/question-display-screen';
 import './components/leaderboard-screen';
@@ -33,6 +34,10 @@ router.on('/', () => {
 
 router.on('/create', () => {
   showScreen('create-session-screen');
+});
+
+router.on('/preview/:bankId', () => {
+  showScreen('question-preview-screen');
 });
 
 router.on('/lobby/:sessionId', () => {
