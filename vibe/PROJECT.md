@@ -84,6 +84,7 @@ quizzquizz/
 - Question bank browser
 - Live game control (next question, show results)
 - Leaderboard display
+- Post-game question analytics (accuracy, answer breakdown, sorting)
 - Projector-friendly display mode
 
 #### `@quizzquizz/player-app`
@@ -217,6 +218,7 @@ Which of the following are parts of a cell? (Select all that apply)
 - `POST /api/sessions/:id/next` - Advance to next question
 - `POST /api/sessions/:id/end` - End the quiz
 - `GET /api/sessions/:id/leaderboard` - Get current leaderboard
+- `GET /api/sessions/:id/question-stats` - Get question performance analytics (post-game)
 
 ### Player Endpoints
 - `POST /api/sessions/join` - Join session with PIN

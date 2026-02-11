@@ -6,7 +6,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 6E Complete - Visual Polish Complete! Phase 6 DONE! (Feb 10, 2026)
+**Current Status**: Phase 12 (Partial) - Host Question Analytics Dashboard Complete! (Feb 11, 2026)
 
 **Completed Phases** (45-54 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
@@ -23,6 +23,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 5C**: Game Control & Question Display - Question presenter with timer
 - ✅ **Phase 5D**: Leaderboard & Results - Complete host MVP experience
 - ✅ **Phase 6**: Polish & Integration - COMPLETE!
+- 🟡 **Phase 12**: Advanced Analytics (Partial) - Host question analytics complete!
 
 **Current Phase**:
 - ✅ **Phase 6A**: Error Handling & Resilience (2-3 hrs) - COMPLETE
@@ -31,7 +32,8 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 6D**: Session Management & Cleanup (1-2 hrs) - COMPLETE
 - ✅ **Phase 6E**: Visual Polish & Animations (1-2 hrs) - COMPLETE
 - ✅ **Phase 6F**: Player Post-Game Review (1-2 hrs) - COMPLETE
-- 🎯 **PHASE 6 COMPLETE - READY FOR MVP TESTING!**
+- ✅ **Phase 12A**: Host Question Analytics Dashboard (1.5 hrs) - COMPLETE
+- 🎯 **PHASE 6 COMPLETE + Question Analytics Enhancement!**
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -52,7 +54,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Phase 9: User Accounts (5-7 hrs)
 - Phase 10: Additional Question Types (4-6 hrs)
 - Phase 11: Team Mode (4-5 hrs)
-- Phase 12: Analytics (3-4 hrs)
+- 🟡 Phase 12: Analytics (3-4 hrs) - PARTIAL: Host question analytics complete
 - Phase 13: Question Marketplace (6-8 hrs)
 - Phase 14: Native Mobile Apps (20+ hrs)
 - Phase 15: Enterprise Features (4-5 hrs)
@@ -73,6 +75,15 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 4. Optional: Address 2 remaining test edge cases (foreign key constraints)
 
 **Recent Achievements**:
+- ✅ **Feb 11, 2026 - Host Question Analytics Dashboard**: Post-game question performance review
+  - API endpoint: `GET /api/sessions/:id/question-stats` (host-only, with host token auth)
+  - Sortable table: By question order or accuracy percentage
+  - Expandable details: Full question, stats (total|correct|incorrect|accuracy), difficulty + topics
+  - Answer breakdown: Each option with selection count, percentage, and correct/incorrect highlighting
+  - Visual elements: Accuracy bars with color-coding (green ≥75%, orange ≥50%, red <50%)
+  - Compact horizontal layout: Stats and badges share single row for optimal space usage
+  - E2E test: 27 test steps covering full analytics dashboard functionality
+  - Files: `question-stats-table.ts`, `sessions.ts` (API route), `host-analytics.spec.ts`
 - ✅ **Feb 10, 2026 - Critical Production Bug Fixes**: Fixed 6 critical bugs blocking gameplay
   - Bug #1: Blank player question screen (render lifecycle)
   - Bug #2: Continuous screen redrawing (timeout tracking)
@@ -1510,14 +1521,26 @@ The boolean logic error in bug #6 (`&&` vs `||`) highlights the importance of:
 
 ### Phase 12: Advanced Analytics & Insights (Est. 3-4 hours)
 
+**Status**: PARTIAL - Host question analytics complete (Feb 11, 2026)
+
 **Goal**: Provide detailed analytics for hosts and players.
 
 **Scope**:
-- [ ] Host analytics:
-  - Question difficulty analysis (% correct)
+- [x] **Host question analytics** (COMPLETE - Feb 11, 2026):
+  - [x] Question accuracy analysis (% correct/incorrect per question)
+  - [x] Total responses per question
+  - [x] Sortable by question order or accuracy
+  - [x] Expandable details with full question text
+  - [x] Difficulty badge and topic tags display
+  - [x] Answer option breakdown (selection count & percentage per option)
+  - [x] Color-coded accuracy visualization (bars + percentages)
+  - [x] Compact horizontal layout (stats left, badges right)
+  - [x] API: `GET /api/sessions/:id/question-stats` with host token auth
+  - [x] Component: `question-stats-table` custom element
+  - [x] E2E test: 27 steps validating all functionality
+- [ ] Remaining host analytics:
   - Time taken per question (avg, min, max)
   - Player performance distribution
-  - Identify confusing questions
   - Export results to CSV/JSON
 - [ ] Player insights:
   - Personal performance over time
