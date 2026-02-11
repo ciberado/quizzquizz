@@ -171,3 +171,41 @@ export const LeaderboardResponseSchema = z.object({
 });
 
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
+
+// Player review (post-game detailed review)
+export const QuestionReviewItemSchema = z.object({
+  questionId: z.string(),
+  questionText: z.string(),
+  answers: z.array(AnswerSchema),
+  correctAnswerIds: z.array(z.string()),
+  playerSelectedAnswerIds: z.array(z.string()),
+  isCorrect: z.boolean(),
+  pointsEarned: z.number(),
+});
+
+export type QuestionReviewItem = z.infer<typeof QuestionReviewItemSchema>;
+
+export const RelativeLeaderboardEntrySchema = z.object({
+  playerId: z.string().uuid(),
+  nickname: z.string(),
+  score: z.number(),
+  rank: z.number(),
+  isCurrentPlayer: z.boolean(),
+});
+
+export type RelativeLeaderboardEntry = z.infer<typeof RelativeLeaderboardEntrySchema>;
+
+export const PlayerReviewResponseSchema = z.object({
+  stats: z.object({
+    totalQuestions: z.number(),
+    correctAnswers: z.number(),
+    totalScore: z.number(),
+    rank: z.number(),
+    totalPlayers: z.number(),
+    accuracyPercentage: z.number(),
+  }),
+  relativeLeaderboard: z.array(RelativeLeaderboardEntrySchema),
+  questions: z.array(QuestionReviewItemSchema),
+});
+
+export type PlayerReviewResponse = z.infer<typeof PlayerReviewResponseSchema>;

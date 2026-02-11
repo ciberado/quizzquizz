@@ -2,27 +2,27 @@ import { BaseComponent } from './base-component';
 import { state } from '../state';
 import { api } from '../api-client';
 import { router } from '../router';
-import type { LeaderboardEntry } from '@quizzquizz/common';
+import type { PlayerReviewResponse } from '@quizzquizz/common';
 
 /**
  * Results Screen Component
  * Displayed when the quiz ends.
- * Shows final leaderboard with player's position highlighted.
+ * Shows detailed review: stats, relative leaderboard, and complete question breakdown.
  */
 export class ResultsScreen extends BaseComponent {
-  private leaderboard: LeaderboardEntry[] = [];
+  private reviewData: PlayerReviewResponse | null = null;
   private loading: boolean = true;
   private error: string | null = null;
 
   protected async onMount(): Promise<void> {
-    await this.loadLeaderboard();
+    await this.loadReview();
     this.render();
   }
 
-  private async loadLeaderboard(): Promise<void> {
+  private async loadReview(): Promise<void> {
     const currentState = state.getState();
     
-    if (!currentState.sessionId) {
+    if (!currentState.sessionId || !currentState.playerId) {
       router.navigate('/');
       return;
     }
@@ -31,23 +31,20 @@ export class ResultsScreen extends BaseComponent {
       this.loading = true;
       this.render();
 
-      const response = await api.getLeaderboard(currentState.sessionId);
-      this.leaderboard = response.entries;
+      const response = await api.getPlayerReview(currentState.sessionId, currentState.playerId);
+      this.reviewData = response;
       this.loading = false;
       this.error = null;
     } catch (error) {
-      console.error('Error loading leaderboard:', error);
+      console.error('Error loading review:', error);
       this.loading = false;
-      this.error = error instanceof Error ? error.message : 'Failed to load leaderboard';
+      this.error = error instanceof Error ? error.message : 'Failed to load review';
     }
 
     this.render();
   }
 
   protected render(): void {
-    const currentState = state.getState();
-    const playerId = currentState.playerId;
-
     let html = '';
 
     if (this.loading) {
@@ -55,7 +52,7 @@ export class ResultsScreen extends BaseComponent {
         <div class="screen results-screen">
           <div class="loading-container">
             <div class="spinner"></div>
-            <p>Loading results...</p>
+            <p>Loading your results...</p>
           </div>
         </div>
       `;
@@ -81,62 +78,21 @@ export class ResultsScreen extends BaseComponent {
       return;
     }
 
-    // Find player's position
-    const playerEntry = this.leaderboard.find(e => e.playerId === playerId);
-
-    // Generate leaderboard HTML
-    const leaderboardHtml = this.leaderboard.map((entry) => {
-      const isCurrentPlayer = entry.playerId === playerId;
-      const medal = this.getMedalForRank(entry.rank);
-      
-      return `
-        <div class="leaderboard-entry ${isCurrentPlayer ? 'current-player' : ''}" data-rank="${entry.rank}">
-          <div class="entry-rank">
-            ${medal || `<span class="rank-number">#${entry.rank}</span>`}
-          </div>
-          <div class="entry-nickname">
-            ${this.escapeHtml(entry.nickname)}
-            ${isCurrentPlayer ? '<span class="you-badge">You</span>' : ''}
-          </div>
-          <div class="entry-score">${entry.score}</div>
-        </div>
-      `;
-    }).join('');
-
-    // Player's summary
-    let summaryHtml = '';
-    if (playerEntry) {
-      summaryHtml = `
-        <div class="player-summary">
-          <h2>Your Results</h2>
-          <div class="summary-stats">
-            <div class="stat">
-              <div class="stat-label">Rank</div>
-              <div class="stat-value">#${playerEntry.rank}</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label">Score</div>
-              <div class="stat-value">${playerEntry.score}</div>
-            </div>
-          </div>
-        </div>
-      `;
+    if (!this.reviewData) {
+      this.setContent('<div class="screen results-screen"><p>No data available</p></div>');
+      return;
     }
 
+    // Build the enhanced results view
     html = `
       <div class="screen results-screen">
         <div class="results-container">
           <h1>🏆 Quiz Complete!</h1>
           
-          ${summaryHtml}
+          ${this.renderStats()}
+          ${this.renderRelativeLeaderboard()}
+          ${this.renderQuestionReview()}
           
-          <div class="final-leaderboard">
-            <h3>Final Standings</h3>
-            <div class="leaderboard-list">
-              ${leaderboardHtml}
-            </div>
-          </div>
-
           <div class="results-actions">
             <button class="play-again-btn">Play Again</button>
           </div>
@@ -148,6 +104,132 @@ export class ResultsScreen extends BaseComponent {
     this.attachEventListeners();
   }
 
+  /**
+   * Render stats summary section
+   */
+  private renderStats(): string {
+    if (!this.reviewData) return '';
+
+    const { stats } = this.reviewData;
+    
+    return `
+      <div class="stats-summary">
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-value">${stats.correctAnswers}/${stats.totalQuestions}</div>
+          <div class="stat-label">Correct</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value">${stats.accuracyPercentage}%</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value">${stats.totalScore}</div>
+          <div class="stat-label">Total Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏅</div>
+          <div class="stat-value">#${stats.rank}</div>
+          <div class="stat-label">of ${stats.totalPlayers}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render relative leaderboard section (1 above + you + 1 below)
+   */
+  private renderRelativeLeaderboard(): string {
+    if (!this.reviewData) return '';
+
+    const { relativeLeaderboard } = this.reviewData;
+    
+    const leaderboardHtml = relativeLeaderboard.map((entry) => {
+      const medal = this.getMedalForRank(entry.rank);
+      
+      return `
+        <div class="leaderboard-entry ${entry.isCurrentPlayer ? 'current-player' : ''}">
+          <div class="entry-rank">
+            ${medal || `<span class="rank-number">#${entry.rank}</span>`}
+          </div>
+          <div class="entry-nickname">
+            ${this.escapeHtml(entry.nickname)}
+            ${entry.isCurrentPlayer ? '<span class="you-badge">You</span>' : ''}
+          </div>
+          <div class="entry-score">${entry.score}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="relative-leaderboard-section">
+        <h3>Your Position</h3>
+        <div class="relative-leaderboard">
+          ${leaderboardHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render complete question review section
+   */
+  private renderQuestionReview(): string {
+    if (!this.reviewData) return '';
+
+    const { questions } = this.reviewData;
+    
+    const questionsHtml = questions.map((question, index) => {
+      const icon = question.isCorrect 
+        ? '<span class="result-icon correct">✓</span>' 
+        : '<span class="result-icon incorrect">✗</span>';
+      
+      const answersHtml = question.answers.map((answer) => {
+        const isPlayerAnswer = question.playerSelectedAnswerIds.includes(answer.id);
+        const isCorrect = question.correctAnswerIds.includes(answer.id);
+        
+        let classes = 'answer-option';
+        if (isCorrect) classes += ' correct-answer';
+        if (isPlayerAnswer) classes += ' player-answer';
+        
+        return `
+          <div class="${classes}">
+            <span class="answer-indicator">
+              ${isPlayerAnswer ? (question.isCorrect ? '✓' : '✗') : ''}
+            </span>
+            <span class="answer-text">${this.escapeHtml(answer.text)}</span>
+            ${isCorrect ? '<span class="correct-badge">Correct</span>' : ''}
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="question-review-card ${question.isCorrect ? 'correct' : 'incorrect'}">
+          <div class="question-header">
+            <div class="question-number">Question ${index + 1}</div>
+            ${icon}
+            <div class="points-earned">+${question.pointsEarned} pts</div>
+          </div>
+          <div class="question-text">${this.escapeHtml(question.questionText)}</div>
+          <div class="answers-list">
+            ${answersHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="question-review-section">
+        <h3>Question Review</h3>
+        <div class="question-review-list">
+          ${questionsHtml}
+        </div>
+      </div>
+    `;
+  }
+
   protected attachEventListeners(): void {
     const playAgainBtn = this.querySelector('.play-again-btn');
     const retryBtn = this.querySelector('.retry-btn');
@@ -157,19 +239,23 @@ export class ResultsScreen extends BaseComponent {
       playAgainBtn.addEventListener('click', () => {
         // Clear state and go back to join screen
         state.clearState();
+        api.clearCache();
+        api.cancelAllRequests();
         router.navigate('/');
       });
     }
 
     if (retryBtn) {
       retryBtn.addEventListener('click', () => {
-        this.loadLeaderboard();
+        this.loadReview();
       });
     }
 
     if (homeBtn) {
       homeBtn.addEventListener('click', () => {
         state.clearState();
+        api.clearCache();
+        api.cancelAllRequests();
         router.navigate('/');
       });
     }

@@ -9,6 +9,7 @@ import type {
   SubmitAnswerRequest,
   SubmitAnswerResponse,
   LeaderboardResponse,
+  PlayerReviewResponse,
 } from '@quizzquizz/common';
 import { retryWithBackoff, isNetworkError } from './network-utils';
 
@@ -211,6 +212,23 @@ class ApiClient {
       {},
       true, // retry on network errors
       true  // use ETag caching
+    );
+  }
+
+  /**
+   * Get player's complete game review (post-game)
+   */
+  async getPlayerReview(sessionId: string, playerId: string): Promise<PlayerReviewResponse> {
+    return this.fetch<PlayerReviewResponse>(
+      `/api/sessions/${sessionId}/players/${playerId}/review`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Player-Id': playerId,
+        },
+      },
+      true, // retry on network errors
+      false // no caching for review (one-time fetch)
     );
   }
 

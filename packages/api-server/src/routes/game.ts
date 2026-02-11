@@ -189,4 +189,153 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
   }
 });
 
+// Get player's complete game review (post-game)
+gameRoutes.get('/:sessionId/players/:playerId/review', async (c) => {
+  const sessionId = c.req.param('sessionId');
+  const playerId = c.req.param('playerId');
+  const requestingPlayerId = c.req.header('X-Player-Id');
+
+  // Verify the requesting player matches the playerId in the URL
+  if (!requestingPlayerId || requestingPlayerId !== playerId) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  try {
+    // Verify session exists and is finished
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    // Allow review for 'finished' sessions or 'playing' (for testing)
+    if (session.status !== 'finished' && session.status !== 'playing') {
+      return c.json({ error: 'Game review only available after game ends' }, 400);
+    }
+
+    // Verify player exists in session
+    const player = await getPrisma().player.findFirst({
+      where: {
+        id: playerId,
+        sessionId,
+      },
+    });
+
+    if (!player) {
+      return c.json({ error: 'Player not found in session' }, 404);
+    }
+
+    // Get question bank
+    const questionBank = questionBanks.get(session.questionBankId);
+    if (!questionBank) {
+      return c.json({ error: 'Question bank not found' }, 404);
+    }
+
+    // Get all player answers for this session
+    const playerAnswers = await getPrisma().playerAnswer.findMany({
+      where: {
+        playerId,
+      },
+    });
+
+    // Build question review items
+    const questionReviewItems = questionBank.questions.map((question) => {
+      const playerAnswer = playerAnswers.find((pa) => pa.questionId === question.id);
+      
+      return {
+        questionId: question.id,
+        questionText: question.text,
+        answers: question.answers,
+        correctAnswerIds: question.correctAnswerIds,
+        playerSelectedAnswerIds: playerAnswer 
+          ? JSON.parse(playerAnswer.selectedAnswerIds as string) 
+          : [],
+        isCorrect: playerAnswer?.isCorrect || false,
+        pointsEarned: playerAnswer?.score || 0,
+      };
+    });
+
+    // Get full leaderboard for rank calculation
+    const allPlayers = await getPrisma().player.findMany({
+      where: { sessionId },
+      orderBy: [
+        { score: 'desc' },
+        { joinedAt: 'asc' },
+      ],
+    });
+
+    // Calculate rankings
+    let currentRank = 1;
+    let previousScore: number | null = null;
+    const leaderboardWithRanks = allPlayers.map((p, index) => {
+      if (previousScore !== null && p.score < previousScore) {
+        currentRank = index + 1;
+      }
+      previousScore = p.score;
+      return {
+        playerId: p.id,
+        nickname: p.nickname,
+        score: p.score,
+        rank: currentRank,
+      };
+    });
+
+    // Find current player's position
+    const playerIndex = leaderboardWithRanks.findIndex((p) => p.playerId === playerId);
+    const currentPlayerEntry = leaderboardWithRanks[playerIndex];
+
+    // Build relative leaderboard (1 above + current + 1 below)
+    const relativeLeaderboard = [];
+    
+    if (playerIndex > 0) {
+      // Add player above
+      const playerAbove = leaderboardWithRanks[playerIndex - 1];
+      relativeLeaderboard.push({
+        ...playerAbove,
+        isCurrentPlayer: false,
+      });
+    }
+    
+    // Add current player
+    relativeLeaderboard.push({
+      ...currentPlayerEntry,
+      isCurrentPlayer: true,
+    });
+    
+    if (playerIndex < leaderboardWithRanks.length - 1) {
+      // Add player below
+      const playerBelow = leaderboardWithRanks[playerIndex + 1];
+      relativeLeaderboard.push({
+        ...playerBelow,
+        isCurrentPlayer: false,
+      });
+    }
+
+    // Calculate stats
+    const correctAnswers = questionReviewItems.filter((q) => q.isCorrect).length;
+    const totalQuestions = questionBank.questions.length;
+    const accuracyPercentage = totalQuestions > 0 
+      ? Math.round((correctAnswers / totalQuestions) * 100) 
+      : 0;
+
+    return c.json({
+      stats: {
+        totalQuestions,
+        correctAnswers,
+        totalScore: player.score,
+        rank: currentPlayerEntry.rank,
+        totalPlayers: allPlayers.length,
+        accuracyPercentage,
+      },
+      relativeLeaderboard,
+      questions: questionReviewItems,
+    });
+  } catch (error) {
+    console.error('Error fetching player review:', error);
+    return c.json({ error: 'Failed to fetch player review' }, 500);
+  }
+});
+
 export default gameRoutes;

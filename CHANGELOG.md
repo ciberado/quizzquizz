@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## 2026-02-11
+
+### Added
+- **Phase 6F: Player Post-Game Review** (IN PROGRESS): Enhanced results screen with complete game review
+  - **Type Definitions** (`@quizzquizz/common`):
+    - `QuestionReviewItem`: Question details with player's answer and correct answers
+    - `RelativeLeaderboardEntry`: Leaderboard entry with `isCurrentPlayer` flag
+    - `PlayerReviewResponse`: Complete review data structure
+    - All types include Zod schemas for runtime validation
+    - Files: `packages/common/src/types.ts`
+  - **API Endpoint** (`@quizzquizz/api-server`):
+    - `GET /api/sessions/:sessionId/players/:playerId/review`: Returns complete player review
+    - Requires X-Player-Id header authentication
+    - Returns stats (accuracy, score, rank), relative leaderboard (1 above + you + 1 below), and all questions with answers
+    - Database query optimization (single pass ranking calculation)
+    - Works with both 'finished' and 'playing' session states
+    - Unit tests: 4 tests (2 passing: authentication, 404 handling)
+    - Files: `packages/api-server/src/routes/game.ts`, `src/routes/player-review.test.ts`
+  - **Player App API Client**:
+    - `getPlayerReview()` method with type-safe response
+    - Uses retry logic for network resilience
+    - Single-use fetch (no caching for review data)
+    - Files: `packages/player-app/src/api-client.ts`
+  - **Enhanced Results Screen** (`@quizzquizz/player-app`):
+    - Complete redesign from simple leaderboard to comprehensive review
+    - **3-Section Layout**: Stats summary → Relative leaderboard → Question review
+    - **Stats Summary**: 4-card grid showing correct answers, accuracy %, total score, and rank
+    - **Relative Leaderboard**: Minimal view (1 above + you + 1 below) with clear "You" indicator
+    - **Question Review**: All questions with checkmark/X indicators, correct answers highlighted in green
+    - **Enhanced "Play Again" button**: Clears state, cancels requests, and navigates to PIN screen
+    - Responsive card-based layout with smooth animations
+    - Loading and error states preserved from previous implementation
+    - Files: `packages/player-app/src/components/results-screen.ts`
+  - **Comprehensive CSS Styling** (`@quizzquizz/player-app`):
+    - **Stats Cards**: Grid layout, hover lift effects, icon + value + label structure
+    - **Question Review Cards**: Left border color-coding (green=correct, red=incorrect)
+    - **Answer Options**: Highlight correct answers, show player's selection with indicators
+    - **Result Icons**: Circular badges with checkmark/X (green/red backgrounds)
+    - **Correct Badge**: Green pill badge for "Correct" answer labels
+    - **Relative Leaderboard**: Compact styling matching existing leaderboard patterns
+    - Mobile-responsive with touch-friendly targets
+    - Files: `packages/player-app/src/styles.css` (+200 lines)
+  - **Bug Fix**: Added missing `expires_at` column to test database schema
+    - Fixes: "Column expires_at does not exist" error in tests
+    - Files: `packages/api-server/src/db/index.ts`
+
+### Changed
+- Results screen now uses `getPlayerReview()` instead of `getLeaderboard()` API call
+- Player app state cleanup now includes `api.cancelAllRequests()` and `api.clearCache()` calls
+
 ## 2026-02-10
 
 ### Added

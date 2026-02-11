@@ -30,7 +30,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 6C**: Polling Optimization (1-2 hrs) - COMPLETE
 - ✅ **Phase 6D**: Session Management & Cleanup (1-2 hrs) - COMPLETE
 - ✅ **Phase 6E**: Visual Polish & Animations (1-2 hrs) - COMPLETE
-- 🎯 **READY FOR MVP TESTING!**
+- 🔨 **Phase 6F**: Player Post-Game Review (1-2 hrs) - IN PROGRESS
 
 **Upcoming MVP Phases** (Est. 4-6 hours to full MVP):
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -966,6 +966,52 @@ The boolean logic error in bug #6 (`&&` vs `||`) highlights the importance of:
   - ✅ Leaderboard entries animate in with stagger
   - ✅ Score counters have bounce-in animation
   - ⏭️ Sound effects deferred to post-MVP
+
+### Phase 6F: Player Post-Game Review (Est. 1-2 hours) 🔨
+
+**Status**: IN PROGRESS (Feb 11, 2026)
+
+**Objective**: Enhanced results screen with complete question review and relative leaderboard.
+
+- [ ] API endpoint for player review:
+  - `GET /api/sessions/:sessionId/players/:playerId/review` - Return player's complete game review
+  - Include: All questions with text/answers, player's selected answers, correct answers, points per question
+  - Include: Relative leaderboard (1 player above + current + 1 player below)
+  - Authentication: X-Player-Id header validation
+- [ ] Backend implementation:
+  - Fetch player's answers from database
+  - Join with question bank data (question text, answer text, correct answers)
+  - Calculate relative leaderboard positions
+  - Return structured review data
+- [ ] Type definitions (common package):
+  - `QuestionReviewItem` type (question, playerAnswer, correctAnswers, points, isCorrect)
+  - `RelativeLeaderboard` type (playerAbove, currentPlayer, playerBelow)
+  - `PlayerReviewResponse` type (stats, relativeLeaderboard, questions)
+- [ ] Player results screen enhancements:
+  - Update to single scrollable screen with 3 sections
+  - Section 1: Stats summary (rank with context, score, correct count, accuracy %)
+  - Section 2: Relative leaderboard (minimal 3-player view with clear "You" indicator)
+  - Section 3: Question review list (all questions, checkmarks/X indicators, correct answers highlighted)
+  - Update "Play Again" button to clear state and navigate to PIN screen
+- [ ] Styling:
+  - Question review cards with green/red indicators
+  - Correct answer highlighting (green background)
+  - Player's answer with checkmark ✓ or X ✗ icons
+  - Compact relative leaderboard with clear current player highlight
+  - Mobile-responsive design
+- [ ] Testing:
+  - Unit tests for API endpoint
+  - Test with correct/incorrect/mixed answer scenarios
+  - Test edge cases (1st place, last place, tied scores)
+  - Manual testing with multiple players
+
+**Deliverable**: Players get comprehensive post-game review showing their performance, nearby competitors, and complete question breakdown. Clear path to play again.
+
+**Design Decisions**:
+- Show ALL questions (not just incorrect ones) for complete review
+- Single scrollable screen (no tabs or separate navigation)
+- No timing details (keep it simple with just correct/incorrect and points)
+- Minimal relative leaderboard (3 players total: 1 above + you + 1 below)
 
 ---
 
