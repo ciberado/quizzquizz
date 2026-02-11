@@ -1224,6 +1224,16 @@ button.loading::after {
   font-weight: bold;
 }
 
+/* Stats and meta combined row */
+.stats-and-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin: var(--spacing-sm) 0;
+  flex-wrap: wrap;
+}
+
 /* Compact stats layout */
 .stats-summary-compact {
   display: flex;
@@ -1231,7 +1241,6 @@ button.loading::after {
   gap: var(--spacing-sm);
   font-size: var(--font-size-base);
   color: var(--color-text);
-  margin: var(--spacing-sm) 0;
 }
 
 .stat-compact {
@@ -1251,7 +1260,6 @@ button.loading::after {
   align-items: center;
   gap: var(--spacing-xs);
   flex-wrap: wrap;
-  margin: var(--spacing-sm) 0;
 }
 
 /* Answer options */

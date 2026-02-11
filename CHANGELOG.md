@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-11
 
+### Changed
+- **[host-app]** Stats and badges now share same row in question analytics details
+  - Stats (total|correct|incorrect|accuracy) display on the left
+  - Difficulty badge and topic tags display on the right
+  - Uses flex layout with space-between for optimal spacing
+  - Wraps on smaller screens for responsive design
+
 ### Fixed
 - **[host-app]** Fixed question analytics stats and badges displaying vertically instead of horizontally
   - Removed `detail-row` class wrapper from stats-summary-compact and meta-row divs
