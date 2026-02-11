@@ -20,4 +20,14 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-non-null-assertion': 'warn',
   },
+  overrides: [
+    {
+      // Allow 'any' type in test files for API response typing
+      files: ['**/*.test.ts', '**/*.spec.ts'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-non-null-assertion': 'off',
+      },
+    },
+  ],
 };

@@ -83,7 +83,10 @@ class ApiClient {
 
         // Add ETag if we have one for this path and caching is enabled
         if (useCache && this.etagCache.has(path)) {
-          headers['If-None-Match'] = this.etagCache.get(path)!;
+          const etag = this.etagCache.get(path);
+          if (etag) {
+            headers['If-None-Match'] = etag;
+          }
         }
 
         const response = await fetch(url, {

@@ -21,7 +21,7 @@ async function createSession() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ questionBankId: 'test-bank' }),
   });
-  return res.json();
+  return res.json() as Promise<any>;
 }
 
 describe('Player Routes', () => {
@@ -71,7 +71,7 @@ describe('Player Routes', () => {
         body: JSON.stringify({ pin: session.pin, nickname: 'Player1' }),
       });
       expect(res.status).toBe(201);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data).toHaveProperty('playerId');
       expect(data.sessionId).toBe(session.id);
       expect(data.nickname).toBe('Player1');
@@ -153,7 +153,7 @@ describe('Player Routes', () => {
       });
       const res = await request(`/api/sessions/${session.id}/players`);
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.players).toHaveLength(2);
     });
 
@@ -161,7 +161,7 @@ describe('Player Routes', () => {
       const session = await createSession();
       const res = await request(`/api/sessions/${session.id}/players`);
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.players).toHaveLength(0);
     });
 
@@ -177,17 +177,19 @@ describe('Player Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: session.pin, nickname: 'Player1' }),
       });
-      const player1 = await res1.json();
+      const player1: any = await res1.json();
       const res2 = await request('/api/sessions/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: session.pin, nickname: 'Player2' }),
       });
-      const player2 = await res2.json();
+      const player2: any = await res2.json();
       await getPrisma().player.update({ where: { id: player1.playerId }, data: { score: 100 } });
       await getPrisma().player.update({ where: { id: player2.playerId }, data: { score: 200 } });
       const res = await request(`/api/sessions/${session.id}/players`);
-      const data = await res.json();
+      const data: any = await res.json();
+      expect(data.players[0]).toBeDefined();
+      expect(data.players[1]).toBeDefined();
       expect(data.players[0].nickname).toBe('Player2');
       expect(data.players[1].nickname).toBe('Player1');
     });

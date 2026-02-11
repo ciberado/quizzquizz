@@ -139,14 +139,32 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     expect(data).toHaveProperty('questions');
 
     // Verify stats
-    const stats = data.stats as {
-      totalQuestions: number;
-      correctAnswers: number;
-      totalScore: number;
-      rank: number;
-      totalPlayers: number;
-      accuracyPercentage: number;
+    const typedData = data as {
+      stats: {
+        totalQuestions: number;
+        correctAnswers: number;
+        totalScore: number;
+        rank: number;
+        totalPlayers: number;
+        accuracyPercentage: number;
+      };
+      relativeLeaderboard: Array<{
+        playerId: string;
+        nickname: string;
+        score: number;
+        rank: number;
+        isCurrentPlayer: boolean;
+      }>;
+      questions: Array<{
+        questionId: string;
+        questionText: string;
+        playerSelectedAnswerIds: string[];
+        correctAnswerIds: string[];
+        isCorrect: boolean;
+        pointsEarned: number;
+      }>;
     };
+    const stats = typedData.stats;
     expect(stats.totalQuestions).toBe(2);
     expect(stats.correctAnswers).toBe(1);
     expect(stats.totalScore).toBeGreaterThan(0);
@@ -155,33 +173,23 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     expect(stats.accuracyPercentage).toBe(50); // 1/2 = 50%
 
     // Verify relative leaderboard (only player)
-    const leaderboard = data.relativeLeaderboard as Array<{
-      playerId: string;
-      nickname: string;
-      score: number;
-      rank: number;
-      isCurrentPlayer: boolean;
-    }>;
+    const leaderboard = typedData.relativeLeaderboard;
     expect(leaderboard).toHaveLength(1);
-    expect(leaderboard[0].isCurrentPlayer).toBe(true);
-    expect(leaderboard[0].nickname).toBe('TestPlayer');
+    expect(leaderboard[0]).toBeDefined();
+    expect(leaderboard[0]!.isCurrentPlayer).toBe(true);
+    expect(leaderboard[0]!.nickname).toBe('TestPlayer');
 
     // Verify questions
-    const questions = data.questions as Array<{
-      questionId: string;
-      questionText: string;
-      playerSelectedAnswerIds: string[];
-      correctAnswerIds: string[];
-      isCorrect: boolean;
-      pointsEarned: number;
-    }>;
+    const questions = typedData.questions;
     expect(questions).toHaveLength(2);
-    expect(questions[0].questionId).toBe('q1');
-    expect(questions[0].isCorrect).toBe(true);
-    expect(questions[0].pointsEarned).toBeGreaterThan(0);
-    expect(questions[1].questionId).toBe('q2');
-    expect(questions[1].isCorrect).toBe(false);
-    expect(questions[1].pointsEarned).toBe(0);
+    expect(questions[0]).toBeDefined();
+    expect(questions[1]).toBeDefined();
+    expect(questions[0]!.questionId).toBe('q1');
+    expect(questions[0]!.isCorrect).toBe(true);
+    expect(questions[0]!.pointsEarned).toBeGreaterThan(0);
+    expect(questions[1]!.questionId).toBe('q2');
+    expect(questions[1]!.isCorrect).toBe(false);
+    expect(questions[1]!.pointsEarned).toBe(0);
   });
 
   it('should return relative leaderboard with neighbors', async () => {
@@ -250,22 +258,28 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     expect(res.status).toBe(200);
 
     // Verify relative leaderboard shows 3 players (1 above + current + 1 below)
-    const leaderboard = data.relativeLeaderboard as Array<{
-      playerId: string;
-      nickname: string;
-      rank: number;
-      isCurrentPlayer: boolean;
-    }>;
+    const typedData2 = data as {
+      relativeLeaderboard: Array<{
+        playerId: string;
+        nickname: string;
+        rank: number;
+        isCurrentPlayer: boolean;
+      }>;
+    };
+    const leaderboard = typedData2.relativeLeaderboard;
     expect(leaderboard).toHaveLength(3);
-    expect(leaderboard[0].nickname).toBe('Player1');
-    expect(leaderboard[0].rank).toBe(1);
-    expect(leaderboard[0].isCurrentPlayer).toBe(false);
-    expect(leaderboard[1].nickname).toBe('Player2');
-    expect(leaderboard[1].rank).toBe(2);
-    expect(leaderboard[1].isCurrentPlayer).toBe(true);
-    expect(leaderboard[2].nickname).toBe('Player3');
-    expect(leaderboard[2].rank).toBe(3);
-    expect(leaderboard[2].isCurrentPlayer).toBe(false);
+    expect(leaderboard[0]).toBeDefined();
+    expect(leaderboard[1]).toBeDefined();
+    expect(leaderboard[2]).toBeDefined();
+    expect(leaderboard[0]!.nickname).toBe('Player1');
+    expect(leaderboard[0]!.rank).toBe(1);
+    expect(leaderboard[0]!.isCurrentPlayer).toBe(false);
+    expect(leaderboard[1]!.nickname).toBe('Player2');
+    expect(leaderboard[1]!.rank).toBe(2);
+    expect(leaderboard[1]!.isCurrentPlayer).toBe(true);
+    expect(leaderboard[2]!.nickname).toBe('Player3');
+    expect(leaderboard[2]!.rank).toBe(3);
+    expect(leaderboard[2]!.isCurrentPlayer).toBe(false);
   });
 
   it('should require player authentication', async () => {

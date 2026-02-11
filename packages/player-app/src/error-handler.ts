@@ -39,11 +39,12 @@ export function handleApiError(error: unknown, context: string = 'API request'):
         }, 2000);
         return true;
 
-      case 409:
+      case 409: {
         // Conflict - usually duplicate action
         const errorData = error.data as { error?: string };
         showErrorToast(errorData?.error || 'Action already completed');
         return true;
+      }
 
       case 429:
         // Rate limited
@@ -57,11 +58,12 @@ export function handleApiError(error: unknown, context: string = 'API request'):
         showErrorToast('Server error. Please try again.');
         return false; // Allow retry
 
-      default:
+      default: {
         // Unknown error
         const data = error.data as { error?: string };
         showErrorToast(data?.error || 'An error occurred');
         return false;
+      }
     }
   }
 

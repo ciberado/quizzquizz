@@ -284,7 +284,12 @@ gameRoutes.get('/:sessionId/players/:playerId/review', async (c) => {
 
     // Find current player's position
     const playerIndex = leaderboardWithRanks.findIndex((p) => p.playerId === playerId);
-    const currentPlayerEntry = leaderboardWithRanks[playerIndex];
+    
+    if (playerIndex === -1) {
+      return c.json({ error: 'Player not found in leaderboard' }, 404);
+    }
+    
+    const currentPlayerEntry = leaderboardWithRanks[playerIndex]!;
 
     // Build relative leaderboard (1 above + current + 1 below)
     const relativeLeaderboard = [];

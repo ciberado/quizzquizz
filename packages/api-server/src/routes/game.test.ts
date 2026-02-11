@@ -106,7 +106,7 @@ describe('Game Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.status).toBe('lobby');
       expect(data.currentQuestion).toBeNull();
       expect(data.currentQuestionNumber).toBe(0);
@@ -145,7 +145,7 @@ describe('Game Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.status).toBe('playing');
       expect(data.currentQuestion).toBeDefined();
       expect(data.currentQuestion.id).toBe('q1');
@@ -159,7 +159,7 @@ describe('Game Routes', () => {
     it('should return 401 if player ID is missing', async () => {
       const res = await request('/api/sessions/test-session/state');
       expect(res.status).toBe(401);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Player ID required');
     });
 
@@ -168,7 +168,7 @@ describe('Game Routes', () => {
         headers: { 'X-Player-Id': 'player-1' },
       });
       expect(res.status).toBe(404);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Session not found');
     });
 
@@ -191,7 +191,7 @@ describe('Game Routes', () => {
         headers: { 'X-Player-Id': 'unknown-player' },
       });
       expect(res.status).toBe(403);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Player not found in session');
     });
   });
@@ -232,7 +232,7 @@ describe('Game Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.correct).toBe(true);
       expect(data.score).toBeGreaterThan(0);
       expect(data.correctAnswerIds).toEqual(['a2']);
@@ -241,7 +241,8 @@ describe('Game Routes', () => {
       const updatedPlayer = await getPrisma().player.findFirst({
         where: { id: playerId },
       });
-      expect(updatedPlayer.score).toBe(data.score);
+      expect(updatedPlayer).toBeDefined();
+      expect(updatedPlayer!.score).toBe(data.score);
     });
 
     it('should accept an incorrect answer and award 0 points', async () => {
@@ -279,7 +280,7 @@ describe('Game Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.correct).toBe(false);
       expect(data.score).toBe(0);
 
@@ -287,7 +288,8 @@ describe('Game Routes', () => {
       const updatedPlayer = await getPrisma().player.findFirst({
         where: { id: playerId },
       });
-      expect(updatedPlayer.score).toBe(0);
+      expect(updatedPlayer).toBeDefined();
+      expect(updatedPlayer!.score).toBe(0);
     });
 
     it('should prevent answering the same question twice', async () => {
@@ -336,7 +338,7 @@ describe('Game Routes', () => {
         }),
       });
       expect(res2.status).toBe(400);
-      const data = await res2.json();
+      const data: any = await res2.json();
       expect(data.error).toBe('Answer already submitted for this question');
     });
 
@@ -393,7 +395,7 @@ describe('Game Routes', () => {
         }),
       });
       expect(res.status).toBe(400);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Session is not currently playing');
     });
   });

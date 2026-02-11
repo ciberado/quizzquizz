@@ -99,8 +99,9 @@ playerRoutes.get('/:sessionId/players', async (c) => {
       // This is a workaround since question IDs are in-memory
       const { questionBanks } = await import('../state');
       const questionBank = questionBanks.get(session.questionBankId);
-      if (questionBank && questionBank.questions[session.currentQuestionIndex]) {
-        currentQuestionId = questionBank.questions[session.currentQuestionIndex].id;
+      const currentQuestion = questionBank?.questions[session.currentQuestionIndex];
+      if (currentQuestion) {
+        currentQuestionId = currentQuestion.id;
       }
     }
 

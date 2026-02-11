@@ -70,24 +70,28 @@ describe('Question Bank Routes', () => {
     it('should list all question banks', async () => {
       const res = await request('/api/question-banks');
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.questionBanks).toHaveLength(2);
     });
 
     it('should include question count', async () => {
       const res = await request('/api/question-banks');
-      const data = await res.json();
-      const bank1 = data.questionBanks.find((b) => b.id === 'test-bank-1');
-      const bank2 = data.questionBanks.find((b) => b.id === 'test-bank-2');
+      const data: any = await res.json();
+      const bank1 = data.questionBanks.find((b: any) => b.id === 'test-bank-1');
+      const bank2 = data.questionBanks.find((b: any) => b.id === 'test-bank-2');
+      expect(bank1).toBeDefined();
+      expect(bank2).toBeDefined();
       expect(bank1.questionCount).toBe(1);
       expect(bank2.questionCount).toBe(2);
     });
 
     it('should include optional description', async () => {
       const res = await request('/api/question-banks');
-      const data = await res.json();
-      const bank1 = data.questionBanks.find((b) => b.id === 'test-bank-1');
-      const bank2 = data.questionBanks.find((b) => b.id === 'test-bank-2');
+      const data: any = await res.json();
+      const bank1 = data.questionBanks.find((b: any) => b.id === 'test-bank-1');
+      const bank2 = data.questionBanks.find((b: any) => b.id === 'test-bank-2');
+      expect(bank1).toBeDefined();
+      expect(bank2).toBeDefined();
       expect(bank1.description).toBe('A test bank');
       expect(bank2.description).toBeUndefined();
     });
@@ -97,10 +101,11 @@ describe('Question Bank Routes', () => {
     it('should return full question bank with questions', async () => {
       const res = await request('/api/question-banks/test-bank-1');
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.id).toBe('test-bank-1');
       expect(data.metadata.name).toBe('Test Bank 1');
       expect(data.questions).toHaveLength(1);
+      expect(data.questions[0]).toBeDefined();
       expect(data.questions[0].id).toBe('Q1');
       expect(data.questions[0].answers).toHaveLength(2);
     });
@@ -112,8 +117,9 @@ describe('Question Bank Routes', () => {
 
     it('should include all question details', async () => {
       const res = await request('/api/question-banks/test-bank-2');
-      const data = await res.json();
+      const data: any = await res.json();
       const question = data.questions[0];
+      expect(question).toBeDefined();
       expect(question).toHaveProperty('id');
       expect(question).toHaveProperty('text');
       expect(question).toHaveProperty('answers');

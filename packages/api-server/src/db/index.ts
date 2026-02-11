@@ -93,6 +93,8 @@ export async function initDatabase() {
 
 // Cleanup function for graceful shutdown
 export async function disconnectDatabase() {
-  await prismaInstance.$disconnect();
+  if (prismaInstance) {
+    await prismaInstance.$disconnect();
+  }
 }
 

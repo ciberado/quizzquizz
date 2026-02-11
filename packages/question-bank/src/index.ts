@@ -95,7 +95,11 @@ function parseQuestion(
   const lines = section.split('\n').filter((line) => line.trim());
   if (lines.length === 0) return null;
 
-  const question: Partial<ParsedQuestion> & { answers: Answer[]; topics: string[]; tags: string[] } = {
+  const question: Partial<ParsedQuestion> & { 
+    answers: Array<{ id: string; text: string; isCorrect: boolean }>; 
+    topics: string[]; 
+    tags: string[] 
+  } = {
     id: questionId,
     answers: [],
     difficulty: 'medium',

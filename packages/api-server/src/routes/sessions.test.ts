@@ -72,7 +72,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(201);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data).toHaveProperty('id');
       expect(data).toHaveProperty('pin');
       expect(data).toHaveProperty('hostToken');
@@ -101,8 +101,8 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const data1 = await res1.json();
-      const data2 = await res2.json();
+      const data1: any = await res1.json();
+      const data2: any = await res2.json();
       expect(data1.pin).not.toBe(data2.pin);
     });
   });
@@ -114,12 +114,12 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
       const res = await request(`/api/sessions/${id}`, {
         headers: { 'X-Host-Token': hostToken },
       });
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.id).toBe(id);
       expect(data).not.toHaveProperty('hostToken');
     });
@@ -142,7 +142,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id } = await createRes.json();
+      const { id }: any = await createRes.json();
       const res = await request(`/api/sessions/${id}`, {
         headers: { 'X-Host-Token': 'wrong-token' },
       });
@@ -157,7 +157,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
       const res = await request(`/api/sessions/${id}`, {
         method: 'DELETE',
         headers: { 'X-Host-Token': hostToken },
@@ -180,7 +180,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id } = await createRes.json();
+      const { id }: any = await createRes.json();
       const res = await request(`/api/sessions/${id}`, {
         method: 'DELETE',
         headers: { 'X-Host-Token': 'wrong-token' },
@@ -196,7 +196,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       const res = await request(`/api/sessions/${id}/start`, {
         method: 'POST',
@@ -204,7 +204,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.message).toBe('Quiz started');
       expect(data.currentQuestionIndex).toBe(0);
 
@@ -212,7 +212,7 @@ describe('Session Routes', () => {
       const checkRes = await request(`/api/sessions/${id}`, {
         headers: { 'X-Host-Token': hostToken },
       });
-      const sessionData = await checkRes.json();
+      const sessionData: any = await checkRes.json();
       expect(sessionData.status).toBe('playing');
       expect(sessionData.currentQuestionIndex).toBe(0);
     });
@@ -223,7 +223,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       // Start quiz
       await request(`/api/sessions/${id}/start`, {
@@ -238,7 +238,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(400);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Session is not in lobby state');
     });
 
@@ -257,7 +257,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       // Start quiz
       await request(`/api/sessions/${id}/start`, {
@@ -272,7 +272,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.message).toBe('Moved to next question');
       expect(data.currentQuestionIndex).toBe(1);
     });
@@ -283,7 +283,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       // Start quiz
       await request(`/api/sessions/${id}/start`, {
@@ -304,7 +304,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.message).toBe('Quiz finished');
       expect(data.status).toBe('finished');
 
@@ -312,7 +312,7 @@ describe('Session Routes', () => {
       const checkRes = await request(`/api/sessions/${id}`, {
         headers: { 'X-Host-Token': hostToken },
       });
-      const sessionData = await checkRes.json();
+      const sessionData: any = await checkRes.json();
       expect(sessionData.status).toBe('finished');
     });
 
@@ -322,7 +322,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       const res = await request(`/api/sessions/${id}/next`, {
         method: 'POST',
@@ -330,7 +330,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(400);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Session is not currently playing');
     });
   });
@@ -342,7 +342,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       // Start quiz
       await request(`/api/sessions/${id}/start`, {
@@ -357,14 +357,14 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.message).toBe('Quiz ended');
 
       // Verify session changed to finished
       const checkRes = await request(`/api/sessions/${id}`, {
         headers: { 'X-Host-Token': hostToken },
       });
-      const sessionData = await checkRes.json();
+      const sessionData: any = await checkRes.json();
       expect(sessionData.status).toBe('finished');
     });
 
@@ -374,7 +374,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id, hostToken } = await createRes.json();
+      const { id, hostToken }: any = await createRes.json();
 
       // Start and end quiz
       await request(`/api/sessions/${id}/start`, {
@@ -394,7 +394,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(400);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Session is already finished');
     });
   });
@@ -406,12 +406,12 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id } = await createRes.json();
+      const { id }: any = await createRes.json();
 
       const res = await request(`/api/sessions/${id}/leaderboard`);
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.leaderboard).toEqual([]);
     });
 
@@ -421,7 +421,7 @@ describe('Session Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionBankId: 'test-bank' }),
       });
-      const { id } = await createRes.json();
+      const { id }: any = await createRes.json();
 
       // Add players with different scores
       await getPrisma().player.createMany({
@@ -435,8 +435,11 @@ describe('Session Routes', () => {
       const res = await request(`/api/sessions/${id}/leaderboard`);
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.leaderboard).toHaveLength(3);
+      expect(data.leaderboard[0]).toBeDefined();
+      expect(data.leaderboard[1]).toBeDefined();
+      expect(data.leaderboard[2]).toBeDefined();
       expect(data.leaderboard[0].nickname).toBe('Bob');
       expect(data.leaderboard[0].score).toBe(800);
       expect(data.leaderboard[0].rank).toBe(1);
@@ -449,7 +452,7 @@ describe('Session Routes', () => {
     it('should return 404 for non-existent session', async () => {
       const res = await request('/api/sessions/non-existent/leaderboard');
       expect(res.status).toBe(404);
-      const data = await res.json();
+      const data: any = await res.json();
       expect(data.error).toBe('Session not found');
     });
   });
