@@ -9,7 +9,7 @@ interface QuestionBank {
   id: string;
   name: string;
   description?: string;
-  topics: string[];
+  topics?: string[];
   questionCount: number;
 }
 
@@ -496,25 +496,29 @@ export class QuestionPreviewScreen extends BaseComponent {
     this.showLoading('Creating quiz session...');
 
     try {
-      // For now, use the existing API which takes just the bankId
-      // TODO: Extend API to accept selectedQuestionIds and randomOrder
-      const session = await api.createSession(this.bankId);
+      // Build questionIds array based on selection mode
+      let questionIds: string[] | undefined;
+      
+      if (this.selectAllMode) {
+        // Use all filtered questions
+        questionIds = this.preview.questions.map(q => q.id);
+      } else {
+        // Use manually selected questions
+        questionIds = Array.from(this.selectedQuestionIds);
+      }
 
-      // Store session info and configuration in state
+      // Create session with selected questions and options
+      const session = await api.createSession(this.bankId, {
+        questionIds,
+        randomOrder: this.randomOrder,
+      });
+
+      // Store session info in state
       state.setState({
         sessionId: session.id,
         hostToken: session.hostToken,
         pin: session.pin,
         questionBankId: this.bankId,
-        // Store configuration for potential future use
-        sessionConfig: {
-          selectedQuestionIds: this.selectAllMode ? null : Array.from(this.selectedQuestionIds),
-          randomOrder: this.randomOrder,
-          filters: {
-            difficulties: Array.from(this.selectedDifficulties),
-            topics: Array.from(this.selectedTopics),
-          },
-        },
       });
 
       console.log('✅ Session created with configuration:', {

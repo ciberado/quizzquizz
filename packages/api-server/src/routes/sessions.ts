@@ -4,17 +4,20 @@ import { z } from 'zod';
 import { getPrisma } from '../db';
 import { generateId, generatePin } from '@quizzquizz/common';
 import { questionBanks } from '../state';
+import { getSessionQuestions } from '../session-utils';
 
 const sessionRoutes = new Hono();
 
 // Create session request schema
 const CreateSessionSchema = z.object({
   questionBankId: z.string(),
+  questionIds: z.array(z.string()).optional(),
+  randomOrder: z.boolean().optional(),
 });
 
 // Create a new session
 sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
-  const { questionBankId } = c.req.valid('json');
+  const { questionBankId, questionIds, randomOrder } = c.req.valid('json');
 
   // Generate unique PIN (in production, check for collisions)
   const pin = generatePin();
@@ -32,6 +35,8 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         pin,
         hostToken,
         questionBankId,
+        questionIds: questionIds ? JSON.stringify(questionIds) : null,
+        randomOrder: randomOrder || false,
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(Date.now()),
@@ -77,16 +82,16 @@ sessionRoutes.get('/:id', async (c) => {
       return c.json({ error: 'Invalid host token' }, 403);
     }
 
-    // Load questions from question bank
-    const questionBank = questionBanks.get(session.questionBankId);
-    const questions = questionBank ? questionBank.questions : [];
+    // Load questions based on session configuration (handles questionIds, randomOrder)
+    const questions = getSessionQuestions(session);
 
     // Calculate current question's time limit (same logic as game state endpoint)
     let currentQuestionTimeLimit = null;
-    if (session.status === 'playing' && session.currentQuestionIndex >= 0 && questionBank) {
-      const currentQ = questionBank.questions[session.currentQuestionIndex];
+    if (session.status === 'playing' && session.currentQuestionIndex >= 0 && questions.length > 0) {
+      const currentQ = questions[session.currentQuestionIndex];
       if (currentQ) {
-        currentQuestionTimeLimit = currentQ.timeLimit || questionBank.metadata.defaultTimeLimit;
+        const questionBank = questionBanks.get(session.questionBankId);
+        currentQuestionTimeLimit = currentQ.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
       }
     }
 
@@ -213,16 +218,17 @@ sessionRoutes.post('/:id/next', async (c) => {
       return c.json({ error: 'Session is not currently playing' }, 400);
     }
 
-    // Get question bank
-    const questionBank = questionBanks.get(session.questionBankId);
-    if (!questionBank) {
-      return c.json({ error: 'Question bank not found' }, 404);
+    // Get session questions (respects questionIds and randomOrder)
+    const questions = getSessionQuestions(session);
+    
+    if (questions.length === 0) {
+      return c.json({ error: 'No questions available for this session' }, 404);
     }
 
     const nextIndex = session.currentQuestionIndex + 1;
 
     // Check if we've reached the end
-    if (nextIndex >= questionBank.questions.length) {
+    if (nextIndex >= questions.length) {
       // End the quiz
       await getPrisma().session.update({
         where: { id: sessionId },
@@ -361,7 +367,7 @@ sessionRoutes.get('/:id/question-stats', async (c) => {
       return c.json({ error: 'Invalid host token' }, 403);
     }
 
-    // Get question bank
+    // Get question bank for metadata
     const questionBank = questionBanks.get(session.questionBankId);
     if (!questionBank) {
       return c.json({ error: 'Question bank not found' }, 404);
@@ -376,8 +382,9 @@ sessionRoutes.get('/:id/question-stats', async (c) => {
       },
     });
 
-    // Aggregate statistics per question
-    const questionStats = questionBank.questions.map((question, index) => {
+    // Aggregate statistics per question (uses session-specific questions)
+    const questions = getSessionQuestions(session);
+    const questionStats = questions.map((question, index) => {
       const answersForQuestion = allAnswers.filter(
         (answer) => answer.questionId === question.id
       );

@@ -15,6 +15,8 @@ model Session {
   pin                  String   @unique
   hostToken            String   @map("host_token")
   questionBankId       String   @map("question_bank_id")
+  questionIds          String?  @map("question_ids") // JSON array of question IDs to use (null = all questions) 
+  randomOrder          Boolean  @default(false) @map("random_order") // Whether to shuffle questions
   status               String   @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
   currentQuestionIndex Int      @default(-1) @map("current_question_index")
   questionStartedAt    BigInt?  @map("question_started_at") // timestamp in ms

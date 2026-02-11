@@ -98,7 +98,9 @@ export type PlayerAnswer = z.infer<typeof PlayerAnswerSchema>;
 // Session creation
 export const CreateSessionRequestSchema = z.object({
   questionBankId: z.string(),
-  questionCount: z.number().min(1).max(50).optional(),
+  questionIds: z.array(z.string()).optional(), // Specific question IDs to use (omit for all questions)
+  randomOrder: z.boolean().optional(), // Whether to shuffle questions
+  questionCount: z.number().min(1).max(50).optional(), // Deprecated - use questionIds instead
   timeLimit: z.number().min(5).max(120).optional(),
 });
 

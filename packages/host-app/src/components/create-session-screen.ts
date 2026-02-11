@@ -1,8 +1,7 @@
 import { BaseComponent } from './base-component';
 import { api } from '../api-client';
 import { router } from '../router';
-import { state } from '../state';
-import { handleApiError, getErrorMessage } from '../error-handler';
+import { handleApiError } from '../error-handler';
 
 // Use a simpler type for the question bank summary (from GET /api/question-banks)
 interface QuestionBankSummary {

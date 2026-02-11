@@ -8,6 +8,7 @@ import {
   SubmitAnswerRequestSchema 
 } from '@quizzquizz/common';
 import { questionBanks } from '../state';
+import { getSessionQuestions } from '../session-utils';
 
 const gameRoutes = new Hono();
 
@@ -42,10 +43,10 @@ gameRoutes.get('/:sessionId/state', async (c) => {
       return c.json({ error: 'Player not found in session' }, 403);
     }
 
-    // Get question bank
-    const questionBank = questionBanks.get(session.questionBankId);
-    if (!questionBank) {
-      return c.json({ error: 'Question bank not found' }, 404);
+    // Get session questions (respects questionIds and randomOrder)
+    const questions = getSessionQuestions(session);
+    if (questions.length === 0) {
+      return c.json({ error: 'No questions available for this session' }, 404);
     }
 
     // Get current question (if any)
@@ -54,10 +55,11 @@ gameRoutes.get('/:sessionId/state', async (c) => {
     let timeLimit = null;
     
     if (session.status === 'playing' && session.currentQuestionIndex >= 0) {
-      currentQuestion = questionBank.questions[session.currentQuestionIndex];
+      currentQuestion = questions[session.currentQuestionIndex];
       
       if (currentQuestion) {
-        timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
+        const questionBank = questionBanks.get(session.questionBankId);
+        timeLimit = currentQuestion.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
         questionStartedAt = session.questionStartedAt ? Number(session.questionStartedAt) : null;
       }
     }
@@ -69,11 +71,11 @@ gameRoutes.get('/:sessionId/state', async (c) => {
         text: currentQuestion.text,
         answers: currentQuestion.answers,
         difficulty: currentQuestion.difficulty,
-        timeLimit: currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit,
+        timeLimit,
       } : null,
       questionStartedAt,
       timeLimit,
-      totalQuestions: questionBank.questions.length,
+      totalQuestions: questions.length,
       currentQuestionNumber: session.currentQuestionIndex + 1,
     });
   } catch (error) {
@@ -123,14 +125,20 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
     }
 
     // Check if player already answered this question
-    const questionBank = questionBanks.get(session.questionBankId);
-    if (!questionBank) {
+    const questions = getSessionQuestions(session);
+    if (questions.length === 0) {
       return c.json({ error: 'Question bank not found' }, 404);
     }
 
-    const currentQuestion = questionBank.questions[session.currentQuestionIndex];
+    const currentQuestion = questions[session.currentQuestionIndex];
     if (!currentQuestion) {
       return c.json({ error: 'Question not found' }, 404);
+    }
+
+    // Get question bank metadata for timeLimit default
+    const questionBank = questionBanks.get(session.questionBankId);
+    if (!questionBank) {
+      return c.json({ error: 'Question bank not found' }, 404);
     }
 
     // Validate client's questionId matches current question
@@ -227,9 +235,9 @@ gameRoutes.get('/:sessionId/players/:playerId/review', async (c) => {
       return c.json({ error: 'Player not found in session' }, 404);
     }
 
-    // Get question bank
-    const questionBank = questionBanks.get(session.questionBankId);
-    if (!questionBank) {
+    // Get questions for this session
+    const questions = getSessionQuestions(session);
+    if (questions.length === 0) {
       return c.json({ error: 'Question bank not found' }, 404);
     }
 
@@ -241,7 +249,7 @@ gameRoutes.get('/:sessionId/players/:playerId/review', async (c) => {
     });
 
     // Build question review items
-    const questionReviewItems = questionBank.questions.map((question) => {
+    const questionReviewItems = questions.map((question) => {
       const playerAnswer = playerAnswers.find((pa) => pa.questionId === question.id);
       
       return {
@@ -320,7 +328,7 @@ gameRoutes.get('/:sessionId/players/:playerId/review', async (c) => {
 
     // Calculate stats
     const correctAnswers = questionReviewItems.filter((q) => q.isCorrect).length;
-    const totalQuestions = questionBank.questions.length;
+    const totalQuestions = questions.length;
     const accuracyPercentage = totalQuestions > 0 
       ? Math.round((correctAnswers / totalQuestions) * 100) 
       : 0;

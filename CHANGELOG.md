@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-11
 
+### Fixed
+- **[Critical Bug]** Question filtering now properly applied to game sessions
+  - Sessions now respect the questionIds selected during session creation
+  - Added `questionIds` (JSON string) and `randomOrder` (boolean) fields to Session database model
+  - Created `getSessionQuestions()` utility function to centralize question loading logic
+  - Updated all game endpoints to use filtered questions instead of entire question bank
+  - Host app now sends `questionIds` array when creating sessions with filtered/selected questions
+  - Random order shuffle now applied consistently when enabled
+  - Fix ensures game uses correct number of questions (e.g., 3 filtered questions instead of all 10)
+  - Players no longer wait for non-existent questions after filtered quiz completes
+  - Host final results screen now displays correctly after last question
+
 ### Added
 - **[Phase 7A]** Advanced Question Bank Management - Question preview and configuration
   - **[api-server]** New endpoint `GET /api/question-banks/:id/questions` with filtering and pagination

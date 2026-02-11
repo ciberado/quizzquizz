@@ -170,14 +170,24 @@ export const api = {
   /**
    * Create a new session
    */
-  async createSession(questionBankId: string): Promise<{
+  async createSession(
+    questionBankId: string,
+    options?: {
+      questionIds?: string[];
+      randomOrder?: boolean;
+    }
+  ): Promise<{
     id: string;
     pin: string;
     hostToken: string;
   }> {
     return apiRequest('/api/sessions', {
       method: 'POST',
-      body: JSON.stringify({ questionBankId }),
+      body: JSON.stringify({
+        questionBankId,
+        ...(options?.questionIds && { questionIds: options.questionIds }),
+        ...(options?.randomOrder !== undefined && { randomOrder: options.randomOrder }),
+      }),
     });
   },
 
