@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-11
 
+### Fixed
+- **[host-app]** Fixed question analytics stats and badges displaying vertically instead of horizontally
+  - Removed `detail-row` class wrapper from stats-summary-compact and meta-row divs
+  - Added proper margins to stats and meta rows for correct spacing
+  - Stats now display in single horizontal row: `Total | Correct | Incorrect | Accuracy`
+  - Difficulty badge and topic tags now display horizontally on same line
+
+### Changed
+- **[host-app]** Improved question analytics details panel with compact horizontal layout
+  - Stats row now displays total, correct, incorrect, and accuracy in single row with separators
+  - Meta row shows difficulty badge and topic tags without headers (self-explanatory)
+  - Added answer options breakdown showing selection counts and percentages
+  - Color-coded answer options: green left border for correct, red for incorrect
+  - Reduced vertical space usage for better UX on smaller screens
+  - Updated E2E test to verify compact layout and answer options display
+
 ### Added
 - **Host Question Analytics Dashboard**: Added comprehensive question performance review to final results screen
   - **API Endpoint** (`@quizzquizz/api-server`):

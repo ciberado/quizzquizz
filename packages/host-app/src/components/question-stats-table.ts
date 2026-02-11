@@ -208,7 +208,7 @@ export class QuestionStatsTable extends HTMLElement {
               <p>${this.escapeHtml(question.questionText)}</p>
             </div>
             
-            <div class="detail-row stats-summary-compact">
+            <div class="stats-summary-compact">
               <span class="stat-compact">Total: <strong>${question.totalAnswers}</strong></span>
               <span class="stat-separator">|</span>
               <span class="stat-compact" style="color: #4caf50">Correct: <strong>${question.correctAnswers}</strong></span>
@@ -218,7 +218,7 @@ export class QuestionStatsTable extends HTMLElement {
               <span class="stat-compact">Accuracy: <strong>${question.accuracyPercentage}%</strong></span>
             </div>
             
-            <div class="detail-row meta-row">
+            <div class="meta-row">
               ${this.getDifficultyBadge(question.difficulty)}
               ${question.topics.length > 0 ? question.topics.map(topic => `<span class="topic-tag">${this.escapeHtml(topic)}</span>`).join('') : ''}
             </div>

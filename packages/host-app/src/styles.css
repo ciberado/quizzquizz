@@ -1231,6 +1231,7 @@ button.loading::after {
   gap: var(--spacing-sm);
   font-size: var(--font-size-base);
   color: var(--color-text);
+  margin: var(--spacing-sm) 0;
 }
 
 .stat-compact {
@@ -1250,6 +1251,7 @@ button.loading::after {
   align-items: center;
   gap: var(--spacing-xs);
   flex-wrap: wrap;
+  margin: var(--spacing-sm) 0;
 }
 
 /* Answer options */
