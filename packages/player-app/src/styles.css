@@ -754,7 +754,7 @@ label {
   .join-screen form,
   .waiting-screen,
   .results-screen {
-    max-width: 600px;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
@@ -1427,6 +1427,7 @@ label {
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   transition: all var(--transition-base);
+  min-height: 48px;
 }
 
 .answer-option.correct-answer {
@@ -1455,6 +1456,7 @@ label {
 .answer-text {
   flex: 1;
   color: var(--color-text);
+  line-height: 1.5;
 }
 
 .correct-badge {
@@ -1464,6 +1466,9 @@ label {
   padding: 2px var(--spacing-xs);
   border-radius: var(--radius-sm);
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 /* Loading and Error States */
