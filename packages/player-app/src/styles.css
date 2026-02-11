@@ -1049,19 +1049,20 @@ label {
 
 /* Results Screen Styles */
 .results-screen {
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
   overflow-y: auto;
 }
 
 .results-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
+  padding: 0 var(--spacing-md);
 }
 
 .results-container h1 {
   font-size: var(--font-size-2xl);
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
   text-align: center;
 }
 
@@ -1250,10 +1251,15 @@ label {
 /* Stats Summary Cards */
 .stats-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
-  max-width: 100%;
+  margin-bottom: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  .stats-summary {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .stat-card {
@@ -1293,8 +1299,8 @@ label {
 .relative-leaderboard-section {
   background-color: var(--color-bg);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
   box-shadow: var(--shadow-md);
 }
 
@@ -1315,7 +1321,7 @@ label {
 .question-review-section {
   background-color: var(--color-bg);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
   box-shadow: var(--shadow-md);
 }
@@ -1330,7 +1336,7 @@ label {
 .question-review-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .question-review-card {
