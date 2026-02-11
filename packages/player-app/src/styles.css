@@ -1055,7 +1055,7 @@ label {
 
 .results-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -1250,9 +1250,10 @@ label {
 /* Stats Summary Cards */
 .stats-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-xl);
+  max-width: 100%;
 }
 
 .stat-card {
@@ -1327,9 +1328,15 @@ label {
 }
 
 .question-review-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--spacing-md);
+}
+
+@media (min-width: 900px) {
+  .question-review-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .question-review-card {

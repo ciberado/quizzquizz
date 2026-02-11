@@ -53,6 +53,7 @@ All notable changes to this project will be documented in this file, organized b
 - Results screen now uses `getPlayerReview()` instead of `getLeaderboard()` API call
 - Player app state cleanup now includes `api.cancelAllRequests()` and `api.clearCache()` calls
 - API route mounting order changed to prevent route conflicts (gameRoutes → sessionRoutes → playerRoutes)
+- **Quiz complete screen layout**: Widened max-width to 1400px (from 800px) and question review now uses 2-column grid on wider screens to reduce scrolling
 
 ## 2026-02-10
 
