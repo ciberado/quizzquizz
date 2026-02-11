@@ -26,13 +26,29 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 },
       },
     },
+    {
+      name: 'host-tests',
+      testMatch: '**/host-analytics.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 }, // Larger viewport for host/projector
+      },
+    },
   ],
 
-  // Start the API server and player app before running tests
+  // Start the API server and host/player apps before running tests
   webServer: [
     {
       command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/api-server"',
       url: 'http://localhost:3000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/host-app"',
+      url: 'http://localhost:3001',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
       stdout: 'pipe',

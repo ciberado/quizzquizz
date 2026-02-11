@@ -7,6 +7,8 @@
 import { router } from '../router';
 import { state } from '../state';
 import { api } from '../api-client';
+import './question-stats-table';
+import type { QuestionStatsTable } from './question-stats-table';
 
 interface LeaderboardEntry {
   rank: number;
@@ -20,6 +22,7 @@ export class FinalResultsScreen extends HTMLElement {
   private totalPlayers: number = 0;
   private totalQuestions: number = 0;
   private confettiRendered: boolean = false;
+  private questionStatsTable: QuestionStatsTable | null = null;
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -32,6 +35,7 @@ export class FinalResultsScreen extends HTMLElement {
 
     this.render();
     await this.loadFinalResults();
+    await this.loadQuestionStats();
     
     // Trigger confetti animation after render
     if (this.leaderboard.length > 0 && !this.confettiRendered) {
@@ -61,6 +65,23 @@ export class FinalResultsScreen extends HTMLElement {
     } catch (error) {
       console.error('Error loading final results:', error);
       this.showError();
+    }
+  }
+
+  private async loadQuestionStats() {
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) return;
+
+    try {
+      const stats = await api.getQuestionStats(sessionId, hostToken);
+      
+      // Update the question stats table with new data
+      if (this.questionStatsTable) {
+        this.questionStatsTable.setData(stats.questions);
+      }
+    } catch (error) {
+      console.error('Error loading question stats:', error);
+      // Non-fatal error - the page will still show the leaderboard
     }
   }
 
@@ -167,6 +188,9 @@ export class FinalResultsScreen extends HTMLElement {
           </div>
         </div>
 
+        <!-- Question Statistics Section -->
+        <question-stats-table></question-stats-table>
+
         <div class="final-actions">
           <button class="btn-primary btn-large" data-action="new-quiz">
             Create New Quiz 🎮
@@ -179,6 +203,9 @@ export class FinalResultsScreen extends HTMLElement {
     this.querySelector('[data-action="new-quiz"]')?.addEventListener('click', () => {
       this.handleCreateNewQuiz();
     });
+
+    // Store reference to question stats table
+    this.questionStatsTable = this.querySelector('question-stats-table') as QuestionStatsTable;
   }
 
   private renderLeaderboardEntry(entry: LeaderboardEntry): string {

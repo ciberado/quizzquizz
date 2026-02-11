@@ -10,6 +10,7 @@ import './components/lobby-screen';
 import './components/question-display-screen';
 import './components/leaderboard-screen';
 import './components/final-results-screen';
+import './components/question-stats-table';
 
 /**
  * QuizzQuizz Host App

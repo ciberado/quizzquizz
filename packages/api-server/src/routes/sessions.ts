@@ -338,4 +338,96 @@ sessionRoutes.get('/:id/leaderboard', async (c) => {
   }
 });
 
+// Get question statistics (host only)
+sessionRoutes.get('/:id/question-stats', async (c) => {
+  const sessionId = c.req.param('id');
+  const hostToken = c.req.header('X-Host-Token');
+
+  if (!hostToken) {
+    return c.json({ error: 'Host token required' }, 401);
+  }
+
+  try {
+    // Verify session and host token
+    const session = await getPrisma().session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    if (session.hostToken !== hostToken) {
+      return c.json({ error: 'Invalid host token' }, 403);
+    }
+
+    // Get question bank
+    const questionBank = questionBanks.get(session.questionBankId);
+    if (!questionBank) {
+      return c.json({ error: 'Question bank not found' }, 404);
+    }
+
+    // Get all player answers for this session
+    const allAnswers = await getPrisma().playerAnswer.findMany({
+      where: {
+        player: {
+          sessionId,
+        },
+      },
+    });
+
+    // Aggregate statistics per question
+    const questionStats = questionBank.questions.map((question, index) => {
+      const answersForQuestion = allAnswers.filter(
+        (answer) => answer.questionId === question.id
+      );
+
+      const totalAnswers = answersForQuestion.length;
+      const correctAnswers = answersForQuestion.filter((a) => a.isCorrect).length;
+      const incorrectAnswers = totalAnswers - correctAnswers;
+      const accuracyPercentage =
+        totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
+
+      // Calculate answer option statistics
+      const answerOptions = question.answers.map((option) => {
+        // Count how many players selected this answer
+        const selectionCount = answersForQuestion.filter((playerAnswer) => {
+          const selectedIds = JSON.parse(playerAnswer.selectedAnswerIds);
+          return selectedIds.includes(option.id);
+        }).length;
+
+        const selectionPercentage = totalAnswers > 0 
+          ? Math.round((selectionCount / totalAnswers) * 100) 
+          : 0;
+
+        return {
+          id: option.id,
+          text: option.text,
+          isCorrect: question.correctAnswerIds.includes(option.id),
+          selectionCount,
+          selectionPercentage,
+        };
+      });
+
+      return {
+        questionIndex: index,
+        questionId: question.id,
+        questionText: question.text,
+        totalAnswers,
+        correctAnswers,
+        incorrectAnswers,
+        accuracyPercentage,
+        difficulty: question.difficulty,
+        topics: question.topics || [],
+        answerOptions,
+      };
+    });
+
+    return c.json({ questions: questionStats });
+  } catch (error) {
+    console.error('Error fetching question statistics:', error);
+    return c.json({ error: 'Failed to fetch question statistics' }, 500);
+  }
+});
+
 export default sessionRoutes;

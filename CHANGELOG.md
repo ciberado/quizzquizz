@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-11
 
+### Added
+- **Host Question Analytics Dashboard**: Added comprehensive question performance review to final results screen
+  - **API Endpoint** (`@quizzquizz/api-server`):
+    - `GET /api/sessions/:sessionId/question-stats`: Returns per-question statistics (host-only)
+    - Requires X-Host-Token header authentication
+    - Returns accuracy percentage, total/correct/incorrect counts for each question
+    - Includes question metadata (difficulty, topics)
+    - Unit tests: 5 tests (all passing - authentication, 401/403/404 handling, stats aggregation)
+    - Files: `packages/api-server/src/routes/sessions.ts`, `src/routes/sessions.test.ts`
+  - **Question Statistics Table Component** (`@quizzquizz/host-app`):
+    - Sortable table with two modes: Order (question sequence) or Accuracy (performance-based)
+    - Compact row format: Q#, question preview, response counts, accuracy with visual bar
+    - Expandable details on click: full question text, difficulty badge, topics, detailed stats
+    - Color-coded accuracy: green (≥75%), orange (≥50%), red (<50%)
+    - Files: `packages/host-app/src/components/question-stats-table.ts`
+  - **Final Results Screen Integration** (`@quizzquizz/host-app`):
+    - Question stats table shown after final leaderboard
+    - Automatic data loading on screen mount
+    - Non-blocking: leaderboard displays even if stats fail to load
+    - Files: `packages/host-app/src/components/final-results-screen.ts`, `src/api-client.ts`, `src/main.ts`
+  - **Comprehensive CSS Styling** (`@quizzquizz/host-app`):
+    - Table layout with hover effects and expansion animations
+    - Visual accuracy bars with dynamic coloring
+    - Difficulty badges with semantic colors (green/orange/red)
+    - Topic tags with consistent styling
+    - Responsive detail panel with stat summary grid
+    - Files: `packages/host-app/src/styles.css`
+
 ### Fixed
 - **TypeScript & Lint Errors**: Resolved all compilation and linting issues across the codebase (119 TypeScript errors, 5 lint errors)
   - Fixed case declarations in error handlers by wrapping with curly braces

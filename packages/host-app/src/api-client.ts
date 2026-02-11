@@ -265,4 +265,34 @@ export const api = {
   async getLeaderboard(sessionId: string): Promise<{ leaderboard: Array<{ rank: number; nickname: string; score: number; playerId: string }> }> {
     return apiRequest<{ leaderboard: Array<{ rank: number; nickname: string; score: number; playerId: string }> }>(`/api/sessions/${sessionId}/leaderboard`);
   },
+
+  /**
+   * Get question statistics (host only)
+   */
+  async getQuestionStats(sessionId: string, hostToken: string): Promise<{
+    questions: Array<{
+      questionIndex: number;
+      questionId: string;
+      questionText: string;
+      totalAnswers: number;
+      correctAnswers: number;
+      incorrectAnswers: number;
+      accuracyPercentage: number;
+      difficulty: string;
+      topics: string[];
+      answerOptions: Array<{
+        id: string;
+        text: string;
+        isCorrect: boolean;
+        selectionCount: number;
+        selectionPercentage: number;
+      }>;
+    }>;
+  }> {
+    return apiRequest(`/api/sessions/${sessionId}/question-stats`, {
+      headers: {
+        'X-Host-Token': hostToken,
+      },
+    });
+  },
 };
