@@ -1422,12 +1422,11 @@ label {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
+  padding: 12px var(--spacing-sm);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   transition: all var(--transition-base);
-  min-height: 48px;
 }
 
 .answer-option.correct-answer {
@@ -1440,9 +1439,13 @@ label {
 }
 
 .answer-indicator {
-  min-width: 20px;
+  width: 20px;
   font-weight: 700;
   color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .answer-option.player-answer .answer-indicator {
@@ -1463,12 +1466,14 @@ label {
   font-size: var(--font-size-sm);
   background-color: var(--color-success);
   color: white;
-  padding: 2px var(--spacing-xs);
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
-  line-height: 1.2;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Loading and Error States */
