@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-12
 
+### Added
+- **[host-app]** Question Display Screen styling for answer review
+  - Correct answers now visually highlighted in green after timer expires
+  - Answer cards show green border, background glow, and animated checkmark
+  - Large answer labels (A, B, C, D) change to green for correct answers
+  - Smooth animations: correct answer pulse and checkmark appear effects
+  - Expired timer section shows warning styling (orange border)
+  - Full projector-optimized layout with large fonts and high contrast
+  - Responsive design: single column on smaller screens
+  - Styling matches Kahoot-style answer reveal experience
+
 ### Fixed
 - **[Critical Bug]** Players now properly see game end when host finishes quiz
   - Fixed leaderboard screen to call API when clicking "View Final Results"
