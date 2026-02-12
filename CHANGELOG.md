@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-12
 
+### Fixed
+- **[Static File Routing]** Fixed API server production routing bug
+  - Host app at `/host` was incorrectly serving player app instead of host app
+  - Root cause: Catch-all route handler (`app.get('*', ...)`) was matching `/host` routes
+  - Solution: Replaced `app.get()` with `app.use()` for static middleware and used `rewriteRequestPath` 
+  - Ensured host routes (`/host/*`, `/host`) are processed before player catch-all
+  - Verified all routes: `/` → player app, `/host` → host app, `/health` → API JSON, `/api/*` → API JSON ✅
+
 ### Added
 - **[Phase 8A]** Docker Configuration - Complete containerized deployment
   - **[Dockerfile]** Multi-stage build for production deployment

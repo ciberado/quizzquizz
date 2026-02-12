@@ -63,13 +63,19 @@ if (isProduction) {
   if (hostAppExists) {
     console.log(`   ✓ Host app: ${hostAppPath}`);
     
-    // Serve host app static assets
+    // Serve host app static assets from /host/assets/*
     app.use('/host/assets/*', serveStatic({ root: hostAppPath }));
     
     // Serve host app index.html for all /host routes
-    app.get('/host*', serveStatic({ 
-      path: './index.html',
-      root: hostAppPath 
+    // Must come before player app catch-all
+    app.use('/host/*', serveStatic({ 
+      root: hostAppPath,
+      rewriteRequestPath: (_path) => '/index.html'
+    }));
+    
+    app.use('/host', serveStatic({ 
+      root: hostAppPath,
+      rewriteRequestPath: (_path) => '/index.html'
     }));
   } else {
     console.warn(`   ⚠ Host app dist not found: ${hostAppPath}`);
@@ -78,19 +84,20 @@ if (isProduction) {
   if (playerAppExists) {
     console.log(`   ✓ Player app: ${playerAppPath}`);
     
-    // Serve player app static assets
+    // Serve player app static assets from /assets/*
     app.use('/assets/*', serveStatic({ root: playerAppPath }));
     
-    // Serve player app index.html for root and all non-API routes
-    app.get('/', serveStatic({ 
-      path: './index.html',
-      root: playerAppPath 
+    // Serve player app index.html for root route
+    app.use('/', serveStatic({ 
+      root: playerAppPath,
+      rewriteRequestPath: (path) => path === '/' ? '/index.html' : path
     }));
     
-    // Fallback to player app for client-side routing
-    app.get('*', serveStatic({ 
-      path: './index.html',
-      root: playerAppPath 
+    // Fallback to player app for client-side routing (must come LAST)
+    // This catches all non-API, non-host routes
+    app.use('*', serveStatic({ 
+      root: playerAppPath,
+      rewriteRequestPath: (_path) => '/index.html'
     }));
   } else {
     console.warn(`   ⚠ Player app dist not found: ${playerAppPath}`);
