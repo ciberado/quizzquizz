@@ -4,8 +4,28 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-12
 
+### Changed
+- **[Architecture]** Simplified Docker deployment with Caddy URL rewriting
+  - **Caddy now serves static files directly** from filesystem instead of proxying to Node.js
+  - Removed ~50 lines of static file serving code from API server
+  - API server now only handles `/api/*` and `/health` endpoints
+  - **Performance improvement**: Caddy serves static files much faster than Node.js
+  - **Cleaner separation of concerns**: API server for business logic, Caddy for static assets
+  - Caddy uses `uri strip_prefix /host` to rewrite URLs (e.g., `/host/assets/app.js` → `/assets/app.js`)
+  - Shared volume (`app-dist`) between containers for static file access
+  - Architecture now: Client → Caddy (static files + API proxy) → Node.js (API only)
+
 ### Fixed
-- **[Static File Routing]** Fixed API server production routing bug
+- **[Docker Deployment]** Fixed critical routing issues in production mode
+  - **Host app assets not loading**: Fixed `/host/assets/*` returning HTML instead of JavaScript/CSS
+    - Root cause: `serveStatic` wasn't rewriting `/host/assets/*` to `/assets/*` to match actual file paths
+    - Solution: Added `rewriteRequestPath: (path) => path.replace(/^\/host/, '')` to strip `/host` prefix
+  - **Host app Vite config**: Added `base: '/host/'` so Vite builds assets with correct paths
+  - **API routes serving HTML**: Fixed `/api` endpoint returning player app instead of 404
+    - Solution: Added path check in catch-all route to skip `/api/*` paths
+  - Created comprehensive Playwright test suite (`e2e/docker-routing.spec.ts`) to verify all routes
+  - All 8 routing tests now passing: player app, host app, API endpoints, asset loading
+- **[Static File Routing]** Fixed API server production routing bug (from earlier today)
   - Host app at `/host` was incorrectly serving player app instead of host app
   - Root cause: Catch-all route handler (`app.get('*', ...)`) was matching `/host` routes
   - Solution: Replaced `app.get()` with `app.use()` for static middleware and used `rewriteRequestPath` 

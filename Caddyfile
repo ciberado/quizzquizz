@@ -1,5 +1,5 @@
 # Caddyfile for QuizzQuizz
-# Provides a single entry point with reverse proxy to the API server
+# Serves static files directly and proxies API requests to Node.js
 
 {
     # Disable automatic HTTPS for local development
@@ -13,24 +13,30 @@
     # Enable compression
     encode gzip
 
-    # API routes - proxy to API server
-    handle /api/* {
+    # API routes - proxy to Node.js API server
+    # Match both /api and /api/*
+    handle /api* {
         reverse_proxy quizzquizz:3000
     }
 
-    # Health check endpoint - proxy to API server
+    # Health check endpoint - proxy to Node.js API server
     handle /health {
         reverse_proxy quizzquizz:3000
     }
 
-    # Host app routes - proxy to API server (which serves static files)
+    # Host app - serve static files directly from filesystem
     handle /host* {
-        reverse_proxy quizzquizz:3000
+        root * /app/packages/host-app/dist
+        uri strip_prefix /host
+        try_files {path} /index.html
+        file_server
     }
 
-    # Player app (root and all other routes) - proxy to API server
+    # Player app - serve static files directly from filesystem (root and all other routes)
     handle /* {
-        reverse_proxy quizzquizz:3000
+        root * /app/packages/player-app/dist
+        try_files {path} /index.html
+        file_server
     }
 
     # Logging

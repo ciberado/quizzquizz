@@ -18,6 +18,8 @@ services:
     volumes:
       # Persist SQLite database
       - quiz-data:/data
+      # Share built frontend files with Caddy
+      - app-dist:/app/packages
       # Mount custom question banks (optional - uncomment and modify path)
       # - ./question-banks:/app/question-banks:ro
     restart: unless-stopped
@@ -39,6 +41,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+      # Access frontend dist files from quizzquizz container (read-only)
+      - app-dist:/app/packages:ro
     restart: unless-stopped
     depends_on:
       - quizzquizz
@@ -51,6 +55,8 @@ volumes:
   caddy-data:
     driver: local
   caddy-config:
+    driver: local
+  app-dist:
     driver: local
 
 networks:

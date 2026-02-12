@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { serve } from '@hono/node-server';
 import { initDatabase } from './db/index.js';
 import { loadQuestionBanks } from '@quizzquizz/question-bank';
@@ -14,7 +13,6 @@ import { startCleanupJob } from './session-cleanup.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -46,85 +44,12 @@ app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
 app.route('/api/question-banks', questionBankRoutes);
 
-// Static file serving for production deployment
-// In production, frontend apps are built and served from the API server
-const isProduction = process.env.NODE_ENV === 'production';
-
-if (isProduction) {
-  const hostAppPath = join(__dirname, '../../host-app/dist');
-  const playerAppPath = join(__dirname, '../../player-app/dist');
-  
-  console.log('📦 Setting up static file serving...');
-  
-  // Check if frontend dist directories exist
-  const hostAppExists = existsSync(hostAppPath);
-  const playerAppExists = existsSync(playerAppPath);
-  
-  if (hostAppExists) {
-    console.log(`   ✓ Host app: ${hostAppPath}`);
-    
-    // Serve host app static assets from /host/assets/*
-    // Rewrite /host/assets/* to /assets/* to match actual file paths in dist
-    app.get('/host/assets/*', serveStatic({
-      root: hostAppPath,
-      rewriteRequestPath: (path) => path.replace(/^\/host/, '')
-    }));
-    
-    // Serve host app index.html for /host and /host/* routes
-    // But NOT for /host/assets/*
-    app.get('/host', serveStatic({ 
-      root: hostAppPath,
-      path: './index.html'
-    }));
-    
-    app.get('/host/*', async (c, next) => {
-      const path = c.req.path;
-      // Don't serve index.html for asset requests
-      if (path.startsWith('/host/assets/')) {
-        return next();
-      }
-      // Serve index.html for all other /host/* routes (client-side routing)
-      return serveStatic({ 
-        root: hostAppPath,
-        path: './index.html'
-      })(c, next);
-    });
-  } else {
-    console.warn(`   ⚠ Host app dist not found: ${hostAppPath}`);
-  }
-  
-  if (playerAppExists) {
-    console.log(`   ✓ Player app: ${playerAppPath}`);
-    
-    // Serve player app static assets from /assets/*
-    app.use('/assets/*', serveStatic({ root: playerAppPath }));
-    
-    // Serve player app index.html for root route only
-    app.get('/', serveStatic({ 
-      root: playerAppPath,
-      path: './index.html'
-    }));
-    
-    // Fallback to player app for client-side routing (must come LAST)
-    // This catches routes that don't start with /api, /host, /health
-    // Use notFound middleware after to handle /api/* misses
-    app.get('*', async (c, next) => {
-      const path = c.req.path;
-      // Don't serve player app for API routes
-      if (path.startsWith('/api/') || path === '/api') {
-        return next();
-      }
-      // Serve player app for all other routes (client-side routing)
-      return serveStatic({ 
-        root: playerAppPath,
-        path: './index.html'
-      })(c, next);
-    });
-  } else {
-    console.warn(`   ⚠ Player app dist not found: ${playerAppPath}`);
-  }
+// In production, static files are served by Caddy reverse proxy
+// This simplifies the Node.js server - no need for static file serving
+if (process.env.NODE_ENV === 'production') {
+  console.log('📦 Production mode: Static files served by Caddy');
 } else {
-  console.log('🔧 Running in development mode - frontend apps served separately');
+  console.log('🔧 Development mode: Frontend apps run on separate ports (3001, 3002)');
 }
 
 // Initialize on startup
