@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## 2026-02-12
+
+### Fixed
+- **[Critical Bug]** Players now properly see game end when host finishes quiz
+  - Fixed leaderboard screen to call API when clicking "View Final Results"
+  - Session status now correctly updates to 'finished' when quiz ends
+  - Players no longer stuck waiting for next question after final question completes
+  - Host clicking "View Final Results" now triggers POST /api/sessions/:id/next
+  - API marks session as finished, allowing players to navigate to results screen
+
 ## 2026-02-11
 
 ### Fixed

@@ -115,8 +115,19 @@ export class LeaderboardScreen extends HTMLElement {
     }
   }
 
-  private handleViewFinalResults() {
-    router.navigate('/results');
+  private async handleViewFinalResults() {
+    const { sessionId, hostToken } = state.getState();
+    if (!sessionId || !hostToken) return;
+
+    try {
+      // Call next to mark session as finished (when at last question)
+      await api.nextQuestion(sessionId, hostToken);
+      router.navigate('/results');
+    } catch (error) {
+      console.error('Error finalizing quiz:', error);
+      // Navigate anyway - might already be finished
+      router.navigate('/results');
+    }
   }
 
   private async handleEndQuiz() {
