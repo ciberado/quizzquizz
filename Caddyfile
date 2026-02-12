@@ -1,0 +1,41 @@
+# Caddyfile for QuizzQuizz
+# Provides a single entry point with reverse proxy to the API server
+
+{
+    # Disable automatic HTTPS for local development
+    auto_https off
+    # Admin API disabled for simplicity
+    admin off
+}
+
+# Listen on port 80
+:80 {
+    # Enable compression
+    encode gzip
+
+    # API routes - proxy to API server
+    handle /api/* {
+        reverse_proxy quizzquizz:3000
+    }
+
+    # Health check endpoint - proxy to API server
+    handle /health {
+        reverse_proxy quizzquizz:3000
+    }
+
+    # Host app routes - proxy to API server (which serves static files)
+    handle /host* {
+        reverse_proxy quizzquizz:3000
+    }
+
+    # Player app (root and all other routes) - proxy to API server
+    handle /* {
+        reverse_proxy quizzquizz:3000
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+}

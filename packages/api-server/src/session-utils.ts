@@ -3,7 +3,7 @@
  */
 
 import type { Question } from '@quizzquizz/common';
-import { questionBanks } from './state';
+import { questionBanks } from './state.js';
 
 /**
  * Get questions for a session based on its configuration

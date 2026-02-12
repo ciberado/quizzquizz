@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { getPrisma } from '../db';
+import { getPrisma } from '../db/index.js';
 import { generateId } from '@quizzquizz/common';
 
 const playerRoutes = new Hono();

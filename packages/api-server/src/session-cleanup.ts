@@ -3,7 +3,7 @@
  * Handles expiration and deletion of old sessions
  */
 
-import { getPrisma } from './db';
+import { getPrisma } from './db/index.js';
 
 /**
  * Delete expired sessions and their associated data

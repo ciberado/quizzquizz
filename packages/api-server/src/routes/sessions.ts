@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { getPrisma } from '../db';
+import { getPrisma } from '../db/index.js';
 import { generateId, generatePin } from '@quizzquizz/common';
-import { questionBanks } from '../state';
-import { getSessionQuestions } from '../session-utils';
+import { questionBanks } from '../state.js';
+import { getSessionQuestions } from '../session-utils.js';
 
 const sessionRoutes = new Hono();
 

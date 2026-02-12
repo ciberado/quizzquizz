@@ -1,18 +1,20 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { serve } from '@hono/node-server';
-import { initDatabase } from './db';
+import { initDatabase } from './db/index.js';
 import { loadQuestionBanks } from '@quizzquizz/question-bank';
-import { questionBanks } from './state';
-import sessionRoutes from './routes/sessions';
-import playerRoutes from './routes/players';
-import gameRoutes from './routes/game';
-import questionBankRoutes from './routes/question-banks';
-import { startCleanupJob } from './session-cleanup';
+import { questionBanks } from './state.js';
+import sessionRoutes from './routes/sessions.js';
+import playerRoutes from './routes/players.js';
+import gameRoutes from './routes/game.js';
+import questionBankRoutes from './routes/question-banks.js';
+import { startCleanupJob } from './session-cleanup.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,6 +45,59 @@ app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/sta
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
 app.route('/api/question-banks', questionBankRoutes);
+
+// Static file serving for production deployment
+// In production, frontend apps are built and served from the API server
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  const hostAppPath = join(__dirname, '../../host-app/dist');
+  const playerAppPath = join(__dirname, '../../player-app/dist');
+  
+  console.log('📦 Setting up static file serving...');
+  
+  // Check if frontend dist directories exist
+  const hostAppExists = existsSync(hostAppPath);
+  const playerAppExists = existsSync(playerAppPath);
+  
+  if (hostAppExists) {
+    console.log(`   ✓ Host app: ${hostAppPath}`);
+    
+    // Serve host app static assets
+    app.use('/host/assets/*', serveStatic({ root: hostAppPath }));
+    
+    // Serve host app index.html for all /host routes
+    app.get('/host*', serveStatic({ 
+      path: './index.html',
+      root: hostAppPath 
+    }));
+  } else {
+    console.warn(`   ⚠ Host app dist not found: ${hostAppPath}`);
+  }
+  
+  if (playerAppExists) {
+    console.log(`   ✓ Player app: ${playerAppPath}`);
+    
+    // Serve player app static assets
+    app.use('/assets/*', serveStatic({ root: playerAppPath }));
+    
+    // Serve player app index.html for root and all non-API routes
+    app.get('/', serveStatic({ 
+      path: './index.html',
+      root: playerAppPath 
+    }));
+    
+    // Fallback to player app for client-side routing
+    app.get('*', serveStatic({ 
+      path: './index.html',
+      root: playerAppPath 
+    }));
+  } else {
+    console.warn(`   ⚠ Player app dist not found: ${playerAppPath}`);
+  }
+} else {
+  console.log('🔧 Running in development mode - frontend apps served separately');
+}
 
 // Initialize on startup
 function initialize() {

@@ -62,7 +62,11 @@ export async function initDatabase() {
         current_question_index INTEGER NOT NULL DEFAULT -1,
         question_started_at BIGINT,
         expires_at BIGINT NOT NULL,
-        created_at BIGINT NOT NULL DEFAULT 0
+        created_at BIGINT NOT NULL DEFAULT 0,
+        question_ids TEXT,
+        random_order INTEGER NOT NULL DEFAULT 0,
+        automatic_pace INTEGER NOT NULL DEFAULT 0,
+        time_limit INTEGER NOT NULL DEFAULT 25
       )
     `);
     
@@ -87,6 +91,22 @@ export async function initDatabase() {
         submitted_at BIGINT NOT NULL DEFAULT 0
       )
     `);
+  } else {
+    // For file-based databases, run migrations automatically on startup
+    console.log('🔄 Running database migrations...');
+    const { execSync } = await import('child_process');
+    try {
+      // Run migrations in production
+      execSync('npx prisma migrate deploy', {
+        cwd: '/app/packages/api-server',
+        stdio: 'inherit',
+        env: { ...process.env }
+      });
+      console.log('✅ Database migrations completed');
+    } catch (error) {
+      console.error('❌ Failed to run migrations:', error);
+      throw error;
+    }
   }
   console.log('✅ Database initialized (using Prisma)');
 }

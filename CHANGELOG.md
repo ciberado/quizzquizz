@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-12
 
 ### Added
+- **[Phase 8A]** Docker Configuration - Complete containerized deployment
+  - **[Dockerfile]** Multi-stage build for production deployment
+    - Builder stage: Compiles all TypeScript packages and builds frontend apps with Vite
+    - Runtime stage: Node.js 22-alpine with production dependencies only
+    - Prisma client generation in runtime stage
+    - Non-root user (nodejs) for security
+    - Health check configured (30s interval)
+    - Optimized layer caching for faster rebuilds
+  - **[Docker Compose]** Complete orchestration with Caddy reverse proxy
+    - **Caddy reverse proxy**: Single entry point for all components
+      - Routes `/api/*` to API server
+      - Routes `/host*` to host app (served from API server)  
+      - Routes `/` to player app (served from API server)
+      - Compression enabled (gzip)
+      - Logging to stdout
+      - Port 80 inside container, mapped to 3000 on host
+    - API server runs internally on port 3000 (not exposed externally)
+    - SQLite database persistence in named volume
+    - Question banks mountable as read-only volume
+    - Environment variables for configuration
+    - Network isolation with custom network
+    - Caddy data and config volumes for persistence
+  - **[Caddyfile]** Reverse proxy configuration
+    - Automatic HTTPS disabled for local development
+    - All routes proxied to internal API server
+    - Clean, simple configuration
+  - **[.dockerignore]** Optimized build context
+    - Excludes node_modules, dist, test results, and development files
+    - Includes question banks markdown files
+    - Reduces image size and build time
+  - **[api-server]** Production static file serving
+    - Serves host app at `/host` route
+    - Serves player app at `/` (root) route
+    - Conditional serving only in production mode (NODE_ENV=production)
+    - Proper MIME types and asset routing
+  - **[api-server]** ESM module fixes for production
+    - Fixed all imports to use `.js` extensions for ESM compatibility
+    - Updated 10+ files: index.ts, routes/*, session-cleanup.ts, session-utils.ts
+    - Resolved `ERR_UNSUPPORTED_DIR_IMPORT` errors in Node.js 22
+  - **[api-server]** Automatic database migrations on startup
+    - Added runtime migration execution in `initDatabase()`
+    - Runs `prisma migrate deploy` automatically for file-based databases
+    - Updated in-memory database schema to include all current fields
+    - Zero-configuration database setup on first run
+  - **[package.json]** Docker build scripts
+    - `docker:build` - Build image with latest tag
+    - `docker:build:version` - Build with version tag
+    - `docker:up` - Start containers in detached mode
+    - `docker:down` - Stop and remove containers
+    - `docker:logs` - Follow container logs
+    - `docker:restart` - Restart running containers
+    - `docker:clean` - Remove containers, volumes, and images
+  - **Deployment ready**: Single command deployment with `docker compose up -d`
+  - **Fully tested**: All endpoints verified working (health, API, frontend apps)
+  - **Database setup**: Automatic migrations on container start
+  - **Question banks included**: Sample general knowledge bank bundled in image
+  - **Architecture**: Caddy → API Server (serving API + static frontend apps)
+
 - **[host-app]** Automatic pace option for quiz sessions
   - New "Automatic pace" checkbox in question preview/configuration screen
   - When enabled, host interaction is not required during quiz

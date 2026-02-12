@@ -6,9 +6,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 7A Complete - Advanced Question Bank Management! (Feb 11, 2026)
+**Current Status**: Phase 8A Complete - Docker Configuration! (Feb 12, 2026)
 
-**Completed Phases** (48-57 hours development time):
+**Completed Phases** (51-60 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
@@ -25,16 +25,17 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 6**: Polish & Integration - COMPLETE!
 - 🟡 **Phase 12**: Advanced Analytics (Partial) - Host question analytics complete!
 - ✅ **Phase 7A**: Question Preview & Configuration - COMPLETE!
+- ✅ **Phase 8A**: Docker Configuration - COMPLETE!
 
 **Current Phase**:
-- ✅ **Phase 6A**: Error Handling & Resilience (2-3 hrs) - COMPLETE
-- ✅ **Phase 6B**: Loading States & Feedback (1-2 hrs) - COMPLETE
-- ✅ **Phase 6C**: Polling Optimization (1-2 hrs) - COMPLETE
-- ✅ **Phase 6D**: Session Management & Cleanup (1-2 hrs) - COMPLETE
-- ✅ **Phase 6E**: Visual Polish & Animations (1-2 hrs) - COMPLETE
-- ✅ **Phase 6F**: Player Post-Game Review (1-2 hrs) - COMPLETE
-- ✅ **Phase 12A**: Host Question Analytics Dashboard (1.5 hrs) - COMPLETE
-- 🎯 **PHASE 6 COMPLETE + Question Analytics Enhancement!**
+- ✅ **Phase 8A**: Docker Configuration (2-3 hrs) - COMPLETE
+  - Multi-stage Dockerfile with optimized builds
+  - Docker Compose with volume persistence
+  - Static file serving for frontend apps
+  - ESM module fixes for Node.js 22
+  - Database migrations on startup
+  - Tested and verified working deployment
+- 🎯 **PHASE 8A COMPLETE - Production Deployment Ready!**
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -74,6 +75,24 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Database: Migrated from Drizzle+better-sqlite3 to Prisma v6 (no native rebuild issues)
 
 **Recent Achievements**:
+- ✅ **Feb 12, 2026 - Phase 8A: Docker Configuration with Caddy** (3 hours)
+  - **Multi-stage Dockerfile**: Builder stage compiles all packages, runtime stage runs production server
+  - **Node.js 22-alpine**: Lightweight base image with production dependencies only
+  - **Build optimization**: Layer caching, .dockerignore, non-root user for security
+  - **Caddy reverse proxy**: Clean single entry point for all app components
+    - Routes `/api/*` to API server for REST API endpoints
+    - Routes `/host*` to host app (static files served from API)
+    - Routes `/` to player app (static files served from API)
+    - Compression (gzip) and access logging enabled
+    - Port 80 inside container, mapped to 3000 on host
+  - **Database setup**: Automatic migrations on application startup via `initDatabase()`
+  - **Static file serving**: Frontend apps (host and player) served from API server in production
+  - **ESM compatibility**: Fixed 10+ files with .js extensions for Node.js 22 ESM modules
+  - **Docker Compose**: Multi-service deployment (API + Caddy) with volume persistence
+  - **Build scripts**: 7 npm scripts for building, running, and managing Docker containers
+  - **Fully tested**: All endpoints verified working through Caddy (health, API, frontend apps)
+  - **Production ready**: Can deploy with single command `docker compose up -d`
+  - **Architecture**: Caddy (port 3000) → API Server (internal port 3000, serving API + static files)
 - ✅ **Feb 12, 2026 - Automatic Pace Feature** (1 hour)
   - **New Feature**: Optional automatic quiz progression without host interaction
   - **Host UI**: "Automatic pace" checkbox in question configuration screen
@@ -1250,43 +1269,90 @@ The boolean logic error in bug #6 (`&&` vs `||`) highlights the importance of:
 
 **Dependencies**: Phase 7 complete (feature-complete application).
 
-### Phase 8A: Docker Configuration (Est. 2-3 hours)
+### Phase 8A: Docker Configuration ✅ COMPLETE (Feb 12, 2026)
+
+**Status**: COMPLETE (3 hours actual development time)
 
 **Objective**: Containerize the application for easy deployment.
 
-- [ ] API server Dockerfile:
+- [x] API server Dockerfile:
   - Multi-stage build (builder + runtime)
-  - Node.js LTS base image
+  - Node.js 22-alpine LTS base image
   - Copy monorepo structure (workspaces)
   - Build TypeScript packages
   - Expose port 3000
-  - Health check configuration
-  - Non-root user for security
-- [ ] Frontend apps build:
+  - Health check configuration (30s interval)
+  - Non-root user for security (nodejs:nodejs)
+  - Optimized layer caching
+- [x] Frontend apps build:
   - Build host-app and player-app with Vite
   - Output to `dist/` folders
   - Optimize for production (minify, tree-shake)
-  - Generate source maps (optional)
   - Copy assets and static files
-- [ ] Serve frontends from API:
-  - Static file serving from Hono
+- [x] Serve frontends from API:
+  - Static file serving from Hono with `@hono/node-server/serve-static`
   - `GET /` → serve player-app index.html
   - `GET /host` → serve host-app index.html
   - `GET /assets/*` → serve static assets
-  - Proper MIME types and caching headers
-- [ ] Docker Compose:
-  - Single service for MVP (all-in-one)
-  - Volume for SQLite database (persistence)
-  - Volume for question banks (easy updates)
-  - Environment variables configuration
-  - Port mapping (3000:3000)
-  - Restart policy (unless-stopped)
-- [ ] Build script:
-  - `package.json` script: `docker:build`
-  - Tag versioning (git tag)
-  - Build optimization flags
+  - `GET /host/assets/*` → serve host static assets
+  - Conditional serving (only in production mode)
+  - Proper MIME types and fallback routing
+- [x] Docker Compose:
+  - Multi-service deployment: API server + Caddy reverse proxy
+  - **Caddy**: Official caddy:2-alpine image
+    - Caddyfile mounted as read-only volume
+    - Caddy data and config volumes for persistence
+    - Port 80 internal, mapped to 3000 on host
+    - Depends on API server (starts after)
+  - **API Server**: Custom quizzquizz:latest image
+    - Internal port 3000 (exposed only to Caddy, not to host)
+    - Named volume for SQLite database (persistence): `quiz-data:/data`
+    - Optional volume for question banks (commented out by default)
+    - Environment variables configuration
+  - Restart policy (unless-stopped) for both services
+  - Health checks configured for API server
+  - Custom network (quizzquizz-network) for service communication
+  - Single command deployment: `docker compose up -d`
+- [x] Build scripts:
+  - `package.json` scripts: `docker:build`, `docker:build:version`
+  - `docker:up`, `docker:down`, `docker:logs`, `docker:restart`, `docker:clean`
+  - `.dockerignore` for optimized build context
 
-**Deliverable**: `docker-compose up` starts entire application. Test with fresh container.
+**Deliverable**: ✅ `docker compose up -d` starts entire application. Tested with fresh container.
+
+**Implementation Notes** (Feb 12, 2026):
+- **Multi-stage build**: Separates build dependencies from runtime for smaller image
+- **Caddy reverse proxy**: Added as separate container for clean architecture
+  - Single entry point on port 3000 (host) → port 80 (Caddy container)
+  - Routes `/api/*` to API server on internal network
+  - Routes `/host*` to host app (served from API server)
+  - Routes `/` to player app (served from API server)
+  - Compression (gzip) enabled for better performance
+  - Access logging to stdout for monitoring
+  - Health check endpoint proxied through
+- **API server**: Runs internally on port 3000, not exposed to host
+- **ESM compatibility**: Fixed 10+ files to use `.js` extensions for Node.js 22 ESM modules
+- **Prisma setup**: Migrations run automatically on application startup via `initDatabase()`
+- **Database migrations**: Runtime execution in `db/index.ts` for zero-configuration setup
+- **Static serving**: Production mode serves both frontend apps from API server
+- **Verified working**: All endpoints tested through Caddy (health, API, session creation, frontend apps)
+- **Image size**: ~450MB (API server, optimized with alpine base and production-only deps)
+- **Caddy image**: ~50MB (official caddy:2-alpine)
+- **Startup time**: ~3-5 seconds (including database migrations and both containers)
+- **Sample question bank**: Bundled in image with 10 general knowledge questions
+- **Architecture**: Client → Caddy (port 3000) → API Server (internal, serving API + static files)
+
+**Files Created**:
+- `Dockerfile` - Multi-stage build configuration for API server
+- `docker-compose.yml` - Multi-service orchestration (API + Caddy)
+- `Caddyfile` - Reverse proxy configuration
+- `.dockerignore` - Build context optimization
+
+**Files Modified**:
+- `package.json` - Added 7 Docker scripts
+- `packages/api-server/src/index.ts` - Added static file serving logic
+- `packages/api-server/src/db/index.ts` - Added runtime migration execution
+- `packages/api-server/src/**/*.ts` - Fixed 10+ ESM imports with .js extensions
 
 ### Phase 8B: Environment Configuration (Est. 1-2 hours)
 

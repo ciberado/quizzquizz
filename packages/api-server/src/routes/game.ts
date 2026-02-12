@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { getPrisma } from '../db';
+import { getPrisma } from '../db/index.js';
 import { 
   generateId, 
   calculateScore, 
   isAnswerCorrect,
   SubmitAnswerRequestSchema 
 } from '@quizzquizz/common';
-import { questionBanks } from '../state';
-import { getSessionQuestions } from '../session-utils';
+import { questionBanks } from '../state.js';
+import { getSessionQuestions } from '../session-utils.js';
 
 const gameRoutes = new Hono();
 

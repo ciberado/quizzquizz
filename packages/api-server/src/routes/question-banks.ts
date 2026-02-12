@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { questionBanks } from '../state';
+import { questionBanks } from '../state.js';
 
 const questionBankRoutes = new Hono();
 
