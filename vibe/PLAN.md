@@ -74,6 +74,15 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Database: Migrated from Drizzle+better-sqlite3 to Prisma v6 (no native rebuild issues)
 
 **Recent Achievements**:
+- ✅ **Feb 12, 2026 - Automatic Pace Feature** (1 hour)
+  - **New Feature**: Optional automatic quiz progression without host interaction
+  - **Host UI**: "Automatic pace" checkbox in question configuration screen
+  - **Behavior**: Correct answers shown for 4s → Leaderboard shown for 4s → Next question auto-starts
+  - **Database**: Added `automaticPace` boolean field to sessions table with migration
+  - **API**: Session creation and retrieval endpoints updated to support automatic pace setting
+  - **Frontend**: Auto-advance logic in question-display-screen and leaderboard-screen
+  - **Manual Override**: Host can still manually end quiz at any time
+  - **Use Case**: Perfect for self-running quizzes at events or in classrooms
 - ✅ **Feb 11, 2026 - Phase 7A: Advanced Question Bank Management** (2-3 hours)
   - **New Feature**: Question preview and configuration screen before creating sessions
   - **API**: `GET /api/question-banks/:id/questions` with filtering (difficulty, topic, tag) and pagination
@@ -1118,7 +1127,8 @@ The boolean logic error in bug #6 (`&&` vs `||`) highlights the importance of:
   - Default time limit per question (10-120 seconds)
   - Difficulty filter (Easy/Medium/Hard checkboxes)
   - Topic filter (multi-select dropdown)
-  - Random order toggle
+  - Random order toggle ✅ COMPLETE (Feb 11)
+  - Automatic pace toggle ✅ COMPLETE (Feb 12)
   - Points per question (500-2000)
 - [ ] API updates:
   - Accept config options in `POST /api/sessions`

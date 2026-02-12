@@ -36,6 +36,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private playerCount: number = 0;
   private answeredCount: number = 0;
   private autoNavigateTimeout: number | null = null;
+  private automaticPace: boolean = false; // Auto-advance enabled
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -72,6 +73,9 @@ export class QuestionDisplayScreen extends HTMLElement {
       // Get session state from API (we'll use the player state endpoint for now)
       const session = await api.getSession(sessionId, hostToken);
       const players = await api.getPlayers(sessionId);
+      
+      // Store automatic pace setting
+      this.automaticPace = session.automaticPace || false;
       
       // Build game state from session data
       const currentQ = session.currentQuestionIndex >= 0 && session.questions.length > 0
@@ -120,6 +124,18 @@ export class QuestionDisplayScreen extends HTMLElement {
       // Check timer state
       const isTimerActive = this.timeRemaining > 0;
       const timerStateChanged = this.wasTimerActive !== isTimerActive;
+      
+      // If timer just expired and automatic pace is enabled, schedule navigation to leaderboard
+      if (timerStateChanged && !isTimerActive && this.automaticPace) {
+        // Timer just expired - show correct answers for 4 seconds then navigate
+        if (!this.autoNavigateTimeout) {
+          console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
+          this.autoNavigateTimeout = window.setTimeout(() => {
+            console.log('🚀 Auto-navigating to leaderboard');
+            router.navigate('/leaderboard');
+          }, 4000); // 4 seconds
+        }
+      }
 
       // Check what changed
       const structuralChange = 

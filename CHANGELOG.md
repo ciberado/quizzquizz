@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-12
 
 ### Added
+- **[host-app]** Automatic pace option for quiz sessions
+  - New "Automatic pace" checkbox in question preview/configuration screen
+  - When enabled, host interaction is not required during quiz
+  - Correct answers automatically shown for 4 seconds after timer expires
+  - Leaderboard automatically shown for 4 seconds before advancing to next question
+  - Seamless automatic progression through entire quiz
+  - Host can still manually end quiz early if needed
+- **[api-server]** Added `automaticPace` field to session configuration
+  - Database schema updated with new boolean field (default: false)
+  - Session creation endpoint accepts automaticPace parameter
+  - Session responses include automaticPace setting
+- **[common]** Updated types to support automatic pace feature
+  - Added `automaticPace` to CreateSessionRequest schema
+  - Added `automaticPace` to Session schema
+
 - **[host-app]** Question Display Screen styling for answer review
   - Correct answers now visually highlighted in green after timer expires
   - Answer cards show green border, background glow, and animated checkmark

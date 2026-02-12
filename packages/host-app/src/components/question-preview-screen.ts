@@ -41,6 +41,7 @@ export class QuestionPreviewScreen extends BaseComponent {
   private selectedQuestionIds = new Set<string>();
   private selectAllMode = true; // By default, select all questions
   private randomOrder = false;
+  private automaticPace = false;
   
   // Filter state
   private selectedDifficulties = new Set<Difficulty>();
@@ -202,7 +203,7 @@ export class QuestionPreviewScreen extends BaseComponent {
 
             <!-- Selection Options -->
             <div style="background: var(--color-bg-alt); padding: var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
                 <div>
                   <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
                     <input 
@@ -228,6 +229,21 @@ export class QuestionPreviewScreen extends BaseComponent {
                     <span>Random order</span>
                   </label>
                 </div>
+              </div>
+              
+              <!-- Automatic Pace Option -->
+              <div>
+                <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                  <input 
+                    type="checkbox" 
+                    data-action="toggle-automatic"
+                    ${this.automaticPace ? 'checked' : ''}
+                  />
+                  <span style="font-weight: 600;">Automatic pace</span>
+                </label>
+                <p style="color: var(--color-text-muted); margin: var(--spacing-xs) 0 0 24px; font-size: var(--font-size-small);">
+                  No host interaction required - automatically shows correct answers (4s) and leaderboard (4s) before advancing
+                </p>
               </div>
             </div>
 
@@ -435,6 +451,14 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
+    // Toggle automatic pace
+    const automaticCheckbox = this.qs('[data-action="toggle-automatic"]') as HTMLInputElement;
+    if (automaticCheckbox) {
+      automaticCheckbox.addEventListener('change', () => {
+        this.automaticPace = automaticCheckbox.checked;
+      });
+    }
+
     // Individual question checkboxes
     if (!this.selectAllMode) {
       this.qsa('.question-checkbox').forEach(checkbox => {
@@ -511,6 +535,7 @@ export class QuestionPreviewScreen extends BaseComponent {
       const session = await api.createSession(this.bankId, {
         questionIds,
         randomOrder: this.randomOrder,
+        automaticPace: this.automaticPace,
       });
 
       // Store session info in state

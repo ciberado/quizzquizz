@@ -13,11 +13,12 @@ const CreateSessionSchema = z.object({
   questionBankId: z.string(),
   questionIds: z.array(z.string()).optional(),
   randomOrder: z.boolean().optional(),
+  automaticPace: z.boolean().optional(),
 });
 
 // Create a new session
 sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
-  const { questionBankId, questionIds, randomOrder } = c.req.valid('json');
+  const { questionBankId, questionIds, randomOrder, automaticPace } = c.req.valid('json');
 
   // Generate unique PIN (in production, check for collisions)
   const pin = generatePin();
@@ -37,6 +38,7 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         questionBankId,
         questionIds: questionIds ? JSON.stringify(questionIds) : null,
         randomOrder: randomOrder || false,
+        automaticPace: automaticPace || false,
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(Date.now()),

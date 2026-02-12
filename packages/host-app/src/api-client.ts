@@ -175,6 +175,7 @@ export const api = {
     options?: {
       questionIds?: string[];
       randomOrder?: boolean;
+      automaticPace?: boolean;
     }
   ): Promise<{
     id: string;
@@ -187,6 +188,7 @@ export const api = {
         questionBankId,
         ...(options?.questionIds && { questionIds: options.questionIds }),
         ...(options?.randomOrder !== undefined && { randomOrder: options.randomOrder }),
+        ...(options?.automaticPace !== undefined && { automaticPace: options.automaticPace }),
       }),
     });
   },

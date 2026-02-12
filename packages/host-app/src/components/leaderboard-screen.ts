@@ -21,6 +21,8 @@ export class LeaderboardScreen extends HTMLElement {
   private sessionStatus: 'lobby' | 'playing' | 'finished' = 'playing';
   private currentQuestionIndex: number = 0;
   private totalQuestions: number = 0;
+  private automaticPace: boolean = false; // Auto-advance enabled
+  private autoNavigateTimeout: number | null = null;
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -38,6 +40,10 @@ export class LeaderboardScreen extends HTMLElement {
 
   disconnectedCallback() {
     this.stopPolling();
+    if (this.autoNavigateTimeout) {
+      clearTimeout(this.autoNavigateTimeout);
+      this.autoNavigateTimeout = null;
+    }
     cancelAllRequests();
   }
 
@@ -54,6 +60,7 @@ export class LeaderboardScreen extends HTMLElement {
       const newSessionStatus = session.status;
       const newCurrentQuestionIndex = session.currentQuestionIndex;
       const newTotalQuestions = session.questions.length;
+      const newAutomaticPace = session.automaticPace || false;
 
       // Get leaderboard data
       const data = await api.getLeaderboard(sessionId);
@@ -64,17 +71,39 @@ export class LeaderboardScreen extends HTMLElement {
         this.sessionStatus !== newSessionStatus ||
         this.currentQuestionIndex !== newCurrentQuestionIndex ||
         this.totalQuestions !== newTotalQuestions ||
+        this.automaticPace !== newAutomaticPace ||
         this.leaderboard.length !== newLeaderboard.length ||
         JSON.stringify(this.leaderboard.map(e => ({ rank: e.rank, score: e.score }))) !== 
         JSON.stringify(newLeaderboard.map(e => ({ rank: e.rank, score: e.score })));
 
       // Only update and re-render if something changed
       if (leaderboardChanged) {
+        const wasFirstLoad = this.leaderboard.length === 0;
+        
         this.sessionStatus = newSessionStatus;
         this.currentQuestionIndex = newCurrentQuestionIndex;
         this.totalQuestions = newTotalQuestions;
+        this.automaticPace = newAutomaticPace;
         this.leaderboard = newLeaderboard;
         this.render();
+        
+        // If automatic pace is enabled and this is the first load, schedule auto-advance
+        if (wasFirstLoad && this.automaticPace && this.sessionStatus === 'playing') {
+          const hasMoreQuestions = this.currentQuestionIndex < this.totalQuestions - 1;
+          if (hasMoreQuestions) {
+            console.log('⏱️ Automatic pace enabled - will advance to next question in 4s');
+            this.autoNavigateTimeout = window.setTimeout(() => {
+              console.log('🚀 Auto-advancing to next question');
+              this.handleNextQuestion();
+            }, 4000); // 4 seconds
+          } else {
+            console.log('⏱️ Automatic pace enabled - will show final results in 4s');
+            this.autoNavigateTimeout = window.setTimeout(() => {
+              console.log('🚀 Auto-navigating to final results');
+              this.handleViewFinalResults();
+            }, 4000); // 4 seconds
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading leaderboard:', error);
