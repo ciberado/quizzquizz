@@ -64,19 +64,31 @@ if (isProduction) {
     console.log(`   ✓ Host app: ${hostAppPath}`);
     
     // Serve host app static assets from /host/assets/*
-    app.use('/host/assets/*', serveStatic({ root: hostAppPath }));
-    
-    // Serve host app index.html for all /host routes
-    // Must come before player app catch-all
-    app.use('/host/*', serveStatic({ 
+    // Rewrite /host/assets/* to /assets/* to match actual file paths in dist
+    app.get('/host/assets/*', serveStatic({
       root: hostAppPath,
-      rewriteRequestPath: (_path) => '/index.html'
+      rewriteRequestPath: (path) => path.replace(/^\/host/, '')
     }));
     
-    app.use('/host', serveStatic({ 
+    // Serve host app index.html for /host and /host/* routes
+    // But NOT for /host/assets/*
+    app.get('/host', serveStatic({ 
       root: hostAppPath,
-      rewriteRequestPath: (_path) => '/index.html'
+      path: './index.html'
     }));
+    
+    app.get('/host/*', async (c, next) => {
+      const path = c.req.path;
+      // Don't serve index.html for asset requests
+      if (path.startsWith('/host/assets/')) {
+        return next();
+      }
+      // Serve index.html for all other /host/* routes (client-side routing)
+      return serveStatic({ 
+        root: hostAppPath,
+        path: './index.html'
+      })(c, next);
+    });
   } else {
     console.warn(`   ⚠ Host app dist not found: ${hostAppPath}`);
   }
@@ -87,18 +99,27 @@ if (isProduction) {
     // Serve player app static assets from /assets/*
     app.use('/assets/*', serveStatic({ root: playerAppPath }));
     
-    // Serve player app index.html for root route
-    app.use('/', serveStatic({ 
+    // Serve player app index.html for root route only
+    app.get('/', serveStatic({ 
       root: playerAppPath,
-      rewriteRequestPath: (path) => path === '/' ? '/index.html' : path
+      path: './index.html'
     }));
     
     // Fallback to player app for client-side routing (must come LAST)
-    // This catches all non-API, non-host routes
-    app.use('*', serveStatic({ 
-      root: playerAppPath,
-      rewriteRequestPath: (_path) => '/index.html'
-    }));
+    // This catches routes that don't start with /api, /host, /health
+    // Use notFound middleware after to handle /api/* misses
+    app.get('*', async (c, next) => {
+      const path = c.req.path;
+      // Don't serve player app for API routes
+      if (path.startsWith('/api/') || path === '/api') {
+        return next();
+      }
+      // Serve player app for all other routes (client-side routing)
+      return serveStatic({ 
+        root: playerAppPath,
+        path: './index.html'
+      })(c, next);
+    });
   } else {
     console.warn(`   ⚠ Player app dist not found: ${playerAppPath}`);
   }
