@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## 2026-02-13
+
+### Fixed
+- **[Docker Build]** Optimized Dockerfile to eliminate slow recursive chown operation
+  - Use `--chown=nodejs:nodejs` flag on all COPY commands instead of recursive chown
+  - Only chown `/data` directory (small, runtime-created) instead of entire `/app` tree
+  - Significantly reduces Docker build time by avoiding filesystem traversal
+
+### Known Issues
+- **[Docker Build]** ES module import issue in players route still present in Docker builds
+  - TypeScript moduleResolution: "bundler" strips .js extensions from dynamic imports in Docker environment
+  - Local builds preserve .js extensions correctly
+  - Investigating root cause - may be related to Docker layer caching or npm build process
+
 ## 2026-02-12
 
 ### Added

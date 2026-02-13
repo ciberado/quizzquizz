@@ -47,34 +47,33 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY packages/common/package*.json ./packages/common/
-COPY packages/question-bank/package*.json ./packages/question-bank/
-COPY packages/api-server/package*.json ./packages/api-server/
+COPY --chown=nodejs:nodejs package*.json ./
+COPY --chown=nodejs:nodejs packages/common/package*.json ./packages/common/
+COPY --chown=nodejs:nodejs packages/question-bank/package*.json ./packages/question-bank/
+COPY --chown=nodejs:nodejs packages/api-server/package*.json ./packages/api-server/
 
 # Install production dependencies only
 RUN npm ci --omit=dev --workspaces
 
 # Copy built artifacts from builder
-COPY --from=builder /app/packages/common/dist ./packages/common/dist
-COPY --from=builder /app/packages/common/package.json ./packages/common/
-COPY --from=builder /app/packages/question-bank/dist ./packages/question-bank/dist
-COPY --from=builder /app/packages/question-bank/package.json ./packages/question-bank/
-COPY --from=builder /app/packages/api-server/dist ./packages/api-server/dist
-COPY --from=builder /app/packages/api-server/prisma ./packages/api-server/prisma
-COPY --from=builder /app/packages/host-app/dist ./packages/host-app/dist
-COPY --from=builder /app/packages/player-app/dist ./packages/player-app/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./packages/common/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./packages/common/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./packages/question-bank/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./packages/question-bank/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./packages/api-server/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./packages/api-server/prisma
+COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./packages/host-app/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./packages/player-app/dist
 
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
 RUN cd packages/api-server && npx prisma generate
 
-# Create directories for runtime data
-RUN mkdir -p /data /app/question-banks && \
-    chown -R nodejs:nodejs /data /app
+# Create directory for runtime data and set ownership
+RUN mkdir -p /data && chown nodejs:nodejs /data
 
 # Copy default question banks (can be overridden with volume mount)
-COPY question-banks/ ./question-banks/
+COPY --chown=nodejs:nodejs question-banks/ ./question-banks/
 
 # Switch to non-root user
 USER nodejs

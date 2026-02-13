@@ -97,7 +97,7 @@ playerRoutes.get('/:sessionId/players', async (c) => {
       // We need to get the question ID from the question bank
       // For now, we'll query PlayerAnswer to get unique question IDs
       // This is a workaround since question IDs are in-memory
-      const { questionBanks } = await import('../state');
+      const { questionBanks } = await import('../state.js');
       const questionBank = questionBanks.get(session.questionBankId);
       const currentQuestion = questionBank?.questions[session.currentQuestionIndex];
       if (currentQuestion) {
