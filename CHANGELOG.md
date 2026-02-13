@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-13
 
 ### Fixed
+- **[API Server]** Fixed players endpoint not detecting answered status
+  - Players endpoint now correctly uses `getSessionQuestions()` to respect filtered/reordered question lists
+  - Issue: was accessing original question bank array instead of session's configured questions
+  - Host screen now correctly shows "X/Y answered" count during gameplay
+  - Fixes bug where `hasAnswered` was always false, resulting in "0/X answered" display
 - **[Host App]** Fixed hardcoded API URLs for production deployment
   - Changed `API_BASE_URL` from hardcoded `http://localhost:3000` to use `window.location.origin` in production
   - Fixed question preview screen to use dynamic API URL instead of hardcoded localhost

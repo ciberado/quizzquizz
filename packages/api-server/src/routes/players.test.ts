@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from '../routes/sessions';
 import playerRoutes from '../routes/players';
+import gameRoutes from '../routes/game';
 import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
@@ -9,6 +10,7 @@ import { QuestionBank } from '@quizzquizz/common';
 const app = new Hono();
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes);
+app.route('/api/game', gameRoutes);
 
 async function request(path: string, options: RequestInit = {}) {
   const req = new Request(`http://localhost${path}`, options);
@@ -192,6 +194,103 @@ describe('Player Routes', () => {
       expect(data.players[1]).toBeDefined();
       expect(data.players[0].nickname).toBe('Player2');
       expect(data.players[1].nickname).toBe('Player1');
+    });
+
+    it('should correctly show hasAnswered status for current question', async () => {
+      // Create session with specific questions
+      const sessionRes = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          questionBankId: 'test-bank',
+          questionIds: ['q2', 'q1'], // Specific order
+        }),
+      });
+      const session: any = await sessionRes.json();
+
+      // Join with two players
+      const p1Res = await request('/api/sessions/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: session.pin, nickname: 'Player1' }),
+      });
+      const player1: any = await p1Res.json();
+
+      const p2Res = await request('/api/sessions/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: session.pin, nickname: 'Player2' }),
+      });
+      const player2: any = await p2Res.json();
+
+      // Start quiz
+      await request(`/api/sessions/${session.id}/start`, {
+        method: 'POST',
+        headers: { 'X-Host-Token': session.hostToken },
+      });
+
+      // Check initial state - no answers yet
+      let playersRes = await request(`/api/sessions/${session.id}/players`);
+      let playersData: any = await playersRes.json();
+      expect(playersData.players).toHaveLength(2);
+      expect(playersData.players.every((p: any) => p.hasAnswered === false)).toBe(true);
+
+      // Get current game state to find the current question ID
+      const gameStateRes = await request(`/api/game/${session.id}/state`, {
+        headers: { 'X-Player-Id': player1.playerId },
+      });
+      const gameState: any = await gameStateRes.json();
+      const currentQuestionId = gameState.currentQuestion.id;
+
+      // Player1 submits answer to first question
+      await request(`/api/game/${session.id}/answer`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Player-Id': player1.playerId,
+        },
+        body: JSON.stringify({
+          questionId: currentQuestionId,
+          selectedAnswerIds: ['a3'],
+        }),
+      });
+
+      // Check updated state - Player1 has answered, Player2 hasn't
+      playersRes = await request(`/api/sessions/${session.id}/players`);
+      playersData = await playersRes.json();
+      const p1 = playersData.players.find((p: any) => p.id === player1.playerId);
+      const p2 = playersData.players.find((p: any) => p.id === player2.playerId);
+      expect(p1.hasAnswered).toBe(true);
+      expect(p2.hasAnswered).toBe(false);
+
+      // Player2 submits answer
+      await request(`/api/game/${session.id}/answer`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Player-Id': player2.playerId,
+        },
+        body: JSON.stringify({
+          questionId: currentQuestionId,
+          selectedAnswerIds: ['a4'],
+        }),
+      });
+
+      // Check both have answered
+      playersRes = await request(`/api/sessions/${session.id}/players`);
+      playersData = await playersRes.json();
+      expect(playersData.players.every((p: any) => p.hasAnswered === true)).toBe(true);
+
+      // Move to next question
+      await request(`/api/sessions/${session.id}/next`, {
+        method: 'POST',
+        headers: { 'X-Host-Token': session.hostToken },
+      });
+
+      // Check hasAnswered resets for new question
+      playersRes = await request(`/api/sessions/${session.id}/players`);
+      playersData = await playersRes.json();
+      expect(playersData.players.every((p: any) => p.hasAnswered === false)).toBe(true);
     });
   });
 });

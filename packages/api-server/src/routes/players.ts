@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { getPrisma } from '../db/index.js';
 import { generateId } from '@quizzquizz/common';
+import { getSessionQuestions } from '../session-utils.js';
 
 const playerRoutes = new Hono();
 
@@ -94,12 +95,9 @@ playerRoutes.get('/:sessionId/players', async (c) => {
     // Get current question ID if quiz is playing
     let currentQuestionId: string | null = null;
     if (session.status === 'playing' && session.currentQuestionIndex >= 0) {
-      // We need to get the question ID from the question bank
-      // For now, we'll query PlayerAnswer to get unique question IDs
-      // This is a workaround since question IDs are in-memory
-      const { questionBanks } = await import('../state.js');
-      const questionBank = questionBanks.get(session.questionBankId);
-      const currentQuestion = questionBank?.questions[session.currentQuestionIndex];
+      // Get the session's questions (respects questionIds and randomOrder)
+      const questions = getSessionQuestions(session);
+      const currentQuestion = questions[session.currentQuestionIndex];
       if (currentQuestion) {
         currentQuestionId = currentQuestion.id;
       }
