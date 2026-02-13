@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "80": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "quizzquizz:80": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:80"
+        }
+      }
+    }
+  }
+}

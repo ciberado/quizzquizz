@@ -21,13 +21,23 @@ const app = new Hono();
 
 // Middleware
 app.use('*', logger());
+
+// CORS configuration - allow development origins and optional custom origin
+const allowedOrigins = [
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
+  'https://quizzquizz.snow-burbot.ts.net',
+];
+
+// Add custom origin from environment (e.g., Tailscale domain)
+if (process.env.CORS_ORIGIN) {
+  allowedOrigins.push(process.env.CORS_ORIGIN);
+  console.log(`✓ Added custom CORS origin: ${process.env.CORS_ORIGIN}`);
+}
+
 app.use('*', cors({
-  origin: [
-    'http://localhost:3001',
-    'http://localhost:3002',
-    'http://localhost:3003',
-    'https://quizzquizz.snow-burbot.ts.net',
-  ],
+  origin: allowedOrigins,
   credentials: true,
 }));
 

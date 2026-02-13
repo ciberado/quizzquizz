@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## 2026-02-12
 
+### Added
+- **[Tailscale Deployment]** Dynamic CORS origin configuration for Tailnet domains
+  - Added `TAILNET_DOMAIN` environment variable for configuring Tailnet domain
+  - API server dynamically adds `CORS_ORIGIN` to allowed origins when set
+  - Updated `docker-compose.ts.yml` to compute CORS origin as `https://quizzquizz.${TAILNET_DOMAIN}`
+  - Added documentation in `.env.example` and `TAILSCALE_DEPLOYMENT.md` for setup
+  - Enables seamless CORS configuration for different Tailnet deployments
+
 ### Changed
 - **[Architecture]** Simplified Docker deployment with Caddy URL rewriting
   - **Caddy now serves static files directly** from filesystem instead of proxying to Node.js

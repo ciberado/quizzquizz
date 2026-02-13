@@ -1,0 +1,98 @@
+# Docker Compose configuration for Tailscale deployment
+# This setup uses Tailscale to expose the QuizzQuizz application
+# The Tailscale service exposes Caddy, which reverse proxies to the API server
+#
+# Prerequisites:
+#   - Set TS_AUTHKEY environment variable with your Tailscale auth key
+#   - Set TAILNET_DOMAIN to your Tailnet domain (e.g., tail1234.ts.net)
+#   - Create config directory with quizzquizz.json serve config
+#
+# Usage:
+#   export TS_AUTHKEY=<your-tailscale-auth-key>
+#   export TAILNET_DOMAIN=<your-tailnet-domain>
+#   docker compose -f docker-compose.ts.yml up -d
+
+services:
+  quizzquizz:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: quizzquizz:latest
+    container_name: quizzquizz-app
+    # No ports exposed externally - accessed through Caddy reverse proxy
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=file:/data/quiz.db
+      - QUESTION_BANKS_PATH=/app/question-banks
+      - SESSION_EXPIRY_HOURS=24
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=https://quizzquizz.${TAILNET_DOMAIN}
+    volumes:
+      # Persist SQLite database
+      - quiz-data-ts:/data
+      # Share built frontend files with Caddy
+      - app-dist-ts:/app/packages
+      # Mount custom question banks (optional - uncomment and modify path)
+      # - ./question-banks:/app/question-banks:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    depends_on:
+      - quizzquizz-ts
+    # Use Tailscale's network namespace
+    network_mode: service:quizzquizz-ts
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: quizzquizz-caddy
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data-ts:/data
+      - caddy-config-ts:/config
+      # Access frontend dist files from quizzquizz container (read-only)
+      - app-dist-ts:/app/packages:ro
+    restart: unless-stopped
+    depends_on:
+      quizzquizz-ts:
+        condition: service_started
+      quizzquizz:
+        condition: service_healthy
+    # Use Tailscale's network namespace to expose on Tailnet
+    network_mode: service:quizzquizz-ts
+
+  quizzquizz-ts:
+    hostname: quizzquizz
+    container_name: quizzquizz_ts
+    image: tailscale/tailscale:latest
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/quizzquizz.json
+    volumes:
+      - tailscale-data-quizzquizz:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+      - ./ts-config:/config:ro
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+
+volumes:
+  quiz-data-ts:
+    driver: local
+  caddy-data-ts:
+    driver: local
+  caddy-config-ts:
+    driver: local
+  app-dist-ts:
+    driver: local
+  tailscale-data-quizzquizz:
+    driver: local
