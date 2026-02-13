@@ -15,6 +15,10 @@ All notable changes to this project will be documented in this file, organized b
   - Solution: Run `docker compose down --volumes` to clear stale volumes before deploying
   - Players endpoint now returns 200 with correct data instead of 500 ERR_MODULE_NOT_FOUND
   - `.js` extension in dynamic import (`import('../state.js')`) now properly deployed
+- **[Tailscale Deployment]** Fixed Docker Compose configuration conflict
+  - Removed `expose:` directive from services using `network_mode: service:quizzquizz-ts`
+  - Port/expose directives are incompatible with container network mode
+  - Services sharing network namespace communicate via localhost
 
 ## 2026-02-12
 

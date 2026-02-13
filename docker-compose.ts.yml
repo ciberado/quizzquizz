@@ -16,9 +16,7 @@ services:
   quizzquizz:
     image: ciberado/quizzquizz:latest
     container_name: quizzquizz-app
-    # No ports exposed externally - accessed through Caddy reverse proxy
-    expose:
-      - "3000"
+    # No ports/expose when using network_mode: service - shares Tailscale's network namespace
     environment:
       - NODE_ENV=production
       - PORT=3000
