@@ -14,10 +14,7 @@
 
 services:
   quizzquizz:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: quizzquizz:latest
+    image: ciberado/quizzquizz:latest
     container_name: quizzquizz-app
     # No ports exposed externally - accessed through Caddy reverse proxy
     expose:
