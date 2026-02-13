@@ -28,6 +28,14 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 },
       },
     },
+    {
+      name: 'full-workflow',
+      testMatch: '**/full-workflow.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
   ],
 
   // No webServer - Docker Compose should be running separately

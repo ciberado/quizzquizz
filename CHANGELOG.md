@@ -9,12 +9,12 @@ All notable changes to this project will be documented in this file, organized b
   - Use `--chown=nodejs:nodejs` flag on all COPY commands instead of recursive chown
   - Only chown `/data` directory (small, runtime-created) instead of entire `/app` tree
   - Significantly reduces Docker build time by avoiding filesystem traversal
-
-### Known Issues
-- **[Docker Build]** ES module import issue in players route still present in Docker builds
-  - TypeScript moduleResolution: "bundler" strips .js extensions from dynamic imports in Docker environment
-  - Local builds preserve .js extensions correctly
-  - Investigating root cause - may be related to Docker layer caching or npm build process
+- **[Docker Build]** Fixed ES module import issue caused by stale Docker volumes
+  - Root cause: Named volume `app-dist` was caching old compiled code
+  - Docker mounts existing volume data over fresh image contents
+  - Solution: Run `docker compose down --volumes` to clear stale volumes before deploying
+  - Players endpoint now returns 200 with correct data instead of 500 ERR_MODULE_NOT_FOUND
+  - `.js` extension in dynamic import (`import('../state.js')`) now properly deployed
 
 ## 2026-02-12
 
