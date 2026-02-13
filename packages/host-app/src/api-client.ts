@@ -28,7 +28,17 @@ interface QuestionBankSummary {
 }
 
 // API base URL (configurable via environment)
-const API_BASE_URL = 'http://localhost:3000';
+function getApiBaseUrl(): string {
+  // In development, API runs on port 3000
+  if (import.meta.env?.DEV) {
+    return 'http://localhost:3000';
+  }
+  
+  // In production, API is served from same origin
+  return window.location.origin;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Custom error class for API errors

@@ -103,7 +103,8 @@ export class QuestionPreviewScreen extends BaseComponent {
         params.set('topic', Array.from(this.selectedTopics).join(','));
       }
 
-      const url = `http://localhost:3000/api/question-banks/${this.bankId}/questions?${params.toString()}`;
+      const apiBaseUrl = import.meta.env?.DEV ? 'http://localhost:3000' : window.location.origin;
+      const url = `${apiBaseUrl}/api/question-banks/${this.bankId}/questions?${params.toString()}`;
       const response = await fetch(url);
       
       if (!response.ok) {

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-13
 
 ### Fixed
+- **[Host App]** Fixed hardcoded API URLs for production deployment
+  - Changed `API_BASE_URL` from hardcoded `http://localhost:3000` to use `window.location.origin` in production
+  - Fixed question preview screen to use dynamic API URL instead of hardcoded localhost
+  - Frontend now correctly makes same-origin API calls through Caddy proxy
+  - Matches player-app pattern: uses localhost in dev, window.location.origin in production
 - **[Docker Build]** Optimized Dockerfile to eliminate slow recursive chown operation
   - Use `--chown=nodejs:nodejs` flag on all COPY commands instead of recursive chown
   - Only chown `/data` directory (small, runtime-created) instead of entire `/app` tree

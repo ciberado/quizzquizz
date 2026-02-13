@@ -1,0 +1,41 @@
+# Caddy configuration for EC2 instance (public proxy)
+# This reverse proxies a public domain to a Tailscale endpoint
+#
+# USAGE:
+#   1. Replace {$PUBLIC_DOMAIN} with your public domain (e.g., quizzquizz.aprender.cloud)
+#   2. Replace {$TAILSCALE_HOST} with your Tailscale hostname (e.g., quizzquizz.snow-burbot.ts.net)
+#   OR use environment variables:
+#      export PUBLIC_DOMAIN=quizzquizz.aprender.cloud
+#      export TAILSCALE_HOST=quizzquizz.snow-burbot.ts.net
+#
+# PREREQUISITE: Your EC2 instance must be on the Tailnet
+#   Install Tailscale: curl -fsSL https://tailscale.com/install.sh | sh
+#   Authenticate: sudo tailscale up
+#
+# Install location: /etc/caddy/Caddyfile on your EC2 instance
+#
+# After updating:
+#   sudo systemctl reload caddy
+
+{$PUBLIC_DOMAIN:quizzquizz.aprender.cloud} {
+    # Reverse proxy to Tailscale endpoint
+    reverse_proxy https://{$TAILSCALE_HOST:quizzquizz.snow-burbot.ts.net} {
+        # Forward original host and client info
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        
+        # Tailscale provides valid HTTPS certificates
+        # No need to skip verification
+    }
+    
+    # Enable compression
+    encode gzip zstd
+    
+    # Logging
+    log {
+        output file /var/log/caddy/quizzquizz.log
+        format json
+    }
+}
