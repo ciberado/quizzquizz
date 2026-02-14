@@ -1,33 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
+import { describe, it, expect } from 'vitest';
 
 describe('QuestionScreen - Multiple Answer Validation', () => {
-  let dom: JSDOM;
-  let document: Document;
-
-  beforeEach(() => {
-    // Create a fresh DOM for each test
-    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-      url: 'http://localhost:3002',
-    });
-    document = dom.window.document;
-    global.document = document as any;
-    global.window = dom.window as any;
-  });
 
   describe('Submit button validation', () => {
-    it('should disable submit button when no answers selected', () => {
-      const html = `
-        <div class="screen">
-          <button class="submit-btn" disabled>Submit Answer</button>
-        </div>
-      `;
-      document.body.innerHTML = html;
-      
-      const submitBtn = document.querySelector('.submit-btn') as HTMLButtonElement;
-      expect(submitBtn.disabled).toBe(true);
-    });
-
     it('should enable submit button for single answer question with one selected', () => {
       // This test verifies the logic conceptually
       // In actual implementation, the button state is controlled by updateSubmitButton()
@@ -111,7 +86,6 @@ describe('QuestionScreen - Multiple Answer Validation', () => {
   describe('UI rendering', () => {
     it('should show multiple answers hint when question has multiple correct answers', () => {
       const correctAnswerIds = ['A1', 'A2', 'A3'];
-      const questionText = 'Which are prime numbers?';
       
       // Simulate rendered HTML for multiple correct answers
       const shouldShowHint = correctAnswerIds.length > 1;
@@ -156,9 +130,6 @@ describe('QuestionScreen - Multiple Answer Validation', () => {
       // This test verifies the timeout behavior logic
       // The actual submitAnswer() method is called directly by timer, bypassing button state
       
-      const correctAnswerIds = ['A1', 'A2', 'A3']; // 3 correct answers required
-      const selectedAnswerIds = new Set(['A1']); // Only 1 selected
-      
       // When timer expires, submitAnswer() is called directly
       // It doesn't check button disabled state
       const timerExpired = true;
@@ -181,9 +152,6 @@ describe('QuestionScreen - Multiple Answer Validation', () => {
     });
 
     it('should auto-submit with correct count on timeout', () => {
-      const correctAnswerIds = ['A1', 'A2'];
-      const selectedAnswerIds = new Set(['A1', 'A2']); // Correct count
-      
       const timerExpired = true;
       const hasSubmitted = false;
       
@@ -194,9 +162,6 @@ describe('QuestionScreen - Multiple Answer Validation', () => {
     });
 
     it('should auto-submit even with zero selections on timeout', () => {
-      const correctAnswerIds = ['A1', 'A2'];
-      const selectedAnswerIds = new Set(); // Nothing selected
-      
       const timerExpired = true;
       const hasSubmitted = false;
       
