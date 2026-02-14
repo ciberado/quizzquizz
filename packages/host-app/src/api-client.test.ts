@@ -89,6 +89,37 @@ describe('API Client', () => {
       );
       expect(result).toEqual(mockBanks);
     });
+
+    it('should reload question banks', async () => {
+      const mockReloadResponse = {
+        success: true,
+        message: 'Reloaded 2 question bank(s)',
+        banks: [
+          { id: 'bank-1', name: 'General Knowledge', questionCount: 10 },
+          { id: 'bank-2', name: 'Science', questionCount: 15 },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockReloadResponse,
+      });
+
+      const result = await api.reloadQuestionBanks();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/question-banks/reload',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+      expect(result).toEqual(mockReloadResponse);
+      expect(result.success).toBe(true);
+      expect(result.banks).toHaveLength(2);
+    });
   });
 
   describe('Session Management', () => {

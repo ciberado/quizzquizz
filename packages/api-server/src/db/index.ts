@@ -3,6 +3,10 @@ import { PrismaClient } from '@prisma/client';
 // Prisma Client instance - lazily initialized
 let prismaInstance: PrismaClient | null = null;
 
+// Track database initialization state
+let isInitialized = false;
+let initializationPromise: Promise<void> | null = null;
+
 function createPrismaClient(): PrismaClient {
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
@@ -23,6 +27,8 @@ export async function resetPrismaInstance() {
     await prismaInstance.$disconnect();
     prismaInstance = null;
   }
+  isInitialized = false;
+  initializationPromise = null;
 }
 
 // Export lazy getters for compatibility
@@ -35,9 +41,22 @@ export const db = prisma;
 
 // Initialize database connection
 export async function initDatabase() {
-  console.log('📦 Initializing database...');
+  // If already initialized, return immediately
+  if (isInitialized) {
+    return;
+  }
   
-  // Get or create Prisma instance (will use current DATABASE_URL)
+  // If initialization is in progress, wait for it
+  if (initializationPromise) {
+    await initializationPromise;
+    return;
+  }
+  
+  // Start initialization
+  initializationPromise = (async () => {
+    console.log('📦 Initializing database...');
+    
+    // Get or create Prisma instance (will use current DATABASE_URL)
   const client = getPrisma();
   
   // With Prisma, schema is managed via `prisma db push` or migrations
@@ -108,7 +127,11 @@ export async function initDatabase() {
       throw error;
     }
   }
-  console.log('✅ Database initialized (using Prisma)');
+    console.log('✅ Database initialized (using Prisma)');
+    isInitialized = true;
+  })();
+  
+  await initializationPromise;
 }
 
 // Cleanup function for graceful shutdown

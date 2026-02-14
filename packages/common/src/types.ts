@@ -156,6 +156,7 @@ export const GameStateSchema = z.object({
   timeLimit: z.number().nullable(),
   totalQuestions: z.number(),
   currentQuestionNumber: z.number(),
+  serverTime: z.number(), // Server's current time for clock synchronization
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;

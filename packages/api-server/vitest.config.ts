@@ -7,5 +7,7 @@ export default defineConfig({
     env: {
       DATABASE_URL: 'file::memory:?cache=shared',
     },
+    // Run tests sequentially to avoid database race conditions with shared in-memory SQLite
+    fileParallelism: false,
   },
 });

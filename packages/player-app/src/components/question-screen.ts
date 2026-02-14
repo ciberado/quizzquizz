@@ -17,6 +17,7 @@ export class QuestionScreen extends BaseComponent {
   private currentQuestion: GameState['currentQuestion'] = null;
   private currentQuestionIndex: number = 0; // Track question index for display
   private questionStartedAt: number | null = null;
+  private serverTime: number = 0; // Server's current time for clock synchronization
   private timeLimit: number = 0;
   private hasSubmitted: boolean = false;
   private hasRenderedQuestion: boolean = false; // Track if we've rendered with actual question data
@@ -55,8 +56,9 @@ export class QuestionScreen extends BaseComponent {
   private startTimer(): void {
     this.stopTimer(); // Clear any existing timer
     
-    // Calculate initial time remaining
-    const elapsed = Date.now() - (this.questionStartedAt || 0);
+    // Calculate initial time remaining using server time (not client clock)
+    // This prevents clock drift issues between devices
+    const elapsed = this.serverTime - (this.questionStartedAt || 0);
     this.timeRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
     
     this.timerInterval = window.setInterval(() => {
@@ -134,6 +136,7 @@ export class QuestionScreen extends BaseComponent {
           this.currentQuestion = gameState.currentQuestion;
           this.currentQuestionIndex = (gameState.currentQuestionNumber || 1) - 1; // Convert 1-based to 0-based
           this.questionStartedAt = gameState.questionStartedAt;
+          this.serverTime = gameState.serverTime; // Store server time for synchronized timer
           this.timeLimit = gameState.timeLimit || 20;
           this.selectedAnswerIds.clear();
           this.hasSubmitted = false;

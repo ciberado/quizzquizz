@@ -137,6 +137,25 @@ Environment variables (in `docker-compose.yml`):
 
 Questions are stored as Markdown files in `question-banks/`. See existing samples for format.
 
+### Editing Questions
+
+When running with Docker Compose, question bank files are mounted as a volume:
+
+1. **Edit** question bank files in `question-banks/` directory
+2. **Reload** in the Host UI:
+   - Open the host app at `http://localhost:3000`
+   - Click the **"🔄 Refresh Banks"** button (top-right corner)
+   - Your changes will appear immediately
+
+Alternatively, reload via command line:
+```bash
+./reload-question-banks.sh
+# Or manually:
+curl -X POST http://localhost:3000/api/question-banks/reload
+```
+
+### Question Format
+
 Example:
 ```markdown
 # Question 1

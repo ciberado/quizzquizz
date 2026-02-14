@@ -18,8 +18,13 @@ interface QuestionBankSummary {
  */
 export class CreateSessionScreen extends BaseComponent {
   private questionBanks: QuestionBankSummary[] = [];
+  private isReloading: boolean = false;
 
   protected async onMount(): Promise<void> {
+    await this.loadQuestionBanks();
+  }
+
+  private async loadQuestionBanks(): Promise<void> {
     this.showLoading('Loading question banks...');
     
     try {
@@ -29,6 +34,52 @@ export class CreateSessionScreen extends BaseComponent {
       console.error('Failed to load question banks:', error);
       handleApiError(error, 'Loading question banks');
       this.showError('Could not load question banks. Please check if the API server is running.');
+    }
+  }
+
+  private async reloadQuestionBanks(): Promise<void> {
+    if (this.isReloading) return;
+    
+    this.isReloading = true;
+    const button = this.querySelector('.reload-btn') as HTMLButtonElement;
+    if (button) {
+      button.disabled = true;
+      button.textContent = '🔄 Reloading...';
+    }
+
+    try {
+      const result = await api.reloadQuestionBanks();
+      console.log('✅ Question banks reloaded:', result);
+      
+      // Reload the list
+      this.questionBanks = await api.getQuestionBanks();
+      this.render();
+      
+      // Show success message briefly
+      if (button) {
+        button.textContent = '✅ Reloaded!';
+        setTimeout(() => {
+          if (button) {
+            button.textContent = '🔄 Refresh Banks';
+            button.disabled = false;
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Failed to reload question banks:', error);
+      handleApiError(error, 'Reloading question banks');
+      
+      if (button) {
+        button.textContent = '❌ Failed';
+        button.disabled = false;
+        setTimeout(() => {
+          if (button) {
+            button.textContent = '🔄 Refresh Banks';
+          }
+        }, 2000);
+      }
+    } finally {
+      this.isReloading = false;
     }
   }
 
@@ -42,7 +93,12 @@ export class CreateSessionScreen extends BaseComponent {
       <div class="screen">
         <div class="container">
           <div class="card">
-            <h1 class="text-center">Create Quiz</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+              <h1 style="margin: 0;">Create Quiz</h1>
+              <button class="reload-btn btn-secondary" style="padding: var(--spacing-sm) var(--spacing-md);">
+                🔄 Refresh Banks
+              </button>
+            </div>
             <p class="text-center" style="font-size: var(--font-size-large); margin-bottom: var(--spacing-xl);">
               Select a question bank to start
             </p>
@@ -50,7 +106,7 @@ export class CreateSessionScreen extends BaseComponent {
             ${this.questionBanks.length === 0 ? `
               <div class="error-container">
                 <p class="error-message">No question banks available</p>
-                <p>Add question bank files to the <code>question-banks/</code> directory.</p>
+                <p>Add question bank files to the <code>question-banks/</code> directory, then click "Refresh Banks".</p>
               </div>
             ` : `
               <div class="question-banks-grid">
@@ -69,6 +125,12 @@ export class CreateSessionScreen extends BaseComponent {
         </div>
       </div>
     `);
+
+    // Set up event listener for reload button
+    const reloadBtn = this.querySelector('.reload-btn');
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', () => this.reloadQuestionBanks());
+    }
 
     // Set up event listeners for question bank cards
     this.qsa('.question-bank-card').forEach(card => {

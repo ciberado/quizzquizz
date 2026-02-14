@@ -91,6 +91,7 @@ describe('Game Routes', () => {
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       await getPrisma().player.create({ data: {
@@ -130,6 +131,7 @@ describe('Game Routes', () => {
         currentQuestionIndex: 0,
         questionStartedAt: BigInt(now),
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       await getPrisma().player.create({ data: {
@@ -185,6 +187,7 @@ describe('Game Routes', () => {
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       const res = await request(`/api/sessions/${sessionId}/state`, {
@@ -212,6 +215,7 @@ describe('Game Routes', () => {
         currentQuestionIndex: 0,
         questionStartedAt: now - 3000, // 3 seconds ago
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       await getPrisma().player.create({ data: {
@@ -260,6 +264,7 @@ describe('Game Routes', () => {
         currentQuestionIndex: 0,
         questionStartedAt: BigInt(now),
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       await getPrisma().player.create({ data: {
@@ -307,6 +312,7 @@ describe('Game Routes', () => {
         currentQuestionIndex: 0,
         questionStartedAt: BigInt(now),
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       await getPrisma().player.create({ data: {
@@ -366,6 +372,7 @@ describe('Game Routes', () => {
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(now),
+        expiresAt: BigInt(now + 3600000), // 1 hour from now
       } });
 
       await getPrisma().player.create({ data: {

@@ -180,12 +180,26 @@ describe('Player Routes', () => {
         body: JSON.stringify({ pin: session.pin, nickname: 'Player1' }),
       });
       const player1: any = await res1.json();
+      
+      // Check if join succeeded
+      if (!player1.playerId) {
+        console.error('Player1 join failed:', player1);
+        throw new Error('Failed to join player 1');
+      }
+      
       const res2 = await request('/api/sessions/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: session.pin, nickname: 'Player2' }),
       });
       const player2: any = await res2.json();
+      
+      // Check if join succeeded
+      if (!player2.playerId) {
+        console.error('Player2 join failed:', player2);
+        throw new Error('Failed to join player 2');
+      }
+      
       await getPrisma().player.update({ where: { id: player1.playerId }, data: { score: 100 } });
       await getPrisma().player.update({ where: { id: player2.playerId }, data: { score: 200 } });
       const res = await request(`/api/sessions/${session.id}/players`);

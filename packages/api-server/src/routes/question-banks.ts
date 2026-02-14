@@ -1,5 +1,12 @@
 import { Hono } from 'hono';
 import { questionBanks } from '../state.js';
+import { loadQuestionBanks } from '@quizzquizz/question-bank';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const questionBankRoutes = new Hono();
 
@@ -95,6 +102,44 @@ questionBankRoutes.get('/:id/questions', (c) => {
       tag: tag || null,
     },
   });
+});
+
+// Reload question banks from disk (useful for hot-reloading during development)
+questionBankRoutes.post('/reload', (c) => {
+  try {
+    // Clear existing question banks
+    questionBanks.clear();
+
+    // Reload from disk
+    const questionBanksPath = process.env.QUESTION_BANKS_PATH || 
+      join(__dirname, '../../../../question-banks');
+    
+    console.log(`🔄 Reloading question banks from: ${questionBanksPath}`);
+    const banks = loadQuestionBanks(questionBanksPath);
+    
+    for (const bank of banks) {
+      questionBanks.set(bank.id, bank);
+      console.log(`   ✓ Reloaded: ${bank.metadata.name} (${bank.questions.length} questions)`);
+    }
+    
+    console.log(`✅ Reloaded ${banks.length} question bank(s)`);
+
+    return c.json({
+      success: true,
+      message: `Reloaded ${banks.length} question bank(s)`,
+      banks: banks.map(b => ({
+        id: b.id,
+        name: b.metadata.name,
+        questionCount: b.questions.length,
+      })),
+    });
+  } catch (error) {
+    console.error('❌ Error reloading question banks:', error);
+    return c.json({ 
+      error: 'Failed to reload question banks',
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
 });
 
 export default questionBankRoutes;

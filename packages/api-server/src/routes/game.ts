@@ -77,6 +77,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
       timeLimit,
       totalQuestions: questions.length,
       currentQuestionNumber: session.currentQuestionIndex + 1,
+      serverTime: Date.now(), // Add server's current time for clock synchronization
     });
   } catch (error) {
     console.error('Error fetching game state:', error);

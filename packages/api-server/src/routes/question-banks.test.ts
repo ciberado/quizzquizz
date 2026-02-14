@@ -129,4 +129,50 @@ describe('Question Bank Routes', () => {
       expect(question).toHaveProperty('tags');
     });
   });
+
+  describe('POST /api/question-banks/reload', () => {
+    it('should reload question banks successfully', async () => {
+      const res = await request('/api/question-banks/reload', {
+        method: 'POST',
+      });
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.message).toBeDefined();
+      expect(data.banks).toBeDefined();
+      expect(Array.isArray(data.banks)).toBe(true);
+    });
+
+    it('should return list of reloaded banks with metadata', async () => {
+      const res = await request('/api/question-banks/reload', {
+        method: 'POST',
+      });
+      const data: any = await res.json();
+      expect(data.banks).toBeDefined();
+      expect(Array.isArray(data.banks)).toBe(true);
+      
+      // Each bank should have id, name, and questionCount
+      data.banks.forEach((bank: any) => {
+        expect(bank).toHaveProperty('id');
+        expect(bank).toHaveProperty('name');
+        expect(bank).toHaveProperty('questionCount');
+        expect(typeof bank.id).toBe('string');
+        expect(typeof bank.name).toBe('string');
+        expect(typeof bank.questionCount).toBe('number');
+      });
+    });
+
+    it('should allow reload without authentication', async () => {
+      // No authentication headers required
+      const res = await request('/api/question-banks/reload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(data.success).toBe(true);
+    });
+  });
 });

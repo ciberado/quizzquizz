@@ -37,6 +37,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private answeredCount: number = 0;
   private autoNavigateTimeout: number | null = null;
   private automaticPace: boolean = false; // Auto-advance enabled
+  private serverTime: number = 0; // Server's current time for clock synchronization
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -104,7 +105,8 @@ export class QuestionDisplayScreen extends HTMLElement {
         // Use computed timeLimit from API (matches question bank default) instead of hardcoded fallback
         const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
         this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
-        const elapsed = Math.floor((Date.now() - Number(session.questionStartedAt)) / 1000);
+        this.serverTime = session.serverTime; // Store server time for synchronized timer
+        const elapsed = Math.floor((this.serverTime - Number(session.questionStartedAt)) / 1000);
         this.timeRemaining = Math.max(0, timeLimit - elapsed);
         newGameState.timeRemaining = this.timeRemaining;
         

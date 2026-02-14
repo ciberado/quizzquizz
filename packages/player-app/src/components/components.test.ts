@@ -165,6 +165,7 @@ describe('QuestionScreen Component', () => {
       timeLimit: 20,
       totalQuestions: 5,
       currentQuestionNumber: 1,
+      serverTime: Date.now(),
     });
 
     // Set up state
@@ -218,6 +219,7 @@ describe('WaitingScreen Component', () => {
       timeLimit: null,
       totalQuestions: 5,
       currentQuestionNumber: 1,
+      serverTime: Date.now(),
     });
 
     state.setState({

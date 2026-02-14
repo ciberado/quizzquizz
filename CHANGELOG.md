@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## 2026-02-14
+
+### Added
+- **[Host App] Question bank refresh button** - Added "Refresh Banks" button to session creation screen
+  - Located in top-right corner of "Create Quiz" screen
+  - Shows loading state while refreshing ("Reloading...")
+  - Shows success confirmation ("Reloaded!") when complete
+  - Automatically reloads the question bank list after refresh
+  - No need to restart the app when question bank files are edited
+  - **Files**: `packages/host-app/src/components/create-session-screen.ts`, `packages/host-app/src/api-client.ts`
+
+- **[API Server] Hot-reload endpoint for question banks** - `POST /api/question-banks/reload`
+  - Allows reloading question banks from disk without restarting the server
+  - No authentication required - freely accessible for convenience
+  - Returns list of reloaded banks with question counts
+  - Triggered by "Refresh Banks" button in host UI
+  - **Test Coverage**: Added 3 API server tests + 1 host app client test (9/9 question bank tests passing)
+  - **Files**: `packages/api-server/src/routes/question-banks.ts`, `packages/api-server/src/routes/question-banks.test.ts`, `packages/host-app/src/api-client.test.ts`
+
+### Changed
+- **[Docker] Enabled question banks volume mount** - Changes to local question bank files now sync to container
+  - Uncommented volume mount in docker-compose.yml: `./question-banks:/app/question-banks:ro`
+  - Combined with reload endpoint, allows live editing of questions without rebuilding image
+  - **File**: `docker-compose.yml`
+
+### Fixed
+- **[Critical] Timer Clock Synchronization Issue** - Fixed inconsistent countdown timers across different networks
+  - **Problem**: Players on WiFi saw countdown start at 10-12 seconds, while 4G users saw 20 seconds
+  - **Root cause**: Timer calculation used client clock (`Date.now()`) minus server timestamp (`questionStartedAt`)
+  - **Impact**: Clock drift between devices caused wildly different answer times, unfair gameplay
+  - **Solution**: API now returns `serverTime` in addition to `questionStartedAt`
+  - **Client fix**: Both host and player apps now calculate elapsed time as `serverTime - questionStartedAt`
+  - **Result**: All players see synchronized countdown regardless of device clock settings or network type
+  - **Files changed**:
+    - `packages/api-server/src/routes/game.ts` - Added `serverTime` to game state response
+    - `packages/api-server/src/routes/sessions.ts` - Added `serverTime` to session response
+    - `packages/common/src/types.ts` - Added `serverTime: number` to `GameStateSchema`
+    - `packages/player-app/src/components/question-screen.ts` - Use `serverTime` for timer calculation
+    - `packages/host-app/src/components/question-display-screen.ts` - Use `serverTime` for timer calculation
+    - `packages/host-app/src/api-client.ts` - Added `serverTime` to `SessionWithTimeLimit` interface
+
+- **[Database] Fixed parallel test execution database initialization race conditions**
+  - **Problem**: Multiple test suites initializing database simultaneously caused "table already exists" errors
+  - **Problem**: Test session creations missing required `expiresAt` field caused constraint violations
+  - **Problem**: Parallel test execution with shared in-memory SQLite caused data corruption and foreign key violations
+  - **Solution**: Added idempotent database initialization with promise-based locking
+  - **Solution**: Added `expiresAt` field to all test session creations (set to 1 hour from creation)
+  - **Solution**: Configured Vitest to run test files sequentially (`fileParallelism: false`)
+  - **Result**: All 57 API server tests pass reliably in all conditions
+  - **Files changed**:
+    - `packages/api-server/src/db/index.ts` - Added initialization state tracking and promise-based locking
+    - `packages/api-server/src/routes/game.test.ts` - Added expiresAt to all session creations
+    - `packages/api-server/vitest.config.ts` - Disabled file parallelism for database safety
+
 ## 2026-02-13
 
 ### Fixed

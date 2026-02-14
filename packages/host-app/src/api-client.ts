@@ -12,6 +12,7 @@ import { retryWithBackoff, isNetworkError } from './network-utils';
 // Extended types for API responses (include runtime-only properties)
 interface SessionWithTimeLimit extends Session {
   currentQuestionTimeLimit: number | null;
+  serverTime: number; // Server's current time for clock synchronization
 }
 
 interface PlayerWithAnswerStatus extends Player {
@@ -175,6 +176,15 @@ export const api = {
   async getQuestionBanks(): Promise<QuestionBankSummary[]> {
     const response = await apiRequest<{ questionBanks: QuestionBankSummary[] }>('/api/question-banks');
     return response.questionBanks;
+  },
+
+  /**
+   * Reload question banks from disk
+   */
+  async reloadQuestionBanks(): Promise<{ success: boolean; message: string; banks: Array<{ id: string; name: string; questionCount: number }> }> {
+    return apiRequest('/api/question-banks/reload', {
+      method: 'POST',
+    });
   },
 
   /**

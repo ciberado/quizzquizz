@@ -107,6 +107,7 @@ sessionRoutes.get('/:id', async (c) => {
       expiresAt: expiresAt ? Number(expiresAt) : null,
       currentQuestionTimeLimit, // Add computed time limit for timer sync
       questions, // Include questions from question bank
+      serverTime: Date.now(), // Add server's current time for clock synchronization
     });
   } catch (error) {
     console.error('Error fetching session:', error);
