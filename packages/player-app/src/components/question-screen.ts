@@ -212,7 +212,29 @@ export class QuestionScreen extends BaseComponent {
   private updateSubmitButton(): void {
     const submitBtn = this.querySelector('.submit-btn') as HTMLButtonElement;
     if (submitBtn) {
-      submitBtn.disabled = this.hasSubmitted || this.selectedAnswerIds.size === 0;
+      // If already submitted, keep disabled
+      if (this.hasSubmitted) {
+        submitBtn.disabled = true;
+        return;
+      }
+      
+      // Must have at least one answer selected
+      if (this.selectedAnswerIds.size === 0) {
+        submitBtn.disabled = true;
+        return;
+      }
+      
+      // If multiple correct answers exist, must select exact count
+      if (this.currentQuestion) {
+        const correctCount = this.currentQuestion.correctAnswerIds.length;
+        if (correctCount > 1 && this.selectedAnswerIds.size !== correctCount) {
+          submitBtn.disabled = true;
+          return;
+        }
+      }
+      
+      // All validations passed
+      submitBtn.disabled = false;
     }
   }
 
@@ -305,6 +327,12 @@ export class QuestionScreen extends BaseComponent {
           ${this.escapeHtml(this.currentQuestion.text)}
         </div>
 
+        ${this.currentQuestion.correctAnswerIds.length > 1 ? `
+          <div class="multiple-answers-hint">
+            ⚠️ Select exactly ${this.currentQuestion.correctAnswerIds.length} answers
+          </div>
+        ` : ''}
+
         <div class="answers-grid">
           ${this.currentQuestion.answers.map((answer) => `
             <button 
@@ -325,7 +353,9 @@ export class QuestionScreen extends BaseComponent {
             Submit Answer
           </button>
           <p class="hint">
-            Select one or more answers
+            ${this.currentQuestion.correctAnswerIds.length > 1 
+              ? `${this.selectedAnswerIds.size}/${this.currentQuestion.correctAnswerIds.length} selected`
+              : 'Select one or more answers'}
           </p>
         </div>
 

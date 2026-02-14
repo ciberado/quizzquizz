@@ -310,6 +310,11 @@ export class QuestionDisplayScreen extends HTMLElement {
           <div class="question-text">
             ${this.escapeHtml(question.text)}
           </div>
+          ${question.correctAnswerIds.length > 1 ? `
+            <div class="multiple-answers-info">
+              ℹ️ This question has ${question.correctAnswerIds.length} correct answers
+            </div>
+          ` : ''}
         </div>
 
         <div class="answers-grid">

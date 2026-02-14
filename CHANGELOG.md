@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-14
 
 ### Added
+- **[Player/Host UI] Multiple Correct Answer Validation** - Enhanced UI for questions with multiple correct answers
+  - **Visual Indicators**: Prominent warning banner shows "⚠️ Select exactly N answers" after question text
+  - **Submit Button Logic**: Disabled until exact number of answers selected (e.g., must pick 3 of 4 for a question with 3 correct)
+  - **Selection Counter**: Shows "X/Y selected" in footer to track progress
+  - **Timeout Behavior**: Timer auto-submits regardless of selection count (ensures no player gets stuck)
+  - **Host Display**: Shows "ℹ️ This question has N correct answers" info banner
+  - **Implementation**: Validation enforced in `updateSubmitButton()` method
+  - **Test Coverage**: 17 comprehensive tests covering validation logic, UI rendering, timeout bypass, edge cases
+  - **Files changed**:
+    - `packages/player-app/src/components/question-screen.ts` - Added validation logic and UI hints
+    - `packages/player-app/src/styles.css` - Added animated warning banner styling
+    - `packages/host-app/src/components/question-display-screen.ts` - Added info banner for host
+    - `packages/host-app/src/styles.css` - Added info banner styling
+    - `packages/player-app/src/components/question-screen.test.ts` - Added 17 tests
+  - **Result**: All 17 new tests passing + existing tests maintained
+
 - **[Feature] Answer Shuffling** - Added option to shuffle answer order within questions (enabled by default)
   - **Why**: Prevents players from memorizing answer positions and sharing "click the second option" strategies
   - **Default**: Enabled by default (`shuffleAnswers: true`) for fair gameplay
