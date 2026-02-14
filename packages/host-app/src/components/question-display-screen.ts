@@ -455,6 +455,15 @@ export class QuestionDisplayScreen extends HTMLElement {
         animation: pulse-correct 0.6s ease;
       }
 
+      .answer-card.correct .answer-text {
+        color: #1a202c;
+        font-weight: 600;
+      }
+
+      .answer-card.correct .answer-label {
+        color: #2d7a4e;
+      }
+
       @keyframes pulse-correct {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.05); }

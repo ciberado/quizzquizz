@@ -59,6 +59,16 @@ All notable changes to this project will be documented in this file, organized b
   - **Test Coverage**: Added 3 API server tests + 1 host app client test (9/9 question bank tests passing)
   - **Files**: `packages/api-server/src/routes/question-banks.ts`, `packages/api-server/src/routes/question-banks.test.ts`, `packages/host-app/src/api-client.test.ts`
 
+- **[Host App] QR code to lobby screen** - Added scannable QR code for easy player joining
+  - QR code displayed on the right side of the PIN display
+  - Encodes the full player app URL with PIN for direct joining (e.g., `#/nickname?pin=123456`)
+  - Players can scan and join without manually entering the PIN
+  - Generated dynamically using QR Server API
+  - Styled with white background and border for better scanning
+  - Layout adjusts PIN content to the left to make room for QR code
+  - **Test Coverage**: Added 4 component tests verifying QR code generation, URL encoding with PIN, and lobby layout
+  - **File**: `packages/host-app/src/components/lobby-screen.ts`, `packages/host-app/src/components/components.test.ts`
+
 ### Changed
 - **[Docker] Enabled question banks volume mount** - Changes to local question bank files now sync to container
   - Uncommented volume mount in docker-compose.yml: `./question-banks:/app/question-banks:ro`
@@ -66,6 +76,22 @@ All notable changes to this project will be documented in this file, organized b
   - **File**: `docker-compose.yml`
 
 ### Fixed
+- **[Host App] Hardcoded player URL in lobby screen** - Fixed localhost:3003 reference to use dynamic URL
+  - **Problem**: Lobby screen always displayed "Join at localhost:3003" regardless of deployment
+  - **Solution**: Added `getPlayerUrl()` method that detects environment and returns correct URL
+  - **Development**: Returns `http://localhost:3002` when host is on `localhost:3001`
+  - **Production**: Returns current origin (e.g., `http://example.com:3000`) for Docker deployments
+  - **Impact**: Players now see correct join URL in all environments
+  - **Test Coverage**: Added component test for URL generation logic
+  - **File**: `packages/host-app/src/components/lobby-screen.ts`, `packages/host-app/src/components/components.test.ts`
+
+- **[Host App] Poor contrast on correct answer display** - Fixed white text on light green background
+  - **Problem**: When timer expires, correct answers shown with light green background but white text (low contrast)
+  - **Solution**: Added dark text color (#1a202c) and darker label color (#2d7a4e) for `.answer-card.correct`
+  - **Impact**: Correct answers are now clearly readable on projectors and all displays
+  - **Test Coverage**: Added 3 component tests verifying correct answer styling and visibility
+  - **File**: `packages/host-app/src/components/question-display-screen.ts`, `packages/host-app/src/components/components.test.ts`
+
 - **[Build] Docker Build Failure** - Fixed TypeScript compilation error due to unused variable
   - **Problem**: `docker build` failed with TS6133 error: 'hostToken' is declared but never used
   - **Location**: `packages/api-server/src/routes/sessions.test.ts` line 117

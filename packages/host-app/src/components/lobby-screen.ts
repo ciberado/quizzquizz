@@ -59,13 +59,28 @@ export class LobbyScreen extends BaseComponent {
       pin: this.pin,
     });
 
+    // Determine player app URL dynamically with PIN for direct joining
+    const playerUrl = this.getPlayerUrl();
+    const playerUrlWithPin = `${playerUrl}/#/nickname?pin=${this.pin}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(playerUrlWithPin)}`;
+
     this.setContent(`
       <div class="screen">
         <div class="container">
-          <!-- Large PIN Display -->
+          <!-- Large PIN Display with QR Code -->
           <div class="pin-display">
-            <div class="pin-label">Join at localhost:3003 with PIN</div>
-            <div class="pin-code">${this.pin || '(No PIN - Check console)'}</div>
+            <div class="pin-content">
+              <div class="pin-text-section">
+                <div class="pin-label">Join at</div>
+                <div class="player-url">${playerUrl}</div>
+                <div class="pin-label">with PIN</div>
+                <div class="pin-code">${this.pin || '(No PIN - Check console)'}</div>
+              </div>
+              <div class="qr-section">
+                <img src="${qrCodeUrl}" alt="QR Code to join" class="qr-code" />
+                <div class="qr-label">Scan to join</div>
+              </div>
+            </div>
           </div>
 
           <!-- Player List -->
@@ -121,6 +136,50 @@ export class LobbyScreen extends BaseComponent {
       const style = document.createElement('style');
       style.id = 'lobby-styles';
       style.textContent = `
+        .pin-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: var(--spacing-xl);
+          flex-wrap: wrap;
+        }
+
+        .pin-text-section {
+          flex: 1;
+          min-width: 300px;
+        }
+
+        .player-url {
+          font-size: var(--font-size-large);
+          font-weight: 600;
+          color: var(--color-accent);
+          margin-bottom: var(--spacing-sm);
+          word-break: break-all;
+        }
+
+        .qr-section {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: var(--spacing-sm);
+        }
+
+        .qr-code {
+          width: 200px;
+          height: 200px;
+          border: 4px solid var(--color-primary);
+          border-radius: var(--border-radius);
+          background: white;
+          padding: 8px;
+        }
+
+        .qr-label {
+          font-size: var(--font-size-base);
+          color: var(--color-text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
         .waiting-message {
           text-align: center;
           padding: var(--spacing-xl);
@@ -329,6 +388,22 @@ export class LobbyScreen extends BaseComponent {
       // Restart polling
       this.startPolling();
     }
+  }
+
+  /**
+   * Get the player app URL dynamically based on environment
+   */
+  private getPlayerUrl(): string {
+    const { protocol, hostname, port } = window.location;
+    
+    // Development: host app on 3001, player app on 3002
+    if (hostname === 'localhost' && port === '3001') {
+      return 'http://localhost:3002';
+    }
+    
+    // Production: both apps served through Caddy
+    // Host app is at /host, player app is at root
+    return `${protocol}//${hostname}${port ? ':' + port : ''}`;
   }
 
   /**
