@@ -114,7 +114,7 @@ describe('Session Routes', () => {
       });
 
       expect(res.status).toBe(201);
-      const { id, hostToken }: any = await res.json();
+      const { id }: any = await res.json();
       
       // Verify in database that shuffleAnswers defaults to true
       const session = await getPrisma().session.findUnique({ where: { id } });

@@ -66,6 +66,13 @@ All notable changes to this project will be documented in this file, organized b
   - **File**: `docker-compose.yml`
 
 ### Fixed
+- **[Build] Docker Build Failure** - Fixed TypeScript compilation error due to unused variable
+  - **Problem**: `docker build` failed with TS6133 error: 'hostToken' is declared but never used
+  - **Location**: `packages/api-server/src/routes/sessions.test.ts` line 117
+  - **Solution**: Removed unused `hostToken` from destructuring in shuffle answers test
+  - **Impact**: Docker builds now succeed, enabling production deployments
+  - **File changed**: `packages/api-server/src/routes/sessions.test.ts`
+
 - **[Critical] Timer Clock Synchronization Issue** - Fixed inconsistent countdown timers across different networks
   - **Problem**: Players on WiFi saw countdown start at 10-12 seconds, while 4G users saw 20 seconds
   - **Root cause**: Timer calculation used client clock (`Date.now()`) minus server timestamp (`questionStartedAt`)
