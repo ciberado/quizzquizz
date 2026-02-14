@@ -225,7 +225,8 @@ export class QuestionScreen extends BaseComponent {
       }
       
       // If multiple correct answers exist, must select exact count
-      if (this.currentQuestion) {
+      // Note: correctAnswerIds may not be available before submission (security)
+      if (this.currentQuestion && this.currentQuestion.correctAnswerIds) {
         const correctCount = this.currentQuestion.correctAnswerIds.length;
         if (correctCount > 1 && this.selectedAnswerIds.size !== correctCount) {
           submitBtn.disabled = true;
@@ -327,7 +328,7 @@ export class QuestionScreen extends BaseComponent {
           ${this.escapeHtml(this.currentQuestion.text)}
         </div>
 
-        ${this.currentQuestion.correctAnswerIds.length > 1 ? `
+        ${this.currentQuestion.correctAnswerIds && this.currentQuestion.correctAnswerIds.length > 1 ? `
           <div class="multiple-answers-hint">
             ⚠️ Select exactly ${this.currentQuestion.correctAnswerIds.length} answers
           </div>
@@ -353,7 +354,7 @@ export class QuestionScreen extends BaseComponent {
             Submit Answer
           </button>
           <p class="hint">
-            ${this.currentQuestion.correctAnswerIds.length > 1 
+            ${this.currentQuestion.correctAnswerIds && this.currentQuestion.correctAnswerIds.length > 1 
               ? `${this.selectedAnswerIds.size}/${this.currentQuestion.correctAnswerIds.length} selected`
               : 'Select one or more answers'}
           </p>

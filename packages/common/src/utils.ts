@@ -98,16 +98,56 @@ export function isAnswerCorrect(
 }
 
 /**
+ * Simple seeded random number generator using mulberry32 algorithm
+ * Same seed always produces the same sequence of random numbers
+ * 
+ * @param seed - Numeric seed value
+ * @returns Function that returns random numbers between 0 and 1
+ */
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return function() {
+    state = (state + 0x6D2B79F5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Convert a string to a numeric seed for seeded random
+ * 
+ * @param str - String to hash into a seed
+ * @returns Numeric seed
+ */
+function stringToSeed(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+/**
  * Shuffle an array using Fisher-Yates algorithm
  * Returns a new array, does not mutate the original
  * 
  * @param array - Array to shuffle
+ * @param seed - Optional seed for deterministic shuffling (string or number)
  * @returns New shuffled array
  */
-export function shuffleArray<T>(array: T[]): T[] {
+export function shuffleArray<T>(array: T[], seed?: string | number): T[] {
   const shuffled = [...array];
+  
+  // Use seeded random if seed is provided
+  const random = seed !== undefined 
+    ? seededRandom(typeof seed === 'string' ? stringToSeed(seed) : seed)
+    : Math.random;
+  
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     const temp = shuffled[i];
     shuffled[i] = shuffled[j]!;
     shuffled[j] = temp!;

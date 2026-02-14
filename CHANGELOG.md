@@ -101,6 +101,24 @@ All notable changes to this project will be documented in this file, organized b
     - `packages/api-server/src/routes/game.test.ts` - Added expiresAt to all session creations
     - `packages/api-server/vitest.config.ts` - Disabled file parallelism for database safety
 
+- **[Critical] Answer Shuffling Breaking Player Client** - Fixed player client crash caused by non-deterministic answer shuffling
+  - **Problem 1**: Answers re-shuffled on every API poll (~every 1-2s), causing constantly changing answer order
+  - **Problem 2**: Player client tried to access `correctAnswerIds.length` but API omits this field for security
+  - **Error**: `TypeError: Cannot read properties of undefined (reading 'length')` in player question screen
+  - **Root Cause**: `getSessionQuestions()` called `shuffleArray()` without seed, producing different order each time
+  - **Impact**: Players saw "Waiting for question..." indefinitely, could not play quiz
+  - **Solution 1 - Deterministic Shuffling**: Added seeded shuffle using mulberry32 algorithm
+    - Same session ID always produces same shuffle order across all API calls
+    - Different sessions get different (but consistent) random orders
+    - Uses session ID + question ID as seed for per-question answer shuffling
+  - **Solution 2 - Client Safety**: Added optional chaining for `correctAnswerIds` access in player UI
+  - **Files changed**:
+    - `packages/common/src/utils.ts` - Added `shuffleArray()` seed parameter with seeded random function
+    - `packages/api-server/src/session-utils.ts` - Pass session ID as seed to shuffle functions
+    - `packages/api-server/src/session-utils.test.ts` - Updated tests to verify deterministic shuffling
+    - `packages/player-app/src/components/question-screen.ts` - Added safety checks for `correctAnswerIds`
+  - **Result**: Players can now successfully load and answer shuffled questions, API returns consistent order
+
 ## 2026-02-13
 
 ### Fixed

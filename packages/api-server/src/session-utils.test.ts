@@ -50,33 +50,57 @@ describe('getSessionQuestions', () => {
   });
 
   describe('Answer shuffling', () => {
-    it('should shuffle answers when shuffleAnswers is true', () => {
+    it('should shuffle answers deterministically with same session ID', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
         shuffleAnswers: true,
       };
 
-      // Run multiple times to ensure shuffling happens
-      let foundDifferentOrder = false;
-      const originalOrder = ['Q1_A1', 'Q1_A2', 'Q1_A3', 'Q1_A4'];
+      // Run multiple times with same session ID - should get SAME order
+      const firstRun = getSessionQuestions(session);
+      const firstAnswerOrder = firstRun[0]?.answers.map(a => a.id);
       
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         const questions = getSessionQuestions(session);
         const answerIds = questions[0]?.answers.map(a => a.id);
         
-        if (JSON.stringify(answerIds) !== JSON.stringify(originalOrder)) {
-          foundDifferentOrder = true;
-          break;
-        }
+        expect(answerIds).toEqual(firstAnswerOrder);
       }
+    });
+
+    it('should shuffle answers differently for different session IDs', () => {
+      const session1 = {
+        id: 'test-session-1',
+        questionBankId: 'test-bank',
+        questionIds: null,
+        randomOrder: false,
+        shuffleAnswers: true,
+      };
+
+      const session2 = {
+        id: 'test-session-2',
+        questionBankId: 'test-bank',
+        questionIds: null,
+        randomOrder: false,
+        shuffleAnswers: true,
+      };
+
+      const questions1 = getSessionQuestions(session1);
+      const questions2 = getSessionQuestions(session2);
       
-      expect(foundDifferentOrder).toBe(true);
+      const answerIds1 = questions1[0]?.answers.map(a => a.id);
+      const answerIds2 = questions2[0]?.answers.map(a => a.id);
+      
+      // Different sessions should produce different shuffles (very likely with 4! = 24 permutations)
+      expect(JSON.stringify(answerIds1)).not.toBe(JSON.stringify(answerIds2));
     });
 
     it('should not shuffle answers when shuffleAnswers is false', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
@@ -96,31 +120,24 @@ describe('getSessionQuestions', () => {
 
     it('should default to shuffling answers when shuffleAnswers is undefined', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
         // shuffleAnswers: undefined (not specified)
       };
 
-      // Run multiple times to ensure default shuffling happens
-      let foundDifferentOrder = false;
       const originalOrder = ['Q1_A1', 'Q1_A2', 'Q1_A3', 'Q1_A4'];
+      const questions = getSessionQuestions(session);
+      const answerIds = questions[0]?.answers.map(a => a.id);
       
-      for (let i = 0; i < 10; i++) {
-        const questions = getSessionQuestions(session);
-        const answerIds = questions[0]?.answers.map(a => a.id);
-        
-        if (JSON.stringify(answerIds) !== JSON.stringify(originalOrder)) {
-          foundDifferentOrder = true;
-          break;
-        }
-      }
-      
-      expect(foundDifferentOrder).toBe(true);
+      // Should be shuffled (not in original order)
+      expect(JSON.stringify(answerIds)).not.toBe(JSON.stringify(originalOrder));
     });
 
     it('should preserve all answer IDs when shuffling', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
@@ -136,6 +153,7 @@ describe('getSessionQuestions', () => {
 
     it('should preserve answer text when shuffling', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
@@ -151,6 +169,7 @@ describe('getSessionQuestions', () => {
 
     it('should shuffle answers independently for each question', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
@@ -170,29 +189,30 @@ describe('getSessionQuestions', () => {
   });
 
   describe('Question shuffling', () => {
-    it('should shuffle questions when randomOrder is true', () => {
+    it('should shuffle questions deterministically with same session ID', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: true,
         shuffleAnswers: false,
       };
 
-      let foundDifferentOrder = false;
+      // Run multiple times with same session ID - should get SAME order
+      const firstRun = getSessionQuestions(session);
+      const firstQuestionOrder = firstRun.map(q => q.id);
       
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         const questions = getSessionQuestions(session);
-        if (questions[0]?.id !== 'Q1') {
-          foundDifferentOrder = true;
-          break;
-        }
+        const questionIds = questions.map(q => q.id);
+        
+        expect(questionIds).toEqual(firstQuestionOrder);
       }
-      
-      expect(foundDifferentOrder).toBe(true);
     });
 
     it('should not shuffle questions when randomOrder is false', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: false,
@@ -209,6 +229,7 @@ describe('getSessionQuestions', () => {
   describe('Combined shuffling', () => {
     it('should handle both question and answer shuffling', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: null,
         randomOrder: true,
@@ -236,6 +257,7 @@ describe('getSessionQuestions', () => {
   describe('Question selection', () => {
     it('should respect questionIds parameter', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: JSON.stringify(['Q2']),
         randomOrder: false,
@@ -248,28 +270,25 @@ describe('getSessionQuestions', () => {
       expect(questions[0]?.id).toBe('Q2');
     });
 
-    it('should shuffle answers even with specific questionIds', () => {
+    it('should shuffle answers deterministically even with specific questionIds', () => {
       const session = {
+        id: 'test-session-1',
         questionBankId: 'test-bank',
         questionIds: JSON.stringify(['Q1']),
         randomOrder: false,
         shuffleAnswers: true,
       };
 
-      let foundDifferentOrder = false;
-      const originalOrder = ['Q1_A1', 'Q1_A2', 'Q1_A3', 'Q1_A4'];
+      // Run multiple times - should get consistent order
+      const firstRun = getSessionQuestions(session);
+      const firstAnswerOrder = firstRun[0]?.answers.map(a => a.id);
       
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         const questions = getSessionQuestions(session);
         const answerIds = questions[0]?.answers.map(a => a.id);
         
-        if (JSON.stringify(answerIds) !== JSON.stringify(originalOrder)) {
-          foundDifferentOrder = true;
-          break;
-        }
+        expect(answerIds).toEqual(firstAnswerOrder);
       }
-      
-      expect(foundDifferentOrder).toBe(true);
     });
   });
 });

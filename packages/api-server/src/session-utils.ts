@@ -9,11 +9,14 @@ import { questionBanks } from './state.js';
 /**
  * Get questions for a session based on its configuration
  * - Uses questionIds if specified (in order)
- * - Shuffles questions if randomOrder is true (after filtering)
- * - Shuffles answers within questions if shuffleAnswers is true
+ * - Shuffles questions if randomOrder is true (after filtering) - deterministic based on session ID
+ * - Shuffles answers within questions if shuffleAnswers is true - deterministic based on session ID + question ID
  * - Falls back to all questions from bank if no questionIds
+ * 
+ * IMPORTANT: Uses seeded shuffling to ensure consistent order across multiple calls
  */
 export function getSessionQuestions(session: { 
+  id: string; // Session ID used as seed for deterministic shuffling
   questionBankId: string; 
   questionIds: string | null; 
   randomOrder: boolean;
@@ -41,17 +44,18 @@ export function getSessionQuestions(session: {
     questions = [...questionBank.questions];
   }
 
-  // Shuffle questions if randomOrder is true
+  // Shuffle questions if randomOrder is true - use session ID as seed for deterministic shuffle
   if (session.randomOrder) {
-    questions = shuffleArray(questions);
+    questions = shuffleArray(questions, session.id);
   }
 
   // Shuffle answers within each question if shuffleAnswers is true (default)
+  // Use session ID + question ID as seed for deterministic, per-question shuffle
   const shouldShuffleAnswers = session.shuffleAnswers ?? true;
   if (shouldShuffleAnswers) {
     questions = questions.map(question => ({
       ...question,
-      answers: shuffleArray(question.answers),
+      answers: shuffleArray(question.answers, `${session.id}-${question.id}`),
     }));
   }
 
