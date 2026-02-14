@@ -84,6 +84,7 @@ export async function initDatabase() {
         created_at BIGINT NOT NULL DEFAULT 0,
         question_ids TEXT,
         random_order INTEGER NOT NULL DEFAULT 0,
+        shuffle_answers INTEGER NOT NULL DEFAULT 1,
         automatic_pace INTEGER NOT NULL DEFAULT 0,
         time_limit INTEGER NOT NULL DEFAULT 25
       )

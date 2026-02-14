@@ -41,6 +41,7 @@ export class QuestionPreviewScreen extends BaseComponent {
   private selectedQuestionIds = new Set<string>();
   private selectAllMode = true; // By default, select all questions
   private randomOrder = false;
+  private shuffleAnswers = true; // Default to true - shuffle answers within questions
   private automaticPace = false;
   
   // Filter state
@@ -220,14 +221,22 @@ export class QuestionPreviewScreen extends BaseComponent {
                       : `Manually select questions (${selectedCount} selected)`}
                   </p>
                 </div>
-                <div>
+                <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
                   <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
                     <input 
                       type="checkbox" 
                       data-action="toggle-random"
                       ${this.randomOrder ? 'checked' : ''}
                     />
-                    <span>Random order</span>
+                    <span>Shuffle question order</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <input 
+                      type="checkbox" 
+                      data-action="toggle-shuffle-answers"
+                      ${this.shuffleAnswers ? 'checked' : ''}
+                    />
+                    <span>Shuffle answers</span>
                   </label>
                 </div>
               </div>
@@ -452,6 +461,14 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
+    // Toggle shuffle answers
+    const shuffleAnswersCheckbox = this.qs('[data-action="toggle-shuffle-answers"]') as HTMLInputElement;
+    if (shuffleAnswersCheckbox) {
+      shuffleAnswersCheckbox.addEventListener('change', () => {
+        this.shuffleAnswers = shuffleAnswersCheckbox.checked;
+      });
+    }
+
     // Toggle automatic pace
     const automaticCheckbox = this.qs('[data-action="toggle-automatic"]') as HTMLInputElement;
     if (automaticCheckbox) {
@@ -536,6 +553,7 @@ export class QuestionPreviewScreen extends BaseComponent {
       const session = await api.createSession(this.bankId, {
         questionIds,
         randomOrder: this.randomOrder,
+        shuffleAnswers: this.shuffleAnswers,
         automaticPace: this.automaticPace,
       });
 

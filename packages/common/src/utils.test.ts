@@ -4,6 +4,7 @@ import {
   generatePin,
   calculateScore,
   isAnswerCorrect,
+  shuffleArray,
   now,
 } from './utils.js';
 
@@ -147,6 +148,71 @@ describe('isAnswerCorrect', () => {
     const correct = ['a', 'b'];
     // Duplicates should not affect correctness
     expect(isAnswerCorrect(selected, correct)).toBe(false);
+  });
+});
+
+describe('shuffleArray', () => {
+  it('should return a new array with same elements', () => {
+    const original = [1, 2, 3, 4, 5];
+    const shuffled = shuffleArray(original);
+    
+    expect(shuffled).toHaveLength(original.length);
+    expect(shuffled.sort()).toEqual(original.sort());
+  });
+
+  it('should not mutate the original array', () => {
+    const original = [1, 2, 3, 4, 5];
+    const originalCopy = [...original];
+    shuffleArray(original);
+    
+    expect(original).toEqual(originalCopy);
+  });
+
+  it('should shuffle array (probabilistic test)', () => {
+    // Test multiple times to ensure shuffling happens
+    const original = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    let wasShuffled = false;
+    
+    // Run 10 times - at least one should be different from original order
+    for (let i = 0; i < 10; i++) {
+      const shuffled = shuffleArray(original);
+      if (JSON.stringify(shuffled) !== JSON.stringify(original)) {
+        wasShuffled = true;
+        break;
+      }
+    }
+    
+    expect(wasShuffled).toBe(true);
+  });
+
+  it('should handle empty arrays', () => {
+    const empty: number[] = [];
+    const shuffled = shuffleArray(empty);
+    
+    expect(shuffled).toEqual([]);
+  });
+
+  it('should handle single-element arrays', () => {
+    const single = [42];
+    const shuffled = shuffleArray(single);
+    
+    expect(shuffled).toEqual([42]);
+  });
+
+  it('should work with different data types', () => {
+    const strings = ['a', 'b', 'c', 'd'];
+    const shuffled = shuffleArray(strings);
+    
+    expect(shuffled).toHaveLength(strings.length);
+    expect(shuffled.sort()).toEqual(strings.sort());
+  });
+
+  it('should work with objects', () => {
+    const objects = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const shuffled = shuffleArray(objects);
+    
+    expect(shuffled).toHaveLength(objects.length);
+    expect(shuffled.map(o => o.id).sort()).toEqual([1, 2, 3]);
   });
 });
 

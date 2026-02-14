@@ -3,18 +3,21 @@
  */
 
 import type { Question } from '@quizzquizz/common';
+import { shuffleArray } from '@quizzquizz/common';
 import { questionBanks } from './state.js';
 
 /**
  * Get questions for a session based on its configuration
  * - Uses questionIds if specified (in order)
- * - Shuffles if randomOrder is true (after filtering)
+ * - Shuffles questions if randomOrder is true (after filtering)
+ * - Shuffles answers within questions if shuffleAnswers is true
  * - Falls back to all questions from bank if no questionIds
  */
 export function getSessionQuestions(session: { 
   questionBankId: string; 
   questionIds: string | null; 
   randomOrder: boolean;
+  shuffleAnswers?: boolean;
 }): Question[] {
   const questionBank = questionBanks.get(session.questionBankId);
   if (!questionBank) {
@@ -38,15 +41,18 @@ export function getSessionQuestions(session: {
     questions = [...questionBank.questions];
   }
 
-  // Shuffle if randomOrder is true
+  // Shuffle questions if randomOrder is true
   if (session.randomOrder) {
-    // Fisher-Yates shuffle
-    for (let i = questions.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = questions[i];
-      questions[i] = questions[j]!;
-      questions[j] = temp!;
-    }
+    questions = shuffleArray(questions);
+  }
+
+  // Shuffle answers within each question if shuffleAnswers is true (default)
+  const shouldShuffleAnswers = session.shuffleAnswers ?? true;
+  if (shouldShuffleAnswers) {
+    questions = questions.map(question => ({
+      ...question,
+      answers: shuffleArray(question.answers),
+    }));
   }
 
   return questions;

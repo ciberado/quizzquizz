@@ -105,6 +105,57 @@ describe('Session Routes', () => {
       const data2: any = await res2.json();
       expect(data1.pin).not.toBe(data2.pin);
     });
+
+    it('should create session with shuffleAnswers enabled by default', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank' }),
+      });
+
+      expect(res.status).toBe(201);
+      const { id, hostToken }: any = await res.json();
+      
+      // Verify in database that shuffleAnswers defaults to true
+      const session = await getPrisma().session.findUnique({ where: { id } });
+      expect(session?.shuffleAnswers).toBe(true);
+    });
+
+    it('should create session with shuffleAnswers set to false', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          questionBankId: 'test-bank',
+          shuffleAnswers: false,
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const { id }: any = await res.json();
+      
+      // Verify in database
+      const session = await getPrisma().session.findUnique({ where: { id } });
+      expect(session?.shuffleAnswers).toBe(false);
+    });
+
+    it('should create session with shuffleAnswers explicitly set to true', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          questionBankId: 'test-bank',
+          shuffleAnswers: true,
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const { id }: any = await res.json();
+      
+      // Verify in database
+      const session = await getPrisma().session.findUnique({ where: { id } });
+      expect(session?.shuffleAnswers).toBe(true);
+    });
   });
 
   describe('GET /api/sessions/:id', () => {

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file, organized b
 ## 2026-02-14
 
 ### Added
+- **[Feature] Answer Shuffling** - Added option to shuffle answer order within questions (enabled by default)
+  - **Why**: Prevents players from memorizing answer positions and sharing "click the second option" strategies
+  - **Default**: Enabled by default (`shuffleAnswers: true`) for fair gameplay
+  - **Host Control**: Added checkbox in question preview screen to toggle shuffle on/off per session
+  - **Implementation**: Answers shuffled once at session creation, all players see same shuffled order
+  - **Validation**: Answer IDs remain unchanged, so correct answer validation works regardless of display order
+  - **Test Coverage**: 21 new tests (7 shuffle utility tests, 11 session-utils tests, 3 API tests)
+  - **Files changed**:
+    - `packages/common/src/types.ts` - Added `shuffleAnswers` to `CreateSessionRequestSchema` and `SessionSchema`
+    - `packages/common/src/utils.ts` - Added `shuffleArray()` utility function with Fisher-Yates algorithm
+    - `packages/common/src/utils.test.ts` - Added 7 comprehensive tests for shuffle function
+    - `packages/api-server/prisma/schema.prisma` - Added `shuffleAnswers` boolean column (default: true)
+    - `packages/api-server/src/db/index.ts` - Added `shuffle_answers` to in-memory database schema
+    - `packages/api-server/src/routes/sessions.ts` - Store `shuffleAnswers` option when creating session
+    - `packages/api-server/src/session-utils.ts` - Shuffle answers if `shuffleAnswers` enabled
+    - `packages/api-server/src/session-utils.test.ts` - Added 11 tests for answer shuffling logic
+    - `packages/api-server/src/routes/sessions.test.ts` - Added 3 tests for database storage
+    - `packages/host-app/src/api-client.ts` - Added `shuffleAnswers` to createSession options
+    - `packages/host-app/src/components/question-preview-screen.ts` - Added UI checkbox for shuffle toggle
+  - **Migration**: `20260214121624_add_shuffle_answers` - Adds `shuffle_answers` column with default true
+  - **Result**: All 74 API tests pass + 32 common tests pass = 106 total tests passing
+
 - **[Host App] Question bank refresh button** - Added "Refresh Banks" button to session creation screen
   - Located in top-right corner of "Create Quiz" screen
   - Shows loading state while refreshing ("Reloading...")

@@ -61,6 +61,7 @@ export const SessionSchema = z.object({
   currentQuestionIndex: z.number(),
   questionStartedAt: z.number().nullable(),
   automaticPace: z.boolean().optional(),
+  shuffleAnswers: z.boolean().optional(),
   createdAt: z.number(),
 });
 
@@ -101,6 +102,7 @@ export const CreateSessionRequestSchema = z.object({
   questionBankId: z.string(),
   questionIds: z.array(z.string()).optional(), // Specific question IDs to use (omit for all questions)
   randomOrder: z.boolean().optional(), // Whether to shuffle questions
+  shuffleAnswers: z.boolean().optional().default(true), // Whether to shuffle answer order within each question
   automaticPace: z.boolean().optional(), // Auto-advance through questions and leaderboards (4s each)
   questionCount: z.number().min(1).max(50).optional(), // Deprecated - use questionIds instead
   timeLimit: z.number().min(5).max(120).optional(),
