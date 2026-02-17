@@ -61,6 +61,7 @@ export class LobbyScreen extends BaseComponent {
 
     // Determine player app URL dynamically with PIN for direct joining
     const playerUrl = this.getPlayerUrl();
+    const displayUrl = playerUrl.replace(/^https?:\/\//, '');
     const playerUrlWithPin = `${playerUrl}/#/nickname?pin=${this.pin}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(playerUrlWithPin)}`;
 
@@ -68,11 +69,13 @@ export class LobbyScreen extends BaseComponent {
       <div class="screen">
         <div class="container">
           <!-- Large PIN Display with QR Code -->
-          <div class="pin-display">
+          <div class="pin-display" id="pin-display" title="Click to copy join link">
             <div class="pin-content">
-              <div class="pin-text-section">
+              <div class="pin-url-section">
                 <div class="pin-label">Join at</div>
-                <div class="player-url">${playerUrl}</div>
+                <div class="player-url">${displayUrl}</div>
+              </div>
+              <div class="pin-center-section">
                 <div class="pin-label">with PIN</div>
                 <div class="pin-code">${this.pin || '(No PIN - Check console)'}</div>
               </div>
@@ -83,8 +86,23 @@ export class LobbyScreen extends BaseComponent {
             </div>
           </div>
 
+          <!-- Control Buttons -->
+          <div class="lobby-controls">
+            <button 
+              type="button" 
+              id="start-button" 
+              class="primary"
+              ${!canStart ? 'disabled title="At least one player must join before starting"' : ''}
+            >
+              ${canStart ? 'Start Quiz' : 'Waiting for Players'}
+            </button>
+            <button type="button" id="cancel-button" class="danger">
+              Cancel Session
+            </button>
+          </div>
+
           <!-- Player List -->
-          <div class="card">
+          <div class="card players-card" id="players-card" data-player-count="${this.players.length}">
             <h2 class="text-center">
               ${this.players.length} Player${this.players.length !== 1 ? 's' : ''} Joined
             </h2>
@@ -107,21 +125,6 @@ export class LobbyScreen extends BaseComponent {
               </div>
             `}
           </div>
-
-          <!-- Control Buttons -->
-          <div class="lobby-controls">
-            <button 
-              type="button" 
-              id="start-button" 
-              class="primary"
-              ${!canStart ? 'disabled title="At least one player must join before starting"' : ''}
-            >
-              ${canStart ? 'Start Quiz' : 'Waiting for Players'}
-            </button>
-            <button type="button" id="cancel-button" class="danger">
-              Cancel Session
-            </button>
-          </div>
           ${!canStart ? `
             <p class="help-text" style="text-align: center; margin-top: var(--spacing-md); color: var(--color-text-secondary);">
               💡 Share the PIN with players to let them join
@@ -136,45 +139,89 @@ export class LobbyScreen extends BaseComponent {
       const style = document.createElement('style');
       style.id = 'lobby-styles';
       style.textContent = `
+        .pin-display {
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-radius: var(--border-radius);
+        }
+
+        .pin-display:hover {
+          transform: scale(1.02);
+          filter: brightness(1.05);
+        }
+
+        .pin-display:active {
+          transform: scale(0.98);
+        }
+
         .pin-content {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: var(--spacing-xl);
-          flex-wrap: wrap;
+          gap: var(--spacing-md);
+          flex-wrap: nowrap;
         }
 
-        .pin-text-section {
+        .pin-url-section {
           flex: 1;
+        }
+
+        .pin-center-section {
+          flex: 0 0 auto;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
           min-width: 300px;
         }
 
+        .pin-label {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-secondary);
+          margin-bottom: var(--spacing-xs);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 500;
+        }
+
+        .pin-url-section .pin-label {
+          font-size: calc(var(--font-size-sm) * 1.5);
+        }
+
+        .pin-code {
+          font-size: 4em;
+          font-weight: 700;
+          color: var(--color-text);
+          letter-spacing: 0.1em;
+        }
+
         .player-url {
-          font-size: var(--font-size-large);
+          font-size: calc(var(--font-size-base) * 1.5);
           font-weight: 600;
           color: var(--color-accent);
-          margin-bottom: var(--spacing-sm);
           word-break: break-all;
         }
 
         .qr-section {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: flex-end;
           gap: var(--spacing-sm);
+          flex: 1;
         }
 
         .qr-code {
-          width: 200px;
-          height: 200px;
-          border: 4px solid var(--color-primary);
+          width: 150px;
+          height: 150px;
+          border: 3px solid var(--color-primary);
           border-radius: var(--border-radius);
           background: white;
-          padding: 8px;
+          padding: 6px;
         }
 
         .qr-label {
-          font-size: var(--font-size-base);
+          font-size: var(--font-size-sm);
           color: var(--color-text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -200,7 +247,7 @@ export class LobbyScreen extends BaseComponent {
 
         .players-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
           gap: var(--spacing-md);
           margin-top: var(--spacing-lg);
         }
@@ -209,7 +256,7 @@ export class LobbyScreen extends BaseComponent {
           background: var(--color-bg);
           border: 2px solid var(--color-primary);
           border-radius:var(--border-radius);
-          padding: var(--spacing-lg);
+          padding: var(--spacing-md);
           text-align: center;
           animation: slideIn 0.4s ease-out backwards;
         }
@@ -226,7 +273,7 @@ export class LobbyScreen extends BaseComponent {
         }
 
         .player-avatar {
-          font-size: 48px;
+          font-size: 40px;
           margin-bottom: var(--spacing-sm);
         }
 
@@ -237,17 +284,79 @@ export class LobbyScreen extends BaseComponent {
           word-break: break-word;
         }
 
+        .pin-display {
+          margin-bottom: var(--spacing-lg);
+          padding: var(--spacing-lg);
+        }
+
         .lobby-controls {
           display: flex;
-          gap: var(--spacing-md);
-          margin-top: var(--spacing-xl);
+          gap: var(--spacing-sm);
+          margin-top: var(--spacing-lg);
+          margin-bottom: var(--spacing-lg);
           justify-content: center;
         }
 
         .lobby-controls button {
           flex: 1;
-          max-width: 400px;
+          max-width: 350px;
+          padding: var(--spacing-md) var(--spacing-lg);
+          font-size: var(--font-size-base);
         }
+
+        .card {
+          margin-top: 0;
+        }
+
+        .players-card {
+          transform-origin: top center;
+          transition: transform 0.3s ease;
+        }
+
+        /* Scale based on number of players/rows */
+        .players-card[data-player-count="0"],
+        .players-card[data-player-count="1"],
+        .players-card[data-player-count="2"],
+        .players-card[data-player-count="3"],
+        .players-card[data-player-count="4"] {
+          transform: scale(1);
+        }
+
+        .players-card[data-player-count="5"],
+        .players-card[data-player-count="6"],
+        .players-card[data-player-count="7"],
+        .players-card[data-player-count="8"] {
+          transform: scale(0.95);
+        }
+
+        .players-card[data-player-count="9"],
+        .players-card[data-player-count="10"],
+        .players-card[data-player-count="11"],
+        .players-card[data-player-count="12"] {
+          transform: scale(0.90);
+        }
+
+        .players-card[data-player-count="13"],
+        .players-card[data-player-count="14"],
+        .players-card[data-player-count="15"],
+        .players-card[data-player-count="16"] {
+          transform: scale(0.85);
+        }
+
+        .players-card[data-player-count="17"],
+        .players-card[data-player-count="18"],
+        .players-card[data-player-count="19"],
+        .players-card[data-player-count="20"] {
+          transform: scale(0.80);
+        }
+
+        .players-card[data-player-count^="2"] {
+          transform: scale(0.75);
+        }
+
+        .players-card[data-player-count^="3"] {
+          transform: scale(0.70);
+        }}
       `;
       document.head.appendChild(style);
     }
@@ -259,6 +368,7 @@ export class LobbyScreen extends BaseComponent {
   private setupEventListeners(): void {
     const startButton = this.qs<HTMLButtonElement>('#start-button');
     const cancelButton = this.qs<HTMLButtonElement>('#cancel-button');
+    const pinDisplay = this.qs<HTMLDivElement>('#pin-display');
 
     if (startButton && !startButton.disabled) {
       startButton.addEventListener('click', () => {
@@ -269,6 +379,12 @@ export class LobbyScreen extends BaseComponent {
     if (cancelButton) {
       cancelButton.addEventListener('click', () => {
         this.handleCancel();
+      });
+    }
+
+    if (pinDisplay) {
+      pinDisplay.addEventListener('click', () => {
+        this.copyJoinLinkToClipboard();
       });
     }
   }
@@ -387,6 +503,33 @@ export class LobbyScreen extends BaseComponent {
 
       // Restart polling
       this.startPolling();
+    }
+  }
+
+  private async copyJoinLinkToClipboard(): Promise<void> {
+    const playerUrl = this.getPlayerUrl();
+    const playerUrlWithPin = `${playerUrl}/#/nickname?pin=${this.pin}`;
+
+    try {
+      await navigator.clipboard.writeText(playerUrlWithPin);
+      
+      // Show feedback to user
+      const pinDisplay = this.qs<HTMLDivElement>('#pin-display');
+      if (pinDisplay) {
+        const originalTitle = pinDisplay.title;
+        pinDisplay.title = '✅ Copied to clipboard!';
+        
+        setTimeout(() => {
+          pinDisplay.title = originalTitle;
+        }, 2000);
+      }
+
+      console.log('✅ Join link copied to clipboard:', playerUrlWithPin);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      
+      // Fallback: show alert
+      alert(`Join link:\n${playerUrlWithPin}`);
     }
   }
 

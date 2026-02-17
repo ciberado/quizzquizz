@@ -13,6 +13,10 @@ All notable changes to this project will be documented in this file, organized b
   - **Files changed**: `packages/host-app/src/components/question-display-screen.ts`
 
 ### Changed
+- **[Host UI] Lobby Screen UI Enhancements** - Improved visibility of joining URL and PIN
+  - **Balanced Layout**: Used flexbox to ensure PIN remains centered regardless of content in side sections
+  - **Increased Legibility**: Increased font size of "Join at" section to 150% (base 1.5rem) and stripped `http://`/`https://` prefix for cleaner display
+  - **Optimized Sections**: Expanded width of URL section and aligned QR code to the right for a more spacious feel
 - **[Host UI] Question Preview Improvements** - Redesigned question preview layout for better space efficiency
   - **Collapsible Answers**: Questions now hide answers by default with clickable triangle (▶/▼) on left side
   - **Compact Layout**: Moved badges (difficulty, topics, time) under question text; reduced font sizes and padding
