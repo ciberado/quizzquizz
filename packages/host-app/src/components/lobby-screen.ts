@@ -158,7 +158,7 @@ export class LobbyScreen extends BaseComponent {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: var(--spacing-md);
+          gap: var(--spacing-xl);
           flex-wrap: nowrap;
         }
 
@@ -206,10 +206,10 @@ export class LobbyScreen extends BaseComponent {
         .qr-section {
           display: flex;
           flex-direction: column;
-          align-items: flex-end;
+          align-items: center;
           gap: var(--spacing-sm);
           flex: 1;
-          min-width: 250px;
+          min-width: 0px;
         }
 
         .qr-code {
