@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[Host UI] End Quiz Navigation Bug** - Fixed issue where clicking "End Quiz" on question display screen caused app to hang showing "Loading question..."
+  - **Root Cause**: Navigation was using `/leaderboard/${sessionId}` route which doesn't exist; router had no matching route handler
+  - **Impact**: When quiz ended, server set `currentQuestionIndex: -1`, component tried to display null question, resulting in stuck loading state
+  - **Solution**: Changed navigation to `/results` which has proper route definition and correctly shows final-results-screen
+  - **Result**: Clicking "End Quiz" now correctly displays final leaderboard and quiz summary
+  - **Files changed**: `packages/host-app/src/components/question-display-screen.ts`
+
 ### Changed
 - **[Host UI] Question Preview Improvements** - Redesigned question preview layout for better space efficiency
   - **Collapsible Answers**: Questions now hide answers by default with clickable triangle (▶/▼) on left side

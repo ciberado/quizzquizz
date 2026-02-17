@@ -252,8 +252,8 @@ export class QuestionDisplayScreen extends HTMLElement {
 
     try {
       await api.endQuiz(sessionId, hostToken);
-      // Navigate to leaderboard
-      router.navigate(`/leaderboard/${sessionId}`);
+      // Navigate to results (use /results, not /leaderboard, since quiz is ended)
+      router.navigate('/results');
     } catch (error) {
       console.error('Failed to end quiz:', error);
       alert('Failed to end quiz. Please try again.');
