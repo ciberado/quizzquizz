@@ -43,6 +43,8 @@ export class QuestionPreviewScreen extends BaseComponent {
   private randomOrder = false;
   private shuffleAnswers = true; // Default to true - shuffle answers within questions
   private automaticPace = false;
+  private expandedQuestions = new Set<string>(); // Track which questions have expanded answers
+  private maxQuestions: number | null = null; // Limit number of questions (null = no limit)
   
   // Filter state
   private selectedDifficulties = new Set<Difficulty>();
@@ -118,6 +120,11 @@ export class QuestionPreviewScreen extends BaseComponent {
       if (this.selectAllMode && this.preview) {
         this.preview.questions.forEach(q => this.selectedQuestionIds.add(q.id));
       }
+      
+      // Adjust maxQuestions if it exceeds available questions after filter change
+      if (this.maxQuestions !== null && this.preview && this.maxQuestions > this.preview.pagination.totalQuestions) {
+        this.maxQuestions = this.preview.pagination.totalQuestions;
+      }
 
       this.render();
     } catch (error) {
@@ -130,9 +137,14 @@ export class QuestionPreviewScreen extends BaseComponent {
   protected render(): void {
     if (!this.bank || !this.preview) return;
 
-    const selectedCount = this.selectAllMode 
+    let selectedCount = this.selectAllMode 
       ? this.preview.pagination.totalQuestions 
       : this.selectedQuestionIds.size;
+    
+    // Apply max questions limit to display count
+    if (this.maxQuestions !== null && selectedCount > this.maxQuestions) {
+      selectedCount = this.maxQuestions;
+    }
 
     this.setContent(`
       <div class="screen">
@@ -205,7 +217,7 @@ export class QuestionPreviewScreen extends BaseComponent {
 
             <!-- Selection Options -->
             <div style="background: var(--color-bg-alt); padding: var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-md);">
                 <div>
                   <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
                     <input 
@@ -220,6 +232,19 @@ export class QuestionPreviewScreen extends BaseComponent {
                       ? `All ${this.preview.pagination.totalQuestions} questions will be used` 
                       : `Manually select questions (${selectedCount} selected)`}
                   </p>
+                  <label style="display: flex; align-items: center; gap: var(--spacing-xs); margin-top: var(--spacing-sm);">
+                    <input 
+                      type="number" 
+                      id="max-questions-input"
+                      min="1"
+                      max="${this.preview.pagination.totalQuestions}"
+                      placeholder="∞"
+                      value="${this.maxQuestions !== null ? this.maxQuestions : ''}"
+                      ${!this.selectAllMode ? 'readonly' : ''}
+                      style="width: 70px; padding: 6px; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-bg); color: var(--color-text); font-size: var(--font-size-small); text-align: center;"
+                    />
+                    <span>Limit questions</span>
+                  </label>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
                   <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
@@ -238,23 +263,30 @@ export class QuestionPreviewScreen extends BaseComponent {
                     />
                     <span>Shuffle answers</span>
                   </label>
+                  <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <input 
+                      type="checkbox" 
+                      data-action="toggle-automatic"
+                      ${this.automaticPace ? 'checked' : ''}
+                    />
+                    <span>Automatic pace</span>
+                  </label>
                 </div>
               </div>
-              
-              <!-- Automatic Pace Option -->
-              <div>
-                <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
-                  <input 
-                    type="checkbox" 
-                    data-action="toggle-automatic"
-                    ${this.automaticPace ? 'checked' : ''}
-                  />
-                  <span style="font-weight: 600;">Automatic pace</span>
-                </label>
-                <p style="color: var(--color-text-muted); margin: var(--spacing-xs) 0 0 24px; font-size: var(--font-size-small);">
-                  No host interaction required - automatically shows correct answers (4s) and leaderboard (4s) before advancing
-                </p>
-              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); padding: var(--spacing-md); background: var(--color-bg-alt); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
+              <button class="btn-secondary" data-action="back">
+                Cancel
+              </button>
+              <button 
+                class="btn" 
+                data-action="create"
+                ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
+              >
+                Create Quiz with ${selectedCount} Question${selectedCount === 1 ? '' : 's'}
+              </button>
             </div>
 
             <!-- Question List -->
@@ -280,20 +312,6 @@ export class QuestionPreviewScreen extends BaseComponent {
                 ${this.renderPagination()}
               `}
             </div>
-
-            <!-- Create Session Button -->
-            <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border);">
-              <button class="btn-secondary" data-action="back">
-                Cancel
-              </button>
-              <button 
-                class="btn" 
-                data-action="create"
-                ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
-              >
-                Create Quiz with ${selectedCount} Question${selectedCount === 1 ? '' : 's'}
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -305,10 +323,11 @@ export class QuestionPreviewScreen extends BaseComponent {
   private renderQuestion(question: Question, index: number): string {
     const isSelected = this.selectAllMode || this.selectedQuestionIds.has(question.id);
     const displayIndex = (this.currentPage - 1) * this.limit + index + 1;
+    const isExpanded = this.expandedQuestions.has(question.id);
 
     return `
-      <div class="question-preview-card ${isSelected ? 'selected' : ''}" data-question-id="${question.id}">
-        <div style="display: flex; gap: var(--spacing-md);">
+      <div class="question-preview-card ${isSelected ? 'selected' : ''}" data-question-id="${question.id}" style="padding: 10px;">
+        <div style="display: flex; gap: 10px;">
           ${!this.selectAllMode ? `
             <input 
               type="checkbox" 
@@ -319,34 +338,45 @@ export class QuestionPreviewScreen extends BaseComponent {
           ` : ''}
           
           <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-sm);">
-              <h4 style="margin: 0;">${displayIndex}. ${this.escapeHtml(question.text)}</h4>
-              <div style="display: flex; gap: var(--spacing-xs);">
-                <span class="badge badge-${question.difficulty}">${question.difficulty}</span>
-                ${question.timeLimit ? `<span class="badge">⏱️ ${question.timeLimit}s</span>` : ''}
-              </div>
+            <!-- Question header with toggle -->
+            <div 
+              style="display: flex; align-items: start; gap: 6px; cursor: pointer; margin-bottom: 6px;"
+              data-action="toggle-answers"
+              data-question-id="${question.id}"
+            >
+              <span style="font-size: 14px; color: var(--color-text-muted); user-select: none; flex-shrink: 0; margin-top: 2px;">
+                ${isExpanded ? '▼' : '▶'}
+              </span>
+              <h4 style="margin: 0; font-size: 16px; font-weight: 500;">
+                ${displayIndex}. ${this.escapeHtml(question.text)}
+              </h4>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);">
+            <!-- Badges -->
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; margin-left: 20px;">
+              <span class="badge badge-${question.difficulty}" style="font-size: 12px;">${question.difficulty}</span>
+              ${question.topics.length > 0 ? question.topics.map(topic => `
+                <span class="badge" style="background: var(--color-bg); color: var(--color-text-muted); font-size: 12px;">
+                  ${this.escapeHtml(topic)}
+                </span>
+              `).join('') : ''}
+              ${question.timeLimit ? `<span class="badge" style="font-size: 12px;">⏱️ ${question.timeLimit}s</span>` : ''}
+            </div>
+
+            <!-- Collapsible Answers -->
+            <div 
+              class="question-answers" 
+              style="display: ${isExpanded ? 'grid' : 'none'}; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-left: 20px;"
+            >
               ${question.answers.map(answer => {
                 const isCorrect = question.correctAnswerIds.includes(answer.id);
                 return `
-                  <div style="padding: var(--spacing-sm); background: var(--color-bg-alt); border-radius: var(--border-radius); border-left: 3px solid ${isCorrect ? 'var(--color-success)' : 'var(--color-border)'};">
+                  <div style="padding: 8px; background: var(--color-bg-alt); border-radius: var(--border-radius); border-left: 3px solid ${isCorrect ? 'var(--color-success)' : 'var(--color-border)'}; font-size: 14px;">
                     ${isCorrect ? '✓ ' : ''}${this.escapeHtml(answer.text)}
                   </div>
                 `;
               }).join('')}
             </div>
-
-            ${question.topics.length > 0 ? `
-              <div style="display: flex; gap: var(--spacing-xs); flex-wrap: wrap;">
-                ${question.topics.map(topic => `
-                  <span style="font-size: var(--font-size-small); color: var(--color-text-muted); background: var(--color-bg); padding: 2px 8px; border-radius: 4px;">
-                    ${this.escapeHtml(topic)}
-                  </span>
-                `).join('')}
-              </div>
-            ` : ''}
           </div>
         </div>
       </div>
@@ -447,6 +477,8 @@ export class QuestionPreviewScreen extends BaseComponent {
         } else {
           // Clear selections when switching to manual mode
           this.selectedQuestionIds.clear();
+          // Reset maxQuestions when switching to manual mode with no selections
+          this.maxQuestions = null;
         }
         
         this.render();
@@ -477,6 +509,29 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
+    // Max questions input
+    const maxQuestionsInput = this.qs('#max-questions-input') as HTMLInputElement;
+    if (maxQuestionsInput) {
+      maxQuestionsInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        const value = target.value.trim();
+        const maxAvailable = this.preview?.pagination.totalQuestions || 999;
+        this.maxQuestions = value === '' ? null : Math.min(maxAvailable, Math.max(1, parseInt(value, 10) || 1));
+        
+        // Update button text dynamically
+        const createBtn = this.qs('[data-action="create"]');
+        if (createBtn && this.preview) {
+          let count = this.selectAllMode 
+            ? this.preview.pagination.totalQuestions 
+            : this.selectedQuestionIds.size;
+          if (this.maxQuestions !== null && count > this.maxQuestions) {
+            count = this.maxQuestions;
+          }
+          createBtn.textContent = `Create Quiz with ${count} Question${count === 1 ? '' : 's'}`;
+        }
+      });
+    }
+
     // Individual question checkboxes
     if (!this.selectAllMode) {
       this.qsa('.question-checkbox').forEach(checkbox => {
@@ -492,10 +547,31 @@ export class QuestionPreviewScreen extends BaseComponent {
             this.selectedQuestionIds.delete(questionId);
           }
           
+          // Auto-update maxQuestions to match selected count in manual mode
+          this.maxQuestions = this.selectedQuestionIds.size > 0 ? this.selectedQuestionIds.size : null;
+          
           this.render();
         });
       });
     }
+
+    // Toggle answer visibility
+    this.qsa('[data-action="toggle-answers"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const questionId = target.getAttribute('data-question-id');
+        
+        if (!questionId) return;
+        
+        if (this.expandedQuestions.has(questionId)) {
+          this.expandedQuestions.delete(questionId);
+        } else {
+          this.expandedQuestions.add(questionId);
+        }
+        
+        this.render();
+      });
+    });
 
     // Pagination
     const prevBtn = this.qs('[data-action="prev-page"]');
@@ -526,9 +602,14 @@ export class QuestionPreviewScreen extends BaseComponent {
   private async createSession(): Promise<void> {
     if (!this.bank || !this.preview) return;
 
-    const selectedCount = this.selectAllMode 
+    let selectedCount = this.selectAllMode 
       ? this.preview.pagination.totalQuestions 
       : this.selectedQuestionIds.size;
+    
+    // Apply max questions limit
+    if (this.maxQuestions !== null && selectedCount > this.maxQuestions) {
+      selectedCount = this.maxQuestions;
+    }
 
     if (selectedCount === 0) {
       this.showError('Please select at least one question');
@@ -547,6 +628,17 @@ export class QuestionPreviewScreen extends BaseComponent {
       } else {
         // Use manually selected questions
         questionIds = Array.from(this.selectedQuestionIds);
+      }
+      
+      // Apply max questions limit if set - randomize first to get a random subset
+      if (this.maxQuestions !== null && questionIds && questionIds.length > this.maxQuestions) {
+        // Shuffle array using Fisher-Yates algorithm
+        const shuffled = [...questionIds];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        questionIds = shuffled.slice(0, this.maxQuestions);
       }
 
       // Create session with selected questions and options

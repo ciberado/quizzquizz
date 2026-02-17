@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## [Unreleased]
+
+### Changed
+- **[Host UI] Question Preview Improvements** - Redesigned question preview layout for better space efficiency
+  - **Collapsible Answers**: Questions now hide answers by default with clickable triangle (▶/▼) on left side
+  - **Compact Layout**: Moved badges (difficulty, topics, time) under question text; reduced font sizes and padding
+  - **Button Repositioning**: Moved "Cancel" and "Create Quiz" buttons above questions list for better visibility
+  - **Question Limit**: Added input field to limit number of questions used in quiz (with automatic random selection)
+  - **Smart Validation**: Limit field auto-adjusts when filters reduce available questions
+  - **Manual Selection**: In manual mode, limit field becomes read-only and auto-updates with selection count
+  - **Random Subset**: When limit is set, quiz randomly selects N questions from available pool for variety
+  - Files changed: `packages/host-app/src/components/question-preview-screen.ts`
+
 ## 2026-02-14
 
 ### Added
