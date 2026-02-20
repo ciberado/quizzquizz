@@ -86,6 +86,7 @@ export async function initDatabase() {
         random_order INTEGER NOT NULL DEFAULT 0,
         shuffle_answers INTEGER NOT NULL DEFAULT 1,
         automatic_pace INTEGER NOT NULL DEFAULT 0,
+        auto_question_time INTEGER NOT NULL DEFAULT 0,
         time_limit INTEGER NOT NULL DEFAULT 25
       )
     `);

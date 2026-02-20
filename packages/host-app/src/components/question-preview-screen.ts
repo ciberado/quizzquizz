@@ -43,6 +43,7 @@ export class QuestionPreviewScreen extends BaseComponent {
   private randomOrder = false;
   private shuffleAnswers = true; // Default to true - shuffle answers within questions
   private automaticPace = false;
+  private autoQuestionTime = false; // Automatically calculate question time based on complexity
   private expandedQuestions = new Set<string>(); // Track which questions have expanded answers
   private maxQuestions: number | null = null; // Limit number of questions (null = no limit)
   
@@ -270,6 +271,14 @@ export class QuestionPreviewScreen extends BaseComponent {
                       ${this.automaticPace ? 'checked' : ''}
                     />
                     <span>Automatic pace</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <input 
+                      type="checkbox" 
+                      data-action="toggle-auto-time"
+                      ${this.autoQuestionTime ? 'checked' : ''}
+                    />
+                    <span>Automatic question time</span>
                   </label>
                 </div>
               </div>
@@ -509,6 +518,14 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
+    // Toggle automatic question time
+    const autoTimeCheckbox = this.qs('[data-action="toggle-auto-time"]') as HTMLInputElement;
+    if (autoTimeCheckbox) {
+      autoTimeCheckbox.addEventListener('change', () => {
+        this.autoQuestionTime = autoTimeCheckbox.checked;
+      });
+    }
+
     // Max questions input
     const maxQuestionsInput = this.qs('#max-questions-input') as HTMLInputElement;
     if (maxQuestionsInput) {
@@ -647,6 +664,7 @@ export class QuestionPreviewScreen extends BaseComponent {
         randomOrder: this.randomOrder,
         shuffleAnswers: this.shuffleAnswers,
         automaticPace: this.automaticPace,
+        autoQuestionTime: this.autoQuestionTime,
       });
 
       // Store session info in state

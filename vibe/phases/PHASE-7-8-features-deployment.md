@@ -77,39 +77,76 @@
 
 ---
 
-### Phase 7B: Game Configuration Options (Est. 2-3 hours)
+### Phase 7B: Game Configuration Options ⚠️ PARTIALLY COMPLETE
+
+**Status**: Core configuration + automatic features implemented, advanced scoring pending.
 
 **Objective**: Customizable quiz parameters.
 
+**Completed**:
 - [x] Configuration UI (host create session):
-  - ✅ Number of questions slider (5-50) - IMPLEMENTED
-  - ✅ Random order toggle - IMPLEMENTED
-  - ✅ Automatic pace toggle - IMPLEMENTED (Feb 12)
-- [ ] Default time limit per question (10-120 seconds) - TODO
-- [ ] Difficulty filter (Easy/Medium/Hard checkboxes) - TODO
-- [ ] Topic filter (multi-select dropdown) - TODO
-- [ ] Points per question (500-2000) - TODO
-- [ ] API updates:
-  - Accept config options in `POST /api/sessions`
-  - Store config in sessions table (new columns or JSON field)
-  - Apply config when loading questions
-  - Respect custom time limits per question
+  - ✅ Number of questions limit input - IMPLEMENTED (Feb 2026)
+  - ✅ Random order toggle (shuffle question order) - IMPLEMENTED (Feb 2026)
+  - ✅ Shuffle answers toggle - IMPLEMENTED (defaults to true, Feb 2026)
+  - ✅ Automatic pace toggle - IMPLEMENTED (Feb 12, 2026)
+  - ✅ **Automatic question time toggle** - IMPLEMENTED (Feb 20, 2026)
+  - ✅ Difficulty filter (Easy/Medium/Hard checkboxes) - IMPLEMENTED (Phase 7A, Feb 11)
+  - ✅ Topic filter (multi-select checkboxes) - IMPLEMENTED (Phase 7A, Feb 11)
+- [x] API updates:
+  - ✅ Accept config options in `POST /api/sessions` (randomOrder, shuffleAnswers, automaticPace, autoQuestionTime)
+  - ✅ Store config in sessions table (database fields: random_order, shuffle_answers, automatic_pace, auto_question_time)
+  - ✅ Apply config when loading questions (filtering, shuffling, and time calculation work correctly)
+- [x] Automatic time calculation:
+  - ✅ Heuristic function based on question/answer word count, answer count, and difficulty
+  - ✅ Formula: Base 10s + word-based bonuses + difficulty multiplier (easy: 0.8x, medium: 1.0x, hard: 1.2x)
+  - ✅ Capped between 10-90 seconds
+  - ✅ Applied in both host and player game state endpoints
+  - ✅ 7 comprehensive tests covering all aspects of heuristic
+- [x] Auto-advance on completion:
+  - ✅ API tracks when all players have answered current question
+  - ✅ Host automatically advances to leaderboard after showing correct answers for 4s
+  - ✅ No waiting for timer when everyone has answered
+  - ✅ Works seamlessly with automatic pace feature
+- [x] Validation:
+  - ✅ Ensure at least 1 question selected (UI validation in place)
+  - ✅ Sensible defaults (shuffleAnswers: true, automaticPace: false, randomOrder: false, autoQuestionTime: false)
+
+**Pending Implementation**:
+- [ ] Manual time limit per question (10-120 seconds slider/input) - TODO
+- [ ] Points per question configuration (500-2000) - TODO
 - [ ] Question time override:
   - Allow per-question time limits (from markdown)
   - Override with session default if not specified
-  - Display time limit to players before question
+  - Display custom time limit to players before question
 - [ ] Score configuration:
   - Configurable base points per question
   - Option to disable time-based scoring (all or nothing)
   - Streak bonus multiplier (optional)
-- [ ] Validation:
-  - Ensure at least 1 question selected
+- [ ] Additional validation:
   - Time limit bounds checking
-  - Sensible defaults
+  - Points per question bounds checking
 
-**Deliverable**: Hosts can create customized quizzes with specific settings.
+**Deliverable**: ✅ Hosts can create customized quizzes with question selection, ordering, pacing, and automatic time calculation. Quiz auto-advances when all players answer. ⚠️ Manual time/scoring configuration still pending.
 
 **Recent Additions**:
+- ✅ **Automatic question time** (Feb 20, 2026):
+  - Smart time limits calculated from question complexity
+  - "Automatic question time" checkbox in question configuration screen
+  - Heuristic: Analyzes question/answer text length, number of answers, and difficulty
+  - Replaces fixed time limits with adaptive timing (10-90s range)
+  - Database: Added `autoQuestionTime` boolean field with migration
+  - API: Time calculation integrated in session and game state endpoints
+  - Tests: 7 new tests, all 114 tests passing (39 common + 75 API)
+  - Use case: Perfect for varied question banks with different complexity levels
+
+- ✅ **Auto-advance on completion** (Feb 20, 2026):
+  - Quiz progresses when all players submit their answers
+  - No waiting for timer to expire when everyone is done
+  - API exposes `allPlayersAnswered` flag to host
+  - Host shows correct answers for 4s then navigates to leaderboard
+  - Combines with automatic pace for fully hands-free quiz experience
+  - Use case: Keeps quiz moving efficiently, reduces dead time
+
 - ✅ **Automatic pace feature** (Feb 12, 2026):
   - Optional automatic quiz progression without host interaction
   - "Automatic pace" checkbox in question configuration screen

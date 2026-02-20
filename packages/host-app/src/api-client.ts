@@ -197,6 +197,7 @@ export const api = {
       randomOrder?: boolean;
       shuffleAnswers?: boolean;
       automaticPace?: boolean;
+      autoQuestionTime?: boolean;
     }
   ): Promise<{
     id: string;
@@ -211,6 +212,7 @@ export const api = {
         ...(options?.randomOrder !== undefined && { randomOrder: options.randomOrder }),
         ...(options?.shuffleAnswers !== undefined && { shuffleAnswers: options.shuffleAnswers }),
         ...(options?.automaticPace !== undefined && { automaticPace: options.automaticPace }),
+        ...(options?.autoQuestionTime !== undefined && { autoQuestionTime: options.autoQuestionTime }),
       }),
     });
   },

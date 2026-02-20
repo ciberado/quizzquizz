@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[Phase 7B] Automatic Question Time Calculation** - Intelligent time limits based on question complexity
+  - **Heuristic Function**: `calculateAutoQuestionTime()` analyzes question text, answers, and difficulty to compute optimal time limits
+  - **Formula**: Base 10s + word count bonus + answer count + difficulty multiplier (easy: 0.8x, medium: 1.0x, hard: 1.2x), capped 10-90s
+  - **Host Toggle**: "Automatic question time" checkbox in question preview screen
+  - **Database**: Added `autoQuestionTime` boolean field to sessions table with migration
+  - **API Integration**: Time calculation applied in both host and player game state endpoints
+  - **Result**: Questions automatically get appropriate time based on reading complexity
+  - **Tests**: 7 comprehensive tests covering heuristic logic (min/max caps, difficulty, length, answer count)
+  - **All 114 tests passing** (39 common + 75 API server)
+  - **Files changed**: `packages/common/src/utils.ts`, `packages/api-server/prisma/schema.prisma`, `packages/api-server/src/routes/{sessions,game}.ts`, `packages/host-app/src/components/question-preview-screen.ts`, `packages/host-app/src/api-client.ts`
+
+- **[Phase 7B] Auto-Advance When All Players Answer** - Quiz progresses when everyone submits (no timer wait)
+  - **Smart Detection**: API tracks which players answered current question and exposes `allPlayersAnswered` flag
+  - **Host Auto-Advance**: When all players submit before timer expires, host automatically shows correct answers for 4s then navigates to leaderboard
+  - **Seamless Experience**: Players no longer wait for timer when everyone's done
+  - **Combines with Automatic Pace**: Works alongside existing automatic pace feature for fully hands-free quiz flow
+  - **Database Query**: Efficient check counts answers vs. active players per question
+  - **Files changed**: `packages/api-server/src/routes/sessions.ts`, `packages/host-app/src/components/question-display-screen.ts`
+
 ### Changed
 - **[Documentation] PLAN.md Cleanup** - Removed 1,797 lines of legacy duplicate content from PLAN.md to reduce file from 2,091 to 306 lines
   - **What changed**: Deleted redundant legacy phase documentation that was duplicated in `vibe/phases/` directory files

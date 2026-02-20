@@ -127,15 +127,27 @@ export class QuestionDisplayScreen extends HTMLElement {
       const isTimerActive = this.timeRemaining > 0;
       const timerStateChanged = this.wasTimerActive !== isTimerActive;
       
-      // If timer just expired and automatic pace is enabled, schedule navigation to leaderboard
-      if (timerStateChanged && !isTimerActive && this.automaticPace) {
-        // Timer just expired - show correct answers for 4 seconds then navigate
-        if (!this.autoNavigateTimeout) {
+      // Check if all players have answered (auto-advance feature)
+      const allPlayersAnswered = (session as any).allPlayersAnswered || false;
+      
+      // If all players answered OR timer just expired, and automatic pace is enabled, schedule navigation
+      if (this.automaticPace && !this.autoNavigateTimeout) {
+        if (allPlayersAnswered && isTimerActive) {
+          // All players answered before timer expired - show correct answers for 4 seconds
+          console.log('✅ All players answered - will show leaderboard in 4s');
+          this.stopTimer(); // Stop the timer since everyone answered
+          this.render(); // Re-render to show correct answers
+          this.autoNavigateTimeout = window.setTimeout(() => {
+            console.log('🚀 Auto-navigating to leaderboard');
+            router.navigate('/leaderboard');
+          }, 4000);
+        } else if (timerStateChanged && !isTimerActive) {
+          // Timer just expired - show correct answers for 4 seconds then navigate
           console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
           this.autoNavigateTimeout = window.setTimeout(() => {
             console.log('🚀 Auto-navigating to leaderboard');
             router.navigate('/leaderboard');
-          }, 4000); // 4 seconds
+          }, 4000);
         }
       }
 

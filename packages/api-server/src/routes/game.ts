@@ -5,6 +5,7 @@ import {
   generateId, 
   calculateScore, 
   isAnswerCorrect,
+  calculateAutoQuestionTime,
   SubmitAnswerRequestSchema 
 } from '@quizzquizz/common';
 import { questionBanks } from '../state.js';
@@ -59,7 +60,20 @@ gameRoutes.get('/:sessionId/state', async (c) => {
       
       if (currentQuestion) {
         const questionBank = questionBanks.get(session.questionBankId);
-        timeLimit = currentQuestion.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
+        
+        // Calculate time limit based on session configuration
+        if (session.autoQuestionTime) {
+          // Use automatic calculation
+          timeLimit = calculateAutoQuestionTime(
+            currentQuestion.text,
+            currentQuestion.answers,
+            currentQuestion.difficulty
+          );
+        } else {
+          // Use question's custom time or bank default
+          timeLimit = currentQuestion.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
+        }
+        
         questionStartedAt = session.questionStartedAt ? Number(session.questionStartedAt) : null;
       }
     }
@@ -160,7 +174,19 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
 
     // Calculate score
     const isCorrect = isAnswerCorrect(selectedAnswerIds, currentQuestion.correctAnswerIds);
-    const timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
+    
+    // Determine time limit based on session configuration
+    let timeLimit: number;
+    if (session.autoQuestionTime) {
+      timeLimit = calculateAutoQuestionTime(
+        currentQuestion.text,
+        currentQuestion.answers,
+        currentQuestion.difficulty
+      );
+    } else {
+      timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;
+    }
+    
     const timeTaken = session.questionStartedAt
       ? (Date.now() - Number(session.questionStartedAt)) / 1000
       : timeLimit;

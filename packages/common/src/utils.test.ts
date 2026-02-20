@@ -6,6 +6,7 @@ import {
   isAnswerCorrect,
   shuffleArray,
   now,
+  calculateAutoQuestionTime,
 } from './utils.js';
 
 describe('generateId', () => {
@@ -228,5 +229,105 @@ describe('now', () => {
     const currentTime = Date.now();
     // Should be within 10ms
     expect(Math.abs(timestamp - currentTime)).toBeLessThan(10);
+  });
+});
+
+describe('calculateAutoQuestionTime', () => {
+  it('should return at least minimum time (10s)', () => {
+    const time = calculateAutoQuestionTime(
+      'Simple?',
+      [{ text: 'Yes' }, { text: 'No' }],
+      'easy'
+    );
+    expect(time).toBeGreaterThanOrEqual(10);
+  });
+
+  it('should increase time for longer questions', () => {
+    const shortTime = calculateAutoQuestionTime(
+      'Short?',
+      [{ text: 'A' }, { text: 'B' }],
+      'medium'
+    );
+    
+    const longTime = calculateAutoQuestionTime(
+      'This is a much longer question with many more words that will take longer to read and understand',
+      [{ text: 'A' }, { text: 'B' }],
+      'medium'
+    );
+    
+    expect(longTime).toBeGreaterThan(shortTime);
+  });
+
+  it('should increase time for more answers', () => {
+    const twoAnswers = calculateAutoQuestionTime(
+      'Question?',
+      [{ text: 'A' }, { text: 'B' }],
+      'medium'
+    );
+    
+    const sixAnswers = calculateAutoQuestionTime(
+      'Question?',
+      [{ text: 'A' }, { text: 'B' }, { text: 'C' }, { text: 'D' }, { text: 'E' }, { text: 'F' }],
+      'medium'
+    );
+    
+    expect(sixAnswers).toBeGreaterThan(twoAnswers);
+  });
+
+  it('should apply difficulty multiplier (easy < medium < hard)', () => {
+    const question = 'What is the capital of France?';
+    const answers = [
+      { text: 'Paris' },
+      { text: 'London' },
+      { text: 'Berlin' },
+      { text: 'Madrid' }
+    ];
+    
+    const easy = calculateAutoQuestionTime(question, answers, 'easy');
+    const medium = calculateAutoQuestionTime(question, answers, 'medium');
+    const hard = calculateAutoQuestionTime(question, answers, 'hard');
+    
+    expect(easy).toBeLessThan(medium);
+    expect(medium).toBeLessThan(hard);
+  });
+
+  it('should cap time at maximum (90s)', () => {
+    // Create a very long question with many long answers
+    const longQuestion = 'This is an extremely long question '.repeat(50);
+    const longAnswers = Array.from({ length: 10 }, (_, i) => ({
+      text: `This is a very long answer option number ${i + 1} with lots of text `.repeat(10)
+    }));
+    
+    const time = calculateAutoQuestionTime(longQuestion, longAnswers, 'hard');
+    expect(time).toBeLessThanOrEqual(90);
+  });
+
+  it('should increase time for longer answer text', () => {
+    const shortAnswers = calculateAutoQuestionTime(
+      'Question?',
+      [{ text: 'A' }, { text: 'B' }],
+      'medium'
+    );
+    
+    const longAnswers = calculateAutoQuestionTime(
+      'Question?',
+      [
+        { text: 'This is a much longer answer with many words' },
+        { text: 'This is another long answer option with lots of text' }
+      ],
+      'medium'
+    );
+    
+    expect(longAnswers).toBeGreaterThan(shortAnswers);
+  });
+
+  it('should return integer values', () => {
+    const time = calculateAutoQuestionTime(
+      'Test question?',
+      [{ text: 'Answer 1' }, { text: 'Answer 2' }],
+      'medium'
+    );
+    
+    expect(Number.isInteger(time)).toBe(true);
   });
 });

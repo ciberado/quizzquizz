@@ -161,3 +161,63 @@ export function shuffleArray<T>(array: T[], seed?: string | number): T[] {
 export function now(): number {
   return Date.now();
 }
+
+/**
+ * Count words in a text string
+ */
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+}
+
+/**
+ * Calculate automatic question time limit based on question complexity
+ * 
+ * Heuristic factors:
+ * - Question text length (words)
+ * - Answer text length (total words across all answers)
+ * - Number of answers
+ * - Difficulty level (easy = 0.8x, medium = 1.0x, hard = 1.2x)
+ * 
+ * Formula:
+ * - Base time: 10 seconds
+ * - +1 second per 5 words in question
+ * - +0.5 seconds per 10 words across all answers
+ * - +1 second per answer option
+ * - Apply difficulty multiplier
+ * - Cap between 10 and 90 seconds
+ * 
+ * @param questionText - The question text
+ * @param answers - Array of answer objects with text
+ * @param difficulty - Question difficulty ('easy' | 'medium' | 'hard')
+ * @returns Time limit in seconds
+ */
+export function calculateAutoQuestionTime(
+  questionText: string,
+  answers: Array<{ text: string }>,
+  difficulty: 'easy' | 'medium' | 'hard'
+): number {
+  // Base time
+  let time = 10;
+  
+  // Add time based on question length
+  const questionWords = countWords(questionText);
+  time += Math.floor(questionWords / 5);
+  
+  // Add time based on answer length
+  const totalAnswerWords = answers.reduce((sum, answer) => sum + countWords(answer.text), 0);
+  time += Math.floor(totalAnswerWords / 10) * 0.5;
+  
+  // Add time based on number of answers
+  time += answers.length;
+  
+  // Apply difficulty multiplier
+  const difficultyMultiplier = {
+    easy: 0.8,
+    medium: 1.0,
+    hard: 1.2,
+  };
+  time *= difficultyMultiplier[difficulty];
+  
+  // Round and cap between 10 and 90 seconds
+  return Math.max(10, Math.min(90, Math.round(time)));
+}

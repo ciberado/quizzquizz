@@ -19,6 +19,7 @@ model Session {
   randomOrder          Boolean  @default(false) @map("random_order") // Whether to shuffle questions
   shuffleAnswers       Boolean  @default(true) @map("shuffle_answers") // Whether to shuffle answer order within each question
   automaticPace        Boolean  @default(false) @map("automatic_pace") // Auto-advance through questions and leaderboards
+  autoQuestionTime     Boolean  @default(false) @map("auto_question_time") // Calculate time limits automatically based on question complexity
   status               String   @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
   currentQuestionIndex Int      @default(-1) @map("current_question_index")
   questionStartedAt    BigInt?  @map("question_started_at") // timestamp in ms

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { getPrisma } from '../db/index.js';
-import { generateId, generatePin } from '@quizzquizz/common';
+import { generateId, generatePin, calculateAutoQuestionTime } from '@quizzquizz/common';
 import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
 
@@ -15,11 +15,12 @@ const CreateSessionSchema = z.object({
   randomOrder: z.boolean().optional(),
   shuffleAnswers: z.boolean().optional().default(true),
   automaticPace: z.boolean().optional(),
+  autoQuestionTime: z.boolean().optional(),
 });
 
 // Create a new session
 sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
-  const { questionBankId, questionIds, randomOrder, shuffleAnswers, automaticPace } = c.req.valid('json');
+  const { questionBankId, questionIds, randomOrder, shuffleAnswers, automaticPace, autoQuestionTime } = c.req.valid('json');
 
   // Generate unique PIN (in production, check for collisions)
   const pin = generatePin();
@@ -41,6 +42,7 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         randomOrder: randomOrder || false,
         shuffleAnswers: shuffleAnswers ?? true, // Default to true if not specified
         automaticPace: automaticPace || false,
+        autoQuestionTime: autoQuestionTime || false,
         status: 'lobby',
         currentQuestionIndex: -1,
         createdAt: BigInt(Date.now()),
@@ -91,11 +93,39 @@ sessionRoutes.get('/:id', async (c) => {
 
     // Calculate current question's time limit (same logic as game state endpoint)
     let currentQuestionTimeLimit = null;
+    let allPlayersAnswered = false;
+    
     if (session.status === 'playing' && session.currentQuestionIndex >= 0 && questions.length > 0) {
       const currentQ = questions[session.currentQuestionIndex];
       if (currentQ) {
         const questionBank = questionBanks.get(session.questionBankId);
-        currentQuestionTimeLimit = currentQ.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
+        
+        // Calculate time limit based on session configuration
+        if (session.autoQuestionTime) {
+          currentQuestionTimeLimit = calculateAutoQuestionTime(
+            currentQ.text,
+            currentQ.answers,
+            currentQ.difficulty
+          );
+        } else {
+          currentQuestionTimeLimit = currentQ.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
+        }
+        
+        // Check if all players have answered the current question
+        const players = await getPrisma().player.findMany({
+          where: { sessionId },
+        });
+        
+        if (players.length > 0) {
+          const answersForCurrentQuestion = await getPrisma().playerAnswer.findMany({
+            where: {
+              playerId: { in: players.map(p => p.id) },
+              questionId: currentQ.id,
+            },
+          });
+          
+          allPlayersAnswered = answersForCurrentQuestion.length === players.length;
+        }
       }
     }
 
@@ -108,6 +138,7 @@ sessionRoutes.get('/:id', async (c) => {
       questionStartedAt: questionStartedAt ? Number(questionStartedAt) : null,
       expiresAt: expiresAt ? Number(expiresAt) : null,
       currentQuestionTimeLimit, // Add computed time limit for timer sync
+      allPlayersAnswered, // Flag to indicate if all players have answered (for auto-advance)
       questions, // Include questions from question bank
       serverTime: Date.now(), // Add server's current time for clock synchronization
     });
