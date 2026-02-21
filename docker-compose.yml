@@ -15,6 +15,8 @@ services:
       - QUESTION_BANKS_PATH=/app/question-banks
       - SESSION_EXPIRY_HOURS=24
       - LOG_LEVEL=info
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-this-to-a-secure-random-secret-in-production}
+      - BETTER_AUTH_BASE_URL=${BETTER_AUTH_BASE_URL:-http://localhost:3000}
     volumes:
       # Persist SQLite database
       - quiz-data:/data

@@ -17,9 +17,34 @@ import { generateId } from "@quizzquizz/common";
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_BASE_URL || "http://localhost:3000",
   basePath: "/api/auth", // Mount path for auth routes
+  
   database: prismaAdapter(getPrisma(), {
     provider: "sqlite"
   }),
+  
+  // Session & cookie configuration  
+  // For HTTP-only deployments, secure cookies must be disabled
+  // Set USE_SECURE_COOKIES=true environment variable for HTTPS deployments
+  secret: process.env.BETTER_AUTH_SECRET,
+  advanced: {
+    generateId: () => generateId(),
+    cookieSameSite: "lax",
+    useSecureCookies: false, // Always false for local Docker/HTTP testing
+    crossSubDomainCookies: {
+      enabled: false,
+    },
+    // Disable CSRF check for local development (even when NODE_ENV=production in Docker)
+    // Enable only when deployed to real production with HTTPS
+    disableCSRFCheck: !process.env.PRODUCTION_HTTPS,
+    // Trusted origins for CORS (Better Auth validates Origin header)
+    trustedOrigins: [
+      "http://localhost:3000",
+      "http://localhost:3001", // Host app
+      "http://localhost:3002", // Player app
+      "http://localhost:3003", // Any other local apps
+      ...(process.env.CORS_ORIGIN ? [process.env.CORS_ORIGIN] : []),
+    ],
+  },
   
   // Email/password authentication
   emailAndPassword: {
@@ -73,16 +98,6 @@ export const auth = betterAuth({
       enabled: !!process.env.GITHUB_CLIENT_ID,
       clientId: process.env.GITHUB_CLIENT_ID || "",
       clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-    },
-  },
-  
-  // Advanced options
-  advanced: {
-    generateId: () => generateId(),
-    cookieSameSite: "lax",
-    useSecureCookies: process.env.NODE_ENV === "production",
-    crossSubDomainCookies: {
-      enabled: false,
     },
   },
   
