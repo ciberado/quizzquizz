@@ -5,6 +5,8 @@ import { OfflineIndicator } from './offline-indicator';
 import { ErrorBoundary } from './error-boundary';
 
 // Import screen components
+import './components/auth-header';
+import './components/login-screen';
 import './components/create-session-screen';
 import './components/question-preview-screen';
 import './components/lobby-screen';
@@ -30,6 +32,10 @@ state.loadFromStorage();
 // Define routes
 router.on('/', () => {
   showScreen('create-session-screen');
+});
+
+router.on('/login', () => {
+  showScreen('login-screen');
 });
 
 router.on('/create', () => {
