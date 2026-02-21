@@ -244,3 +244,115 @@ export const QuestionPreviewResponseSchema = z.object({
 });
 
 export type QuestionPreviewResponse = z.infer<typeof QuestionPreviewResponseSchema>;
+
+// ============================================================================
+// Authentication Types (Phase 9)
+// ============================================================================
+
+export const UserSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  emailVerified: z.boolean(),
+  username: z.string(),
+  name: z.string().optional(),
+  image: z.string().url().optional(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
+export type User = z.infer<typeof UserSchema>;
+
+export const AuthSessionSchema = z.object({
+  user: UserSchema,
+  session: z.object({
+    id: z.string(),
+    token: z.string(),
+    expiresAt: z.number(),
+  }),
+});
+
+export type AuthSession = z.infer<typeof AuthSessionSchema>;
+
+export const UserProfileResponseSchema = z.object({
+  user: UserSchema,
+  stats: z.object({
+    totalHosted: z.number(),
+    totalPlayed: z.number(),
+    totalSavedQuizzes: z.number(),
+  }),
+});
+
+export type UserProfileResponse = z.infer<typeof UserProfileResponseSchema>;
+
+export const UserStatsSchema = z.object({
+  asPlayer: z.object({
+    totalQuizzes: z.number(),
+    averageScore: z.number(),
+    averageRank: z.number(),
+    totalQuestionsAnswered: z.number(),
+    totalCorrectAnswers: z.number(),
+    accuracy: z.number(),
+    averageResponseTime: z.number(),
+  }),
+  asHost: z.object({
+    totalQuizzes: z.number(),
+    totalPlayersHosted: z.number(),
+    totalQuestionsAsked: z.number(),
+  }),
+});
+
+export type UserStats = z.infer<typeof UserStatsSchema>;
+
+export const SavedQuizSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  questionBankId: z.string(),
+  questionIds: z.array(z.string()).optional(),
+  randomOrder: z.boolean(),
+  shuffleAnswers: z.boolean(),
+  automaticPace: z.boolean(),
+  autoQuestionTime: z.boolean(),
+  isPublic: z.boolean(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
+export type SavedQuiz = z.infer<typeof SavedQuizSchema>;
+
+export const HostedSessionSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  sessionId: z.string(),
+  questionBankId: z.string(),
+  questionBankName: z.string(),
+  totalPlayers: z.number(),
+  totalQuestions: z.number(),
+  completedAt: z.number(),
+});
+
+export type HostedSession = z.infer<typeof HostedSessionSchema>;
+
+export const PlayerStatSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  sessionId: z.string(),
+  nickname: z.string(),
+  finalScore: z.number(),
+  finalRank: z.number(),
+  correctAnswers: z.number(),
+  totalQuestions: z.number(),
+  averageTime: z.number(),
+  playedAt: z.number(),
+});
+
+export type PlayerStat = z.infer<typeof PlayerStatSchema>;
+
+export const UserHistoryResponseSchema = z.object({
+  hosted: z.array(HostedSessionSchema),
+  played: z.array(PlayerStatSchema),
+});
+
+export type UserHistoryResponse = z.infer<typeof UserHistoryResponseSchema>;
+

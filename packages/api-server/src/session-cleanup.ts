@@ -10,10 +10,10 @@ import { getPrisma } from './db/index.js';
  * @returns Number of sessions deleted
  */
 export async function cleanupExpiredSessions(): Promise<number> {
-  const now = BigInt(Date.now());
+  const now = new Date();
 
   try {
-    const expiredSessions = await getPrisma().session.findMany({
+    const expiredSessions = await getPrisma().quizSession.findMany({
       where: {
         expiresAt: {
           not: null,
@@ -28,7 +28,7 @@ export async function cleanupExpiredSessions(): Promise<number> {
     }
 
     // Delete expired sessions (cascade will delete players and answers)
-    const result = await getPrisma().session.deleteMany({
+    const result = await getPrisma().quizSession.deleteMany({
       where: {
         id: {
           in: expiredSessions.map((s) => s.id),
@@ -49,11 +49,11 @@ export async function cleanupExpiredSessions(): Promise<number> {
  * @returns Number of sessions marked as abandoned
  */
 export async function markAbandonedSessions(): Promise<number> {
-  const oneHourAgo = BigInt(Date.now() - 60 * 60 * 1000);
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
   try {
     // Find sessions still in lobby that are over 1 hour old
-    const result = await getPrisma().session.updateMany({
+    const result = await getPrisma().quizSession.updateMany({
       where: {
         status: 'lobby',
         createdAt: {

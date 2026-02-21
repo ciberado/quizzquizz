@@ -61,7 +61,7 @@ describe('Player Routes', () => {
 
   beforeEach(async () => {
     await getPrisma().player.deleteMany({});
-    await getPrisma().session.deleteMany({});
+    await getPrisma().quizSession.deleteMany({});
   });
 
   describe('POST /api/sessions/join', () => {

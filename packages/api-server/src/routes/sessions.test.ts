@@ -60,7 +60,7 @@ describe('Session Routes', () => {
 
   beforeEach(async () => {
     await getPrisma().player.deleteMany({});
-    await getPrisma().session.deleteMany({});
+    await getPrisma().quizSession.deleteMany({});
   });
 
   describe('POST /api/sessions', () => {
@@ -117,7 +117,7 @@ describe('Session Routes', () => {
       const { id }: any = await res.json();
       
       // Verify in database that shuffleAnswers defaults to true
-      const session = await getPrisma().session.findUnique({ where: { id } });
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
       expect(session?.shuffleAnswers).toBe(true);
     });
 
@@ -135,7 +135,7 @@ describe('Session Routes', () => {
       const { id }: any = await res.json();
       
       // Verify in database
-      const session = await getPrisma().session.findUnique({ where: { id } });
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
       expect(session?.shuffleAnswers).toBe(false);
     });
 
@@ -153,7 +153,7 @@ describe('Session Routes', () => {
       const { id }: any = await res.json();
       
       // Verify in database
-      const session = await getPrisma().session.findUnique({ where: { id } });
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
       expect(session?.shuffleAnswers).toBe(true);
     });
   });
@@ -477,9 +477,9 @@ describe('Session Routes', () => {
       // Add players with different scores
       await getPrisma().player.createMany({
         data: [
-          { id: 'p1', sessionId: id, nickname: 'Alice', score: 500, joinedAt: BigInt(Date.now()) },
-          { id: 'p2', sessionId: id, nickname: 'Bob', score: 800, joinedAt: BigInt(Date.now()) },
-          { id: 'p3', sessionId: id, nickname: 'Charlie', score: 300, joinedAt: BigInt(Date.now()) },
+          { id: 'p1', sessionId: id, nickname: 'Alice', score: 500, joinedAt: new Date() },
+          { id: 'p2', sessionId: id, nickname: 'Bob', score: 800, joinedAt: new Date() },
+          { id: 'p3', sessionId: id, nickname: 'Charlie', score: 300, joinedAt: new Date() },
         ],
       });
 
@@ -577,9 +577,9 @@ describe('Session Routes', () => {
       // Create players
       await getPrisma().player.createMany({
         data: [
-          { id: 'p1', sessionId: id, nickname: 'Alice', score: 100, joinedAt: BigInt(Date.now()) },
-          { id: 'p2', sessionId: id, nickname: 'Bob', score: 100, joinedAt: BigInt(Date.now()) },
-          { id: 'p3', sessionId: id, nickname: 'Charlie', score: 0, joinedAt: BigInt(Date.now()) },
+          { id: 'p1', sessionId: id, nickname: 'Alice', score: 100, joinedAt: new Date() },
+          { id: 'p2', sessionId: id, nickname: 'Bob', score: 100, joinedAt: new Date() },
+          { id: 'p3', sessionId: id, nickname: 'Charlie', score: 0, joinedAt: new Date() },
         ],
       });
 
@@ -592,7 +592,7 @@ describe('Session Routes', () => {
             questionId: 'q1',
             selectedAnswerIds: JSON.stringify(['a1']),
             isCorrect: true,
-            submittedAt: BigInt(Date.now()),
+            submittedAt: new Date(),
             score: 100,
           },
           {
@@ -601,7 +601,7 @@ describe('Session Routes', () => {
             questionId: 'q1',
             selectedAnswerIds: JSON.stringify(['a1']),
             isCorrect: true,
-            submittedAt: BigInt(Date.now()),
+            submittedAt: new Date(),
             score: 100,
           },
           {
@@ -610,7 +610,7 @@ describe('Session Routes', () => {
             questionId: 'q1',
             selectedAnswerIds: JSON.stringify(['a2']),
             isCorrect: false,
-            submittedAt: BigInt(Date.now()),
+            submittedAt: new Date(),
             score: 0,
           },
         ],

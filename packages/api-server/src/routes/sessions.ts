@@ -5,8 +5,22 @@ import { getPrisma } from '../db/index.js';
 import { generateId, generatePin, calculateAutoQuestionTime } from '@quizzquizz/common';
 import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
+import { authMiddleware } from '../auth/middleware.js';
 
-const sessionRoutes = new Hono();
+// Extend Hono with user context
+type Variables = {
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    name?: string;
+  } | null;
+};
+
+const sessionRoutes = new Hono<{ Variables: Variables }>();
+
+// Apply optional auth middleware to all routes
+sessionRoutes.use('*', authMiddleware);
 
 // Create session request schema
 const CreateSessionSchema = z.object({
@@ -21,6 +35,9 @@ const CreateSessionSchema = z.object({
 // Create a new session
 sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
   const { questionBankId, questionIds, randomOrder, shuffleAnswers, automaticPace, autoQuestionTime } = c.req.valid('json');
+  
+  // Get authenticated user if present (optional auth)
+  const user = c.get('user');
 
   // Generate unique PIN (in production, check for collisions)
   const pin = generatePin();
@@ -29,14 +46,15 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
 
   // Session expiration: default 24 hours, configurable via env
   const expirationHours = parseInt(process.env.SESSION_EXPIRATION_HOURS || '24', 10);
-  const expiresAt = BigInt(Date.now() + expirationHours * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
 
   try {
-    await getPrisma().session.create({
+    await getPrisma().quizSession.create({
       data: {
         id: sessionId,
         pin,
         hostToken,
+        userId: user?.id || null, // Link to authenticated user if logged in
         questionBankId,
         questionIds: questionIds ? JSON.stringify(questionIds) : null,
         randomOrder: randomOrder || false,
@@ -45,7 +63,7 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         autoQuestionTime: autoQuestionTime || false,
         status: 'lobby',
         currentQuestionIndex: -1,
-        createdAt: BigInt(Date.now()),
+        // createdAt uses @default(now()) in schema
         expiresAt,
       },
     });
@@ -76,7 +94,7 @@ sessionRoutes.get('/:id', async (c) => {
   }
 
   try {
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -129,14 +147,14 @@ sessionRoutes.get('/:id', async (c) => {
       }
     }
 
-    // Don't send hostToken in response, convert BigInt to number
+    // Don't send hostToken in response
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { hostToken: _, createdAt, questionStartedAt, expiresAt, ...sessionData } = session;
+    const { hostToken: _, ...sessionData } = session;
     return c.json({
       ...sessionData,
-      createdAt: Number(createdAt),
-      questionStartedAt: questionStartedAt ? Number(questionStartedAt) : null,
-      expiresAt: expiresAt ? Number(expiresAt) : null,
+      createdAt: session.createdAt.getTime(),
+      questionStartedAt: session.questionStartedAt ? session.questionStartedAt.getTime() : null,
+      expiresAt: session.expiresAt ? session.expiresAt.getTime() : null,
       currentQuestionTimeLimit, // Add computed time limit for timer sync
       allPlayersAnswered, // Flag to indicate if all players have answered (for auto-advance)
       questions, // Include questions from question bank
@@ -158,7 +176,7 @@ sessionRoutes.delete('/:id', async (c) => {
   }
 
   try {
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -170,7 +188,7 @@ sessionRoutes.delete('/:id', async (c) => {
       return c.json({ error: 'Invalid host token' }, 403);
     }
 
-    await getPrisma().session.delete({ where: { id: sessionId } });
+    await getPrisma().quizSession.delete({ where: { id: sessionId } });
 
     return c.json({ message: 'Session deleted' });
   } catch (error) {
@@ -189,7 +207,7 @@ sessionRoutes.post('/:id/start', async (c) => {
   }
 
   try {
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -212,12 +230,12 @@ sessionRoutes.post('/:id/start', async (c) => {
     }
 
     // Start quiz: move to first question
-    await getPrisma().session.update({
+    await getPrisma().quizSession.update({
       where: { id: sessionId },
       data: {
         status: 'playing',
         currentQuestionIndex: 0,
-        questionStartedAt: BigInt(Date.now()),
+        questionStartedAt: new Date(),
       },
     });
 
@@ -238,7 +256,7 @@ sessionRoutes.post('/:id/next', async (c) => {
   }
 
   try {
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -266,7 +284,7 @@ sessionRoutes.post('/:id/next', async (c) => {
     // Check if we've reached the end
     if (nextIndex >= questions.length) {
       // End the quiz
-      await getPrisma().session.update({
+      await getPrisma().quizSession.update({
         where: { id: sessionId },
         data: {
           status: 'finished',
@@ -282,11 +300,11 @@ sessionRoutes.post('/:id/next', async (c) => {
     }
 
     // Move to next question
-    await getPrisma().session.update({
+    await getPrisma().quizSession.update({
       where: { id: sessionId },
       data: {
         currentQuestionIndex: nextIndex,
-        questionStartedAt: BigInt(Date.now()),
+        questionStartedAt: new Date(),
       },
     });
 
@@ -310,7 +328,7 @@ sessionRoutes.post('/:id/end', async (c) => {
   }
 
   try {
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -327,7 +345,7 @@ sessionRoutes.post('/:id/end', async (c) => {
     }
 
     // End the quiz
-    await getPrisma().session.update({
+    await getPrisma().quizSession.update({
       where: { id: sessionId },
       data: {
         status: 'finished',
@@ -349,7 +367,7 @@ sessionRoutes.get('/:id/leaderboard', async (c) => {
 
   try {
     // Verify session exists
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -391,7 +409,7 @@ sessionRoutes.get('/:id/question-stats', async (c) => {
 
   try {
     // Verify session and host token
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 

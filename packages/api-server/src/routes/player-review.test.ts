@@ -79,7 +79,7 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     // Clean database between tests
     await getPrisma().playerAnswer.deleteMany();
     await getPrisma().player.deleteMany();
-    await getPrisma().session.deleteMany();
+    await getPrisma().quizSession.deleteMany();
   });
 
   it('should return complete player review with stats and questions', async () => {
@@ -119,7 +119,7 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     });
 
     // End quiz
-    await getPrisma().session.update({
+    await getPrisma().quizSession.update({
       where: { id: session.id },
       data: { status: 'finished' },
     });
@@ -241,7 +241,7 @@ describe('GET /api/sessions/:sessionId/players/:playerId/review', () => {
     });
 
     // Mark session as finished
-    await getPrisma().session.update({
+    await getPrisma().quizSession.update({
       where: { id: session.id },
       data: { status: 'finished' },
     });

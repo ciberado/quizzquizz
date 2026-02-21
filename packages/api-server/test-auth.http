@@ -1,0 +1,76 @@
+# QuizzQuizz Authentication API Tests
+# Use with REST Client extension in VS Code or curl
+
+@baseUrl = http://localhost:3000
+@email = test@example.com
+@password = testpassword123
+@username = testuser
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Sign Up - Create Account
+POST {{baseUrl}}/api/auth/sign-up
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "username": "{{username}}",
+  "name": "Test User"
+}
+
+### Sign In - Login
+POST {{baseUrl}}/api/auth/sign-in/email
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Get Current Session
+GET {{baseUrl}}/api/auth/session
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE
+
+### Get User Profile
+GET {{baseUrl}}/api/users/me
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE
+
+### Update Profile
+PATCH {{baseUrl}}/api/users/me
+Content-Type: application/json
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE
+
+{
+  "name": "Updated Test User"
+}
+
+### Get User Statistics
+GET {{baseUrl}}/api/users/me/stats
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE
+
+### Get User History  
+GET {{baseUrl}}/api/users/me/history
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE
+
+### Create Session (Anonymous)
+POST {{baseUrl}}/api/sessions
+Content-Type: application/json
+
+{
+  "questionBankId": "sample-general-knowledge"
+}
+
+### Create Session (Authenticated - needs session cookie)
+POST {{baseUrl}}/api/sessions
+Content-Type: application/json
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE
+
+{
+  "questionBankId": "sample-general-knowledge"
+}
+
+### Sign Out
+POST {{baseUrl}}/api/auth/sign-out
+Cookie: better-auth.session_token=YOUR_SESSION_TOKEN_HERE

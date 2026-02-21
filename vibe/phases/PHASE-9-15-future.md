@@ -10,11 +10,16 @@ These phases represent the long-term direction of QuizzQuizz beyond the v1.0.0 M
 
 **Scope**:
 - [ ] Authentication system:
-  - User registration and login (email/password)
+  - User registration and login (username/password)
   - JWT tokens for session management
   - Password hashing (bcrypt)
   - "Remember me" functionality
   - Password reset flow (email)
+- [ ] Roles
+  - Two initial roles: host and player
+  - Player can access to their historical scores
+  - Host can access to the game statistics
+  - Games can still be created and played anonymously
 - [ ] User profiles:
   - Profile page (username, email, avatar)
   - Quiz history (hosted and played)

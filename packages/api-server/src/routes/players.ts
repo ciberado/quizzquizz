@@ -19,7 +19,7 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
 
   try {
     // Find session by PIN
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { pin },
     });
 
@@ -51,7 +51,7 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
         sessionId: session.id,
         nickname,
         score: 0,
-        joinedAt: BigInt(Date.now()),
+        // joinedAt uses @default(now()) in schema
       },
     });
 
@@ -75,7 +75,7 @@ playerRoutes.get('/:sessionId/players', async (c) => {
 
   try {
     // Verify session exists
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 

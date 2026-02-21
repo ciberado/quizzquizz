@@ -9,6 +9,8 @@ import sessionRoutes from './routes/sessions.js';
 import playerRoutes from './routes/players.js';
 import gameRoutes from './routes/game.js';
 import questionBankRoutes from './routes/question-banks.js';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
 import { startCleanupJob } from './session-cleanup.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -47,6 +49,11 @@ app.get('/health', (c) => {
 });
 
 // API routes
+// AUTH ROUTES: Mount first to handle /api/auth/* before anything else
+app.route('/api/auth', authRoutes);
+app.route('/api/users', userRoutes);
+
+// GAME ROUTES: Mount before sessionRoutes to ensure specific routes match first
 // IMPORTANT: Mount gameRoutes first to ensure specific routes like
 // /:sessionId/players/:playerId/review match before catch-all /:id in sessionRoutes
 app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/state, /answer, and /players/:id/review patterns
@@ -63,11 +70,11 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Initialize on startup
-function initialize() {
+async function initialize() {
   console.log('🎯 Initializing QuizzQuizz API Server...');
   
-  // Initialize database
-  initDatabase();
+  // Initialize database (await to ensure tables exist before cleanup job starts)
+  await initDatabase();
   
   // Load question banks
   const questionBanksPath = process.env.QUESTION_BANKS_PATH || 
@@ -88,16 +95,22 @@ function initialize() {
   startCleanupJob(cleanupIntervalMinutes);
 }
 
-// Initialize before starting
-initialize();
+// Initialize before starting (async initialization)
+initialize().then(() => {
+  const port = parseInt(process.env.PORT || '3000', 10);
+  const hostname = process.env.HOST || '0.0.0.0';
 
-const port = parseInt(process.env.PORT || '3000', 10);
-const hostname = process.env.HOST || '0.0.0.0';
+  console.log(`🚀 QuizzQuizz API Server starting on http://${hostname}:${port}...`);
 
-console.log(`🚀 QuizzQuizz API Server starting on http://${hostname}:${port}...`);
-
-serve({
-  fetch: app.fetch,
-  port,
-  hostname,
+  serve({
+    fetch: app.fetch,
+    port,
+    hostname,
+  });
+}).catch(error => {
+  console.error('❌ Failed to initialize server:', error);
+  process.exit(1);
 });
+
+// Export app for testing
+export default app;

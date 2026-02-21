@@ -68,36 +68,100 @@ export async function initDatabase() {
     // Drop existing tables to ensure clean schema (important with shared cache)
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS player_answers`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS players`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS quiz_sessions`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS hosted_sessions`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS player_stats`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS saved_quizzes`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS sessions`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS accounts`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS verifications`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS users`);
     
-    // Create tables for in-memory SQLite with correct BIGINT types
+    // Create auth tables (DateTime maps to BIGINT in SQLite - milliseconds since epoch)
+    await client.$executeRawUnsafe(`
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        email_verified INTEGER NOT NULL DEFAULT 0,
+        image TEXT,
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL
+      )
+    `);
+    
+    await client.$executeRawUnsafe(`
+      CREATE TABLE accounts (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        account_id TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        access_token TEXT,
+        refresh_token TEXT,
+        id_token TEXT,
+        expires_at BIGINT,
+        password TEXT,
+        scope TEXT,
+        access_token_expires_at BIGINT,
+        refresh_token_expires_at BIGINT,
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL
+      )
+    `);
+    
     await client.$executeRawUnsafe(`
       CREATE TABLE sessions (
         id TEXT PRIMARY KEY,
+        expires_at BIGINT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    
+    await client.$executeRawUnsafe(`
+      CREATE TABLE verifications (
+        id TEXT PRIMARY KEY,
+        identifier TEXT NOT NULL,
+        value TEXT NOT NULL,
+        expires_at BIGINT NOT NULL,
+        created_at BIGINT,
+        updated_at BIGINT
+      )
+    `);
+    
+    // Create quiz tables (renamed to quiz_sessions to avoid collision)
+    await client.$executeRawUnsafe(`
+      CREATE TABLE quiz_sessions (
+        id TEXT PRIMARY KEY,
         pin TEXT NOT NULL UNIQUE,
         host_token TEXT NOT NULL,
+        user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
         question_bank_id TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'lobby',
         current_question_index INTEGER NOT NULL DEFAULT -1,
         question_started_at BIGINT,
-        expires_at BIGINT NOT NULL,
-        created_at BIGINT NOT NULL DEFAULT 0,
+        expires_at BIGINT,
+        created_at BIGINT NOT NULL,
         question_ids TEXT,
         random_order INTEGER NOT NULL DEFAULT 0,
         shuffle_answers INTEGER NOT NULL DEFAULT 1,
         automatic_pace INTEGER NOT NULL DEFAULT 0,
-        auto_question_time INTEGER NOT NULL DEFAULT 0,
-        time_limit INTEGER NOT NULL DEFAULT 25
+        auto_question_time INTEGER NOT NULL DEFAULT 0
       )
     `);
     
     await client.$executeRawUnsafe(`
       CREATE TABLE players (
         id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        session_id TEXT NOT NULL REFERENCES quiz_sessions(id) ON DELETE CASCADE,
         nickname TEXT NOT NULL,
         score INTEGER NOT NULL DEFAULT 0,
-        joined_at BIGINT NOT NULL DEFAULT 0
+        joined_at BIGINT NOT NULL
       )
     `);
     
@@ -107,26 +171,78 @@ export async function initDatabase() {
         player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
         question_id TEXT NOT NULL,
         selected_answer_ids TEXT NOT NULL,
-        is_correct BOOLEAN NOT NULL,
+        is_correct INTEGER NOT NULL,
         score INTEGER NOT NULL,
-        submitted_at BIGINT NOT NULL DEFAULT 0
+        submitted_at BIGINT NOT NULL
+      )
+    `);
+    
+    // Create user feature tables
+    await client.$executeRawUnsafe(`
+      CREATE TABLE hosted_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        session_id TEXT NOT NULL,
+        question_bank_id TEXT NOT NULL,
+        question_bank_name TEXT NOT NULL,
+        total_players INTEGER NOT NULL,
+        total_questions INTEGER NOT NULL,
+        completed_at BIGINT NOT NULL
+      )
+    `);
+    
+    await client.$executeRawUnsafe(`
+      CREATE TABLE player_stats (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        session_id TEXT NOT NULL,
+        nickname TEXT NOT NULL,
+        final_score INTEGER NOT NULL,
+        final_rank INTEGER NOT NULL,
+        correct_answers INTEGER NOT NULL,
+        total_questions INTEGER NOT NULL,
+        average_time INTEGER NOT NULL,
+        played_at BIGINT NOT NULL
+      )
+    `);
+    
+    await client.$executeRawUnsafe(`
+      CREATE TABLE saved_quizzes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        question_bank_id TEXT NOT NULL,
+        question_ids TEXT,
+        random_order INTEGER NOT NULL DEFAULT 0,
+        shuffle_answers INTEGER NOT NULL DEFAULT 1,
+        automatic_pace INTEGER NOT NULL DEFAULT 0,
+        auto_question_time INTEGER NOT NULL DEFAULT 0,
+        is_public INTEGER NOT NULL DEFAULT 0,
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL
       )
     `);
   } else {
-    // For file-based databases, run migrations automatically on startup
-    console.log('🔄 Running database migrations...');
-    const { execSync } = await import('child_process');
-    try {
-      // Run migrations in production
-      execSync('npx prisma migrate deploy', {
-        cwd: '/app/packages/api-server',
-        stdio: 'inherit',
-        env: { ...process.env }
-      });
-      console.log('✅ Database migrations completed');
-    } catch (error) {
-      console.error('❌ Failed to run migrations:', error);
-      throw error;
+    // For file-based databases in production, run migrations automatically on startup
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🔄 Running database migrations...');
+      const { execSync } = await import('child_process');
+      try {
+        // Run migrations in production
+        execSync('npx prisma migrate deploy', {
+          cwd: '/app/packages/api-server',
+          stdio: 'inherit',
+          env: { ...process.env }
+        });
+        console.log('✅ Database migrations completed');
+      } catch (error) {
+        console.error('❌ Failed to run migrations:', error);
+        throw error;
+      }
+    } else {
+      // In development, migrations should be run manually via: npx prisma migrate dev
+      console.log('📝 Development mode: Run migrations manually if needed (npx prisma migrate dev)');
     }
   }
     console.log('✅ Database initialized (using Prisma)');

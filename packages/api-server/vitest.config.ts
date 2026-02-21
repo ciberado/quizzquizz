@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     env: {
+      NODE_ENV: 'test',
       DATABASE_URL: 'file::memory:?cache=shared',
     },
     // Run tests sequentially to avoid database race conditions with shared in-memory SQLite

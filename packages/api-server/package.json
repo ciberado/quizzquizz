@@ -18,6 +18,7 @@
     "@prisma/client": "^6.19.2",
     "@quizzquizz/common": "0.0.0",
     "@quizzquizz/question-bank": "0.0.0",
+    "better-auth": "^1.4.18",
     "hono": "^4.0.0",
     "prisma": "^6.19.2"
   },

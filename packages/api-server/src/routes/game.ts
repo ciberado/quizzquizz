@@ -24,7 +24,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
 
   try {
     // Verify session exists
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -74,7 +74,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
           timeLimit = currentQuestion.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
         }
         
-        questionStartedAt = session.questionStartedAt ? Number(session.questionStartedAt) : null;
+        questionStartedAt = session.questionStartedAt ? session.questionStartedAt.getTime() : null;
       }
     }
 
@@ -111,7 +111,7 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
 
   try {
     // Verify session exists and is playing
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -201,7 +201,7 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
         questionId: currentQuestion.id,
         selectedAnswerIds: JSON.stringify(selectedAnswerIds),
         isCorrect,
-        submittedAt: BigInt(Date.now()),
+        submittedAt: new Date(),
         score,
       },
     });
@@ -237,7 +237,7 @@ gameRoutes.get('/:sessionId/players/:playerId/review', async (c) => {
 
   try {
     // Verify session exists and is finished
-    const session = await getPrisma().session.findUnique({
+    const session = await getPrisma().quizSession.findUnique({
       where: { id: sessionId },
     });
 

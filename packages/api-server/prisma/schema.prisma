@@ -10,26 +10,104 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// Authentication Tables (Better Auth)
+// ============================================================================
+
+model User {
+  id            String    @id
+  email         String    @unique
+  emailVerified Boolean   @default(false) @map("email_verified")
+  username      String    @unique
+  name          String?
+  image         String?   // Avatar URL
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  hostedSessions HostedSession[]
+  playerStats   PlayerStat[]
+  savedQuizzes  SavedQuiz[]
+  quizSessions  QuizSession[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String    @id
+  userId            String    @map("user_id")
+  accountId         String    @map("account_id") // Provider-specific account ID
+  providerId        String    @map("provider_id") // "credential" | "google" | "github"
+  password          String?   // Hashed password for credential accounts
+  accessToken       String?   @map("access_token")
+  refreshToken      String?   @map("refresh_token")
+  accessTokenExpiresAt DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope             String?
+  idToken           String?   @map("id_token")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("accounts")
+}
+
 model Session {
-  id                   String   @id
-  pin                  String   @unique
-  hostToken            String   @map("host_token")
-  questionBankId       String   @map("question_bank_id")
-  questionIds          String?  @map("question_ids") // JSON array of question IDs to use (null = all questions) 
-  randomOrder          Boolean  @default(false) @map("random_order") // Whether to shuffle questions
-  shuffleAnswers       Boolean  @default(true) @map("shuffle_answers") // Whether to shuffle answer order within each question
-  automaticPace        Boolean  @default(false) @map("automatic_pace") // Auto-advance through questions and leaderboards
-  autoQuestionTime     Boolean  @default(false) @map("auto_question_time") // Calculate time limits automatically based on question complexity
-  status               String   @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
-  currentQuestionIndex Int      @default(-1) @map("current_question_index")
-  questionStartedAt    BigInt?  @map("question_started_at") // timestamp in ms
-  createdAt            BigInt   @default(0) @map("created_at")
-  expiresAt            BigInt?  @map("expires_at") // timestamp in ms, null = never expires
+  id           String   @id
+  token        String   @unique // Auth session token
+  userId       String   @map("user_id")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model Verification {
+  id         String   @id
+  identifier String   // email or user ID
+  value      String   // the token value
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  @@map("verifications")
+}
+
+// ============================================================================
+// Quiz Session Tables (Existing)
+// ============================================================================
+
+model QuizSession {
+  id                   String    @id
+  pin                  String    @unique
+  hostToken            String    @map("host_token")
+  userId               String?   @map("user_id") // NEW: Link to authenticated host (nullable for anonymous)
+  questionBankId       String    @map("question_bank_id")
+  questionIds          String?   @map("question_ids") // JSON array of question IDs to use (null = all questions) 
+  randomOrder          Boolean   @default(false) @map("random_order") // Whether to shuffle questions
+  shuffleAnswers       Boolean   @default(true) @map("shuffle_answers") // Whether to shuffle answer order within each question
+  automaticPace        Boolean   @default(false) @map("automatic_pace") // Auto-advance through questions and leaderboards
+  autoQuestionTime     Boolean   @default(false) @map("auto_question_time") // Calculate time limits automatically based on question complexity
+  status               String    @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
+  currentQuestionIndex Int       @default(-1) @map("current_question_index")
+  questionStartedAt    DateTime? @map("question_started_at") // timestamp
+  createdAt            DateTime  @default(now()) @map("created_at")
+  expiresAt            DateTime? @map("expires_at") // null = never expires
 
   // Relations
-  players Player[]
+  players        Player[]
+  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hostedSession  HostedSession? // Historical record when quiz completes
 
-  @@map("sessions")
+  @@map("quiz_sessions")
 }
 
 model Player {
@@ -37,26 +115,85 @@ model Player {
   sessionId String   @map("session_id")
   nickname  String
   score     Int      @default(0)
-  joinedAt  BigInt   @default(0) @map("joined_at")
+  joinedAt  DateTime @default(now()) @map("joined_at")
 
   // Relations
-  session Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session QuizSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   answers PlayerAnswer[]
 
   @@map("players")
 }
 
 model PlayerAnswer {
-  id                String  @id
-  playerId          String  @map("player_id")
-  questionId        String  @map("question_id")
-  selectedAnswerIds String  @map("selected_answer_ids") // JSON array as string
-  isCorrect         Boolean @map("is_correct")
-  submittedAt       BigInt  @map("submitted_at")
-  score             Int     @default(0)
+  id                String   @id
+  playerId          String   @map("player_id")
+  questionId        String   @map("question_id")
+  selectedAnswerIds String   @map("selected_answer_ids") // JSON array as string
+  isCorrect         Boolean  @map("is_correct")
+  submittedAt       DateTime @map("submitted_at")
+  score             Int      @default(0)
 
   // Relations
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@map("player_answers")
+}
+
+// ============================================================================
+// User Feature Tables (Saved Quizzes, History, Stats)
+// ============================================================================
+
+model SavedQuiz {
+  id                String   @id
+  userId            String   @map("user_id")
+  name              String
+  description       String?
+  questionBankId    String   @map("question_bank_id")
+  questionIds       String?  @map("question_ids") // JSON array
+  randomOrder       Boolean  @default(false) @map("random_order")
+  shuffleAnswers    Boolean  @default(true) @map("shuffle_answers")
+  automaticPace     Boolean  @default(false) @map("automatic_pace")
+  autoQuestionTime  Boolean  @default(false) @map("auto_question_time")
+  isPublic          Boolean  @default(false) @map("is_public")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("saved_quizzes")
+}
+
+model HostedSession {
+  id               String   @id
+  userId           String   @map("user_id")
+  sessionId        String   @unique @map("session_id")
+  questionBankId   String   @map("question_bank_id")
+  questionBankName String   @map("question_bank_name")
+  totalPlayers     Int      @default(0) @map("total_players")
+  totalQuestions   Int      @default(0) @map("total_questions")
+  completedAt      DateTime @map("completed_at")
+  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, completedAt])
+  @@map("hosted_sessions")
+}
+
+model PlayerStat {
+  id              String   @id
+  userId          String   @map("user_id")
+  sessionId       String   @map("session_id")
+  nickname        String   // Nickname used in this session
+  finalScore      Int      @map("final_score")
+  finalRank       Int      @map("final_rank")
+  correctAnswers  Int      @map("correct_answers")
+  totalQuestions  Int      @map("total_questions")
+  averageTime     Int      @map("average_time") // Average response time in ms
+  playedAt        DateTime @map("played_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, playedAt])
+  @@map("player_stats")
 }
