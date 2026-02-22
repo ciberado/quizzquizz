@@ -28,6 +28,12 @@ All notable changes to this project will be documented in this file, organized b
   - Added trusted origins for local development (localhost:3000-3003)
 
 ### Fixed
+- **Docker Volume Override Issue** - Fixed named volume overwriting fresh build artifacts with stale cached files
+  - Root cause: `app-dist` named volume at `/app/packages` persisted old files from previous builds
+  - Solution: Implemented "copy-on-start" pattern using `docker-entrypoint.sh`
+  - Frontend dist files now stored in `/app/dist-build/` and synced to shared volume at container startup
+  - This ensures every deployment gets fresh build artifacts regardless of volume state
+
 - **[Phase 9] Authentication Test Suite - 100% Pass Rate** - Fixed all authentication test failures (160/162 passing, 2 intentionally skipped)
   - **Integration Tests (auth-integration.test.ts)**: Fixed 14/14 tests
     - Token extraction: Use signed token from Set-Cookie header, not response body

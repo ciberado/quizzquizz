@@ -56,14 +56,18 @@ COPY --chown=nodejs:nodejs packages/api-server/package*.json ./packages/api-serv
 RUN npm ci --omit=dev --workspaces
 
 # Copy built artifacts from builder
+# Copy backend built artifacts (these don't need sharing)
 COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./packages/common/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./packages/common/
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./packages/question-bank/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./packages/question-bank/
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./packages/api-server/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./packages/api-server/prisma
-COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./packages/host-app/dist
-COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./packages/player-app/dist
+
+# Copy frontend dist to a BUILD location (NOT /app/packages which is volume-mounted)
+# The entrypoint script will sync these to the shared volume on startup
+COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./dist-build/host-app/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./dist-build/player-app/dist
 
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
@@ -72,8 +76,16 @@ RUN cd packages/api-server && npx prisma generate
 # Create directory for runtime data and set ownership
 RUN mkdir -p /data && chown nodejs:nodejs /data
 
+# Create directory for shared volume mount point
+RUN mkdir -p /app/packages/host-app/dist /app/packages/player-app/dist && \
+    chown -R nodejs:nodejs /app/packages
+
 # Copy default question banks (can be overridden with volume mount)
 COPY --chown=nodejs:nodejs question-banks/ ./question-banks/
+
+# Copy entrypoint script
+COPY --chown=nodejs:nodejs docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Switch to non-root user
 USER nodejs
@@ -91,8 +103,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+# Use dumb-init to handle signals properly, with our entrypoint script
+# The entrypoint script syncs fresh frontend builds to the shared volume
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]
 
 # Start the API server (which will serve frontend apps as static files)
 CMD ["node", "packages/api-server/dist/index.js"]
