@@ -252,6 +252,82 @@ class ApiClient {
       this.pendingRequests.delete(key);
     }
   }
+
+  // ===== Authentication Methods =====
+
+  /**
+   * Sign up a new user
+   */
+  async signUp(email: string, password: string, username: string, name: string): Promise<{
+    user: {
+      id: string;
+      email: string;
+      username: string;
+      name: string;
+    };
+    token: string;
+  }> {
+    return this.fetch('/api/auth/sign-up/email', {
+      method: 'POST',
+      credentials: 'include', // Important for cookies
+      body: JSON.stringify({ email, password, username, name }),
+    }, false); // Don't retry auth requests
+  }
+
+  /**
+   * Sign in an existing user
+   */
+  async signIn(email: string, password: string): Promise<{
+    user: {
+      id: string;
+      email: string;
+      username: string;
+      name: string;
+    };
+    token: string;
+  }> {
+    return this.fetch('/api/auth/sign-in/email', {
+      method: 'POST',
+      credentials: 'include', // Important for cookies
+      body: JSON.stringify({ email, password }),
+    }, false); // Don't retry auth requests
+  }
+
+  /**
+   * Sign out current user
+   */
+  async signOut(): Promise<void> {
+    return this.fetch('/api/auth/sign-out', {
+      method: 'POST',
+      credentials: 'include', // Important for cookies
+      body: JSON.stringify({}), // Better Auth requires a body
+    }, false); // Don't retry auth requests
+  }
+
+  /**
+   * Get current session (check if user is logged in)
+   */
+  async getAuthSession(): Promise<{
+    user: {
+      id: string;
+      email: string;
+      username: string;
+      name: string;
+    } | null;
+    session: unknown | null;
+  } | null> {
+    try {
+      return await this.fetch('/api/auth/get-session', {
+        credentials: 'include', // Important for cookies
+      }, false); // Don't retry auth requests
+    } catch (error) {
+      // Return null if not authenticated (404 or 401)
+      if (error instanceof ApiError && (error.status === 404 || error.status === 401)) {
+        return null;
+      }
+      throw error;
+    }
+  }
 }
 
 /**

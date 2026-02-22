@@ -11,6 +11,8 @@ import './components/lobby-screen';
 import './components/question-screen';
 import './components/waiting-screen';
 import './components/results-screen';
+import './components/login-screen';
+import './components/auth-header';
 
 /**
  * QuizzQuizz Player App
@@ -61,6 +63,10 @@ router.on('/results/:sessionId', () => {
 
 router.on('/results', () => {
   showScreen('results-screen');
+});
+
+router.on('/login', () => {
+  showScreen('login-screen');
 });
 
 /**
