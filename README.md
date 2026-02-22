@@ -40,6 +40,10 @@ QuizzQuizz uses a modern, simplified architecture:
 - ✅ Automatic quiz pacing option
 - ✅ Mobile-responsive player and host interfaces
 - ✅ Session management with automatic cleanup
+- ✅ **User authentication** - Optional sign up/login for both hosts and players
+  - Save quiz history and performance stats
+  - Track your progress over time
+  - Anonymous play still fully supported
 
 ## Development
 

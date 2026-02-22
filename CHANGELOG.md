@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
+- **[Phase 9E] Authentication E2E Tests** - Created comprehensive Playwright test suite for authentication flows
+  - 14 end-to-end tests covering host and player authentication (100% passing)
+  - Host app tests: Auth header display, login/signup flows, logout, skip authentication, error handling, password validation
+  - Player app tests: Auth header, signup, sign in/out, skip authentication with anonymous quiz join
+  - Cross-app compatibility: Verified accounts work across both host and player apps
+  - Added `auth-tests` project to playwright.config.ts
+  - Test file: `e2e/auth.spec.ts` (~420 lines)
+  
+- **[Phase 9E] Player App Authentication UI** - Implemented complete authentication interface for player app
+  - Created `auth-header` component: Shows user info, login/logout button, auto-refreshes on auth state changes
+  - Created `login-screen` component: Unified login/signup form with toggle, password validation, skip option
+  - Added auth methods to API client: `signUp()`, `signIn()`, `signOut()`, `getAuthSession()` with cookie support
+  - Added `/login` route to player router for authentication flow
+  - Updated `index.html` and `main.ts` to include auth header in page layout
+  - Full feature parity with host app authentication (players can now track stats and history)
+
 - **[Phase 9] Authentication Infrastructure** - Enhanced Better Auth configuration for Docker deployment
   - Added environment variables (`BETTER_AUTH_SECRET`, `BETTER_AUTH_BASE_URL`) to docker-compose.yml
   - Enhanced auth config with session management, CSRF settings, CORS configuration, and rate limiting
