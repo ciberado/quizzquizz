@@ -23,6 +23,7 @@ export class LeaderboardScreen extends HTMLElement {
   private totalQuestions: number = 0;
   private automaticPace: boolean = false; // Auto-advance enabled
   private autoNavigateTimeout: number | null = null;
+  private isNavigating: boolean = false; // Prevent concurrent API calls
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -132,22 +133,37 @@ export class LeaderboardScreen extends HTMLElement {
   }
 
   private async handleNextQuestion() {
+    // Prevent concurrent calls
+    if (this.isNavigating) {
+      console.log('⚠️ Already navigating, skipping duplicate call');
+      return;
+    }
+    
     const { sessionId, hostToken } = state.getState();
     if (!sessionId || !hostToken) return;
 
+    this.isNavigating = true;
     try {
       await api.nextQuestion(sessionId, hostToken);
       router.navigate('/question');
     } catch (error) {
       console.error('Error advancing to next question:', error);
       alert('Failed to advance to next question');
+      this.isNavigating = false; // Reset on error
     }
   }
 
   private async handleViewFinalResults() {
+    // Prevent concurrent calls
+    if (this.isNavigating) {
+      console.log('⚠️ Already navigating, skipping duplicate call');
+      return;
+    }
+    
     const { sessionId, hostToken } = state.getState();
     if (!sessionId || !hostToken) return;
 
+    this.isNavigating = true;
     try {
       // Call next to mark session as finished (when at last question)
       await api.nextQuestion(sessionId, hostToken);
@@ -157,6 +173,7 @@ export class LeaderboardScreen extends HTMLElement {
       // Navigate anyway - might already be finished
       router.navigate('/results');
     }
+    // Note: Don't reset isNavigating after success - component will unmount
   }
 
   private async handleEndQuiz() {
@@ -164,15 +181,23 @@ export class LeaderboardScreen extends HTMLElement {
       return;
     }
 
+    // Prevent concurrent calls
+    if (this.isNavigating) {
+      console.log('⚠️ Already navigating, skipping duplicate call');
+      return;
+    }
+
     const { sessionId, hostToken } = state.getState();
     if (!sessionId || !hostToken) return;
 
+    this.isNavigating = true;
     try {
       await api.endQuiz(sessionId, hostToken);
       router.navigate('/results');
     } catch (error) {
       console.error('Error ending quiz:', error);
       alert('Failed to end quiz');
+      this.isNavigating = false; // Reset on error
     }
   }
 

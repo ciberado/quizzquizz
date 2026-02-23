@@ -28,6 +28,8 @@ All notable changes to this project will be documented in this file, organized b
   - Added trusted origins for local development (localhost:3000-3003)
 
 ### Fixed
+- Fixed automatic pace not working when timer expires with automatic question time enabled - timer expiration now properly triggers automatic navigation to leaderboard
+- Added guards to prevent duplicate API calls when ending game or advancing questions (prevents "game ending twice" issue)
 - **Docker Volume Override Issue** - Fixed named volume overwriting fresh build artifacts with stale cached files
   - Root cause: `app-dist` named volume at `/app/packages` persisted old files from previous builds
   - Solution: Implemented "copy-on-start" pattern using `docker-entrypoint.sh`

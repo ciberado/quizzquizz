@@ -38,6 +38,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private autoNavigateTimeout: number | null = null;
   private automaticPace: boolean = false; // Auto-advance enabled
   private serverTime: number = 0; // Server's current time for clock synchronization
+  private isNavigating: boolean = false; // Prevent concurrent API calls
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -207,6 +208,15 @@ export class QuestionDisplayScreen extends HTMLElement {
         this.wasTimerActive = false; // Mark timer as expired
         // Timer expired - render to show correct answers with Continue button
         this.render();
+        
+        // If automatic pace is enabled, schedule navigation to leaderboard
+        if (this.automaticPace && !this.autoNavigateTimeout) {
+          console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
+          this.autoNavigateTimeout = window.setTimeout(() => {
+            console.log('🚀 Auto-navigating to leaderboard');
+            router.navigate('/leaderboard');
+          }, 4000);
+        }
       }
     }, 1000);
   }
@@ -259,9 +269,16 @@ export class QuestionDisplayScreen extends HTMLElement {
     const confirmed = confirm('Are you sure you want to end the quiz? This will show the final leaderboard.');
     if (!confirmed) return;
 
+    // Prevent concurrent calls
+    if (this.isNavigating) {
+      console.log('⚠️ Already navigating, skipping duplicate call');
+      return;
+    }
+
     const { sessionId, hostToken } = state.getState();
     if (!sessionId || !hostToken) return;
 
+    this.isNavigating = true;
     try {
       await api.endQuiz(sessionId, hostToken);
       // Navigate to results (use /results, not /leaderboard, since quiz is ended)
@@ -269,6 +286,7 @@ export class QuestionDisplayScreen extends HTMLElement {
     } catch (error) {
       console.error('Failed to end quiz:', error);
       alert('Failed to end quiz. Please try again.');
+      this.isNavigating = false; // Reset on error
     }
   }
 
