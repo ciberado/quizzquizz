@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[api-server] Prisma Client stale types after schema changes** — added `"postinstall": "prisma generate"` to `packages/api-server/package.json` so the client is regenerated automatically after every `npm install`, preventing `userQuestionStat`/`questionGlobalStat`/`userId`/`responseTimeMs` from appearing as unknown properties to TypeScript
+
 ### Added
 - **[Phase 9F] Granular Question Statistics & Post-Game Stat Recording — full implementation**
   - **Prisma schema** (`packages/api-server/prisma/schema.prisma`): added `userId?` to `Player`, `responseTimeMs` to `PlayerAnswer`, new `UserQuestionStat` model (per-user × per-question with `practiceWeight`), new `QuestionGlobalStat` model (`answerSelections` JSON, `empiricalDifficulty`)
