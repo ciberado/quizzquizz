@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Changed
+- **[Player App] Auto-join for registered users** - Authenticated users no longer see the nickname screen; they are joined automatically using their registered display name. If a name conflict occurs the form is shown pre-filled so they can pick an alternative.
+
 ### Added
 - **[Phase 9E] Authentication E2E Tests** - Created comprehensive Playwright test suite for authentication flows
   - 14 end-to-end tests covering host and player authentication (100% passing)

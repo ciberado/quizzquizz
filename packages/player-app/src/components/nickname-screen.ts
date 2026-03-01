@@ -13,7 +13,7 @@ export class NicknameScreen extends BaseComponent {
   private isSubmitting = false;
   private pin = '';
 
-  protected onMount(): void {
+  protected async onMount(): Promise<void> {
     // Extract PIN from URL query params
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
     this.pin = params.get('pin') || '';
@@ -21,6 +21,67 @@ export class NicknameScreen extends BaseComponent {
     if (!this.pin || this.pin.length !== 6) {
       // No valid PIN, go back to join screen
       router.navigate('/join');
+      return;
+    }
+
+    // Check if user is already authenticated — skip nickname prompt if so
+    try {
+      const authSession = await api.getAuthSession();
+      const user = authSession?.user;
+      if (user?.name) {
+        // Auto-join with the user's registered name
+        this.autoJoin(user.name);
+        return;
+      }
+    } catch {
+      // Not authenticated or error — fall through to manual nickname entry
+    }
+  }
+
+  /** Join the session automatically using the authenticated user's name */
+  private async autoJoin(name: string): Promise<void> {
+    // Show a loading state in place of the form
+    this.setContent(`
+      <div class="screen">
+        <div class="card">
+          <h1>Joining as <em>${name}</em>…</h1>
+          <p>PIN: <span class="pin-badge">${this.pin}</span></p>
+        </div>
+      </div>
+    `);
+
+    try {
+      const nickname = name.slice(0, 20); // enforce max length
+      const response = await api.joinSession({ pin: this.pin, nickname });
+
+      state.setState({
+        sessionId: response.sessionId,
+        playerId: response.playerId,
+        nickname,
+        score: 0,
+        currentQuestionIndex: -1,
+      });
+
+      router.navigate(`/lobby/${response.sessionId}`);
+    } catch (error) {
+      // Re-render the form so the user can pick a different name
+      this.render();
+
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          // Pre-fill the input and explain the conflict
+          if (this.nicknameInput) this.nicknameInput.value = name;
+          this.showError('Your display name is already taken in this session. Please choose a different one.');
+        } else if (error.status === 404) {
+          this.showError('Quiz not found. Please check the PIN.');
+        } else if (error.status === 403) {
+          this.showError('This quiz has already started.');
+        } else {
+          this.showError(error.message || 'Failed to join quiz. Please try again.');
+        }
+      } else {
+        this.showError('Network error. Please check your connection.');
+      }
     }
   }
 
@@ -33,7 +94,7 @@ export class NicknameScreen extends BaseComponent {
       <div class="screen">
         <div class="card">
           <h1>Choose Your Name</h1>
-          <p>PIN: <span id="pin-display" class="pin-badge">${this.pin}</span></p>
+          <p><span id="pin-display" class="pin-badge">${this.pin}</span></p>
           
           <form id="nickname-form">
             <input
