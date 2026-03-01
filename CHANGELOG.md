@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[Tests] E2e test suite - all 29 previously-failing tests now pass**
+  - `e2e/api.spec.ts`: Added missing `questionId` field to all answer submission requests (required by `SubmitAnswerRequestSchema`); updated field names `currentQuestionIndex` → `currentQuestionNumber`, `timeRemaining` → `timeLimit`; removed non-existent `playerScore` assertion
+  - `e2e/player-ui.spec.ts`: Replaced non-existent `.player-summary` / `.final-leaderboard` selectors with actual component classes (`.stats-summary`, `.relative-leaderboard-section`); fixed stat label text (`"Rank"` → `"Correct"`, `"Score"` → `"Total Score"`); shortened XSS test nickname from 29 chars to `<b>XSS</b>` (10 chars) to pass API `max(20)` validation; updated escaped-HTML assertion accordingly; added `.first()` to 7 `.feedback, .waiting-indicator` locators to resolve Playwright strict mode violations
+  - `e2e/question-preview.spec.ts`: Added `.first()` to two `.badge` locators (difficulty + topic badges both match); updated label `"Random order"` → `"Shuffle question order"` (2 occurrences); added `.trim()` before heading regex match
+  - `packages/host-app/src/api-client.test.ts`: Updated two mock responses to wrap arrays in `{ questionBanks: [...] }` and `{ players: [...] }` to match actual API response shape
+
 ### Changed
 - **[Player App] Auto-join for registered users** - Authenticated users no longer see the nickname screen; they are joined automatically using their registered display name. If a name conflict occurs the form is shown pre-filled so they can pick an alternative.
 

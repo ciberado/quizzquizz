@@ -74,7 +74,7 @@ describe('API Client', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockBanks,
+        json: async () => ({ questionBanks: mockBanks }),
       });
 
       const result = await api.getQuestionBanks();
@@ -260,7 +260,7 @@ describe('API Client', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockPlayers,
+        json: async () => ({ players: mockPlayers }),
       });
 
       const result = await api.getPlayers('session-123');

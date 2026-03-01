@@ -223,8 +223,7 @@ test.describe('QuizzQuizz API E2E Tests', () => {
     const initialState = await initialStateResponse.json();
     expect(initialState.status).toBe('lobby');
     expect(initialState.currentQuestion).toBeNull();
-    expect(initialState.currentQuestionIndex).toBe(-1);
-    expect(initialState.playerScore).toBe(0);
+    expect(initialState.currentQuestionNumber).toBe(0);
     expect(initialState.totalQuestions).toBeGreaterThan(0);
     console.log(`✓ Initial lobby state verified (${initialState.totalQuestions} questions)`);
 
@@ -254,8 +253,8 @@ test.describe('QuizzQuizz API E2E Tests', () => {
     const playingState = await playingStateResponse.json();
     expect(playingState.status).toBe('playing');
     expect(playingState.currentQuestion).toBeTruthy();
-    expect(playingState.currentQuestionIndex).toBe(0);
-    expect(playingState.timeRemaining).toBeGreaterThan(0);
+    expect(playingState.currentQuestionNumber).toBe(1);
+    expect(playingState.timeLimit).toBeGreaterThan(0);
     expect(playingState.currentQuestion.answers).toBeDefined();
     
     const firstQuestion = playingState.currentQuestion;
@@ -269,6 +268,7 @@ test.describe('QuizzQuizz API E2E Tests', () => {
         'Content-Type': 'application/json'
       },
       data: {
+        questionId: firstQuestion.id,
         selectedAnswerIds: [correctAnswerId],
       },
     });
@@ -285,6 +285,7 @@ test.describe('QuizzQuizz API E2E Tests', () => {
         'Content-Type': 'application/json'
       },
       data: {
+        questionId: firstQuestion.id,
         selectedAnswerIds: [wrongAnswerId],
       },
     });
@@ -307,6 +308,7 @@ test.describe('QuizzQuizz API E2E Tests', () => {
         'Content-Type': 'application/json'
       },
       data: {
+        questionId: firstQuestion.id,
         selectedAnswerIds: [correctAnswerId],
       },
     });
@@ -325,14 +327,14 @@ test.describe('QuizzQuizz API E2E Tests', () => {
     } else {
       expect(nextData.message).toBe('Moved to next question');
       expect(nextData.currentQuestionIndex).toBe(1);
-      console.log(`✓ Moved to question ${nextData.currentQuestionIndex + 1}`);
+      console.log(`✓ Moved to question ${nextData.currentQuestionIndex + 1}`); // POST /next returns currentQuestionIndex
 
       // Verify new question state
       const newStateResponse = await request.get(`/api/sessions/${session.id}/state`, {
         headers: { 'X-Player-Id': player1.playerId },
       });
       const newState = await newStateResponse.json();
-      expect(newState.currentQuestionIndex).toBe(1);
+      expect(newState.currentQuestionNumber).toBe(2);
       expect(newState.currentQuestion.id).not.toBe(firstQuestion.id);
       console.log('✓ New question loaded successfully');
 
@@ -385,7 +387,7 @@ test.describe('QuizzQuizz API E2E Tests', () => {
         'X-Player-Id': player.playerId,
         'Content-Type': 'application/json'
       },
-      data: { selectedAnswerIds: ['answer1'] },
+      data: { questionId: 'fake-question', selectedAnswerIds: ['answer1'] },
     });
     expect(prematureAnswerResponse.status()).toBe(400);
     console.log('✓ Answer before start correctly rejected');

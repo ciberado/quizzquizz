@@ -196,7 +196,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
 
     // Step 5: Waiting screen should appear - check for actual content
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
     console.log('✓ Waiting screen loaded');
 
     // Verify feedback is shown
@@ -219,7 +219,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
 
     // Wait for waiting screen - check for actual content
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
 
     // End quiz via API
     await endQuiz(request, sessionId, hostToken);
@@ -232,13 +232,13 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
 
     // Verify results screen content
     await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible();
-    await expect(page.locator('.player-summary')).toBeVisible();
-    await expect(page.locator('.final-leaderboard')).toBeVisible();
-    await expect(page.locator('.leaderboard-entry')).toBeVisible();
+    await expect(page.locator('.stats-summary')).toBeVisible();
+    await expect(page.locator('.relative-leaderboard-section')).toBeVisible();
+    await expect(page.locator('.leaderboard-entry').first()).toBeVisible();
 
     // Verify player stats are shown
-    await expect(page.locator('.stat-label:has-text("Rank")')).toBeVisible();
-    await expect(page.locator('.stat-label:has-text("Score")')).toBeVisible();
+    await expect(page.locator('.stat-label:has-text("Correct")')).toBeVisible();
+    await expect(page.locator('.stat-label:has-text("Total Score")')).toBeVisible();
 
     // Verify play again button exists
     await expect(page.locator('button:has-text("Play Again")')).toBeVisible();
@@ -289,7 +289,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
 
     // End quiz
     await endQuiz(request, sessionId, hostToken);
@@ -338,7 +338,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'results-screen');
@@ -388,7 +388,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'results-screen');
@@ -487,7 +487,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
 
@@ -496,7 +496,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await expect(page.locator('h1:has-text("Quiz Complete")')).toBeVisible({ timeout: 10000 });
 
     // Final state should show leaderboard, not loading spinner
-    await expect(page.locator('.final-leaderboard')).toBeVisible();
+    await expect(page.locator('.relative-leaderboard-section')).toBeVisible();
     await expect(page.locator('.loading-container')).not.toBeVisible();
 
     console.log('✓ Loading states handled correctly');
@@ -568,7 +568,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
       });
     });
     
-    const xssNickname = '<script>alert("XSS")</script>';
+    const xssNickname = '<b>XSS</b>';
 
     await page.goto('http://localhost:3002');
     await waitForComponentReady(page, 'join-screen');
@@ -586,7 +586,7 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     await page.locator('.answer-btn').first().click();
     await page.locator('button:has-text("Submit Answer")').click();
     await waitForComponentReady(page, 'waiting-screen');
-    await expect(page.locator('.feedback, .waiting-indicator')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.feedback, .waiting-indicator').first()).toBeVisible({ timeout: 5000 });
 
     await endQuiz(request, sessionId, hostToken);
     await waitForComponentReady(page, 'results-screen');
@@ -596,9 +596,9 @@ test.describe('Phase 4D - Player UI Complete Flow', () => {
     const nicknameElement = page.locator('.entry-nickname').first();
     const html = await nicknameElement.innerHTML();
     
-    // Should contain escaped HTML, not actual script tag
-    expect(html).toContain('&lt;script&gt;');
-    expect(html).not.toContain('<script>');
+    // Should contain escaped HTML, not actual tag
+    expect(html).toContain('&lt;b&gt;');
+    expect(html).not.toContain('<b>');
 
     console.log('✓ XSS protection working - HTML properly escaped');
   });

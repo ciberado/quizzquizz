@@ -50,7 +50,7 @@ test.describe('Phase 7A - Question Preview & Configuration', () => {
     await expect(selectAllCheckbox).toBeChecked();
     
     // Should show random order toggle
-    await expect(page.getByLabel('Random order')).toBeVisible();
+    await expect(page.getByLabel('Shuffle question order')).toBeVisible();
     
     // Should display questions
     const questionCards = page.locator('.question-preview-card');
@@ -61,7 +61,7 @@ test.describe('Phase 7A - Question Preview & Configuration', () => {
     // Should show question number, text, answers, difficulty badge
     const firstQuestion = questionCards.first();
     await expect(firstQuestion.locator('h4')).toBeVisible();
-    await expect(firstQuestion.locator('.badge')).toBeVisible();
+    await expect(firstQuestion.locator('.badge').first()).toBeVisible();
   });
 
   test('should filter questions by difficulty', async ({ page }) => {
@@ -181,18 +181,18 @@ test.describe('Phase 7A - Question Preview & Configuration', () => {
     await page.goto('http://localhost:3001/#/preview/sample-general-knowledge');
     await expect(page.locator('.question-preview-card').first()).toBeVisible({ timeout: 10000 });
     
-    const randomOrderCheckbox = page.getByLabel('Random order');
+    const shuffleOrderCheckbox = page.getByLabel('Shuffle question order');
     
     // By default, should be unchecked
-    await expect(randomOrderCheckbox).not.toBeChecked();
+    await expect(shuffleOrderCheckbox).not.toBeChecked();
     
-    // Check random order
-    await randomOrderCheckbox.check();
-    await expect(randomOrderCheckbox).toBeChecked();
+    // Check shuffle order
+    await shuffleOrderCheckbox.check();
+    await expect(shuffleOrderCheckbox).toBeChecked();
     
     // Uncheck
-    await randomOrderCheckbox.uncheck();
-    await expect(randomOrderCheckbox).not.toBeChecked();
+    await shuffleOrderCheckbox.uncheck();
+    await expect(shuffleOrderCheckbox).not.toBeChecked();
   });
 
   test('should show correct answer highlighting in questions', async ({ page }) => {
@@ -352,10 +352,10 @@ test.describe('Phase 7A - Question Preview & Configuration', () => {
     const heading = firstQuestion.locator('h4');
     await expect(heading).toBeVisible();
     const headingText = await heading.textContent();
-    expect(headingText).toMatch(/^\d+\./); // Starts with number
+    expect(headingText?.trim()).toMatch(/^\d+\./); // Starts with number
     
     // Should show difficulty badge
-    await expect(firstQuestion.locator('.badge')).toBeVisible();
+    await expect(firstQuestion.locator('.badge').first()).toBeVisible();
     
     // May show time limit badge
     const badges = firstQuestion.locator('.badge');
