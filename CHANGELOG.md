@@ -4,7 +4,18 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
-### Fixed
+### Added
+- **[Docs] Phase 9F plan: Granular Question Statistics & Post-Game Stat Recording**
+  - Documented known gap: session-end code never writes `hosted_sessions`/`player_stats` to DB
+  - Designed `UserQuestionStat` table: per-user × per-question counters (`timesAnswered`, `timesCorrect`, rolling `averageResponseMs`, `practiceWeight` for future smart-practice mode)
+  - Designed `QuestionGlobalStat` table: per-question aggregate across all players (`timesAppeared`, `timesAnswered`, `timesCorrect`, `answerSelections` JSON map, `empiricalDifficulty`)
+  - Planned `responseTimeMs` column addition to `player_answers`
+  - Defined three new API endpoints: `/api/users/me/question-stats`, `/api/users/me/weak-topics`, `/api/question-banks/:id/stats`
+  - Documented extra dimensions: accuracy trend over time, empirical difficulty divergence alerts, dominant distractor detection, response-time quartiles
+  - Updated `PLAN.md`: marked Phase 9 (9A–9E) complete, added Phase 9F as next step, updated future-vision list, added Phase 9 to Recent Achievements
+  - Updated `PHASE-9-15-future.md`: Phase 9 marked complete with actual implementation notes; Phase 12 analytics cross-linked to Phase 9F data
+
+
 - **[Tests] E2e test suite - all 29 previously-failing tests now pass**
   - `e2e/api.spec.ts`: Added missing `questionId` field to all answer submission requests (required by `SubmitAnswerRequestSchema`); updated field names `currentQuestionIndex` → `currentQuestionNumber`, `timeRemaining` → `timeLimit`; removed non-existent `playerScore` assertion
   - `e2e/player-ui.spec.ts`: Replaced non-existent `.player-summary` / `.final-leaderboard` selectors with actual component classes (`.stats-summary`, `.relative-leaderboard-section`); fixed stat label text (`"Rank"` → `"Correct"`, `"Score"` → `"Total Score"`); shortened XSS test nickname from 29 chars to `<b>XSS</b>` (10 chars) to pass API `max(20)` validation; updated escaped-HTML assertion accordingly; added `.first()` to 7 `.feedback, .waiting-indicator` locators to resolve Playwright strict mode violations

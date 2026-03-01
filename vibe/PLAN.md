@@ -17,7 +17,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 8A Complete - Docker Configuration! (Feb 12, 2026)
+**Current Status**: Phase 9E Complete - Authentication! (Feb 21-22, 2026)
 
 **Completed Phases** (51-60 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
@@ -37,16 +37,17 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - 🟡 **Phase 12**: Advanced Analytics (Partial) - Host question analytics complete!
 - ✅ **Phase 7A**: Question Preview & Configuration - COMPLETE!
 - ✅ **Phase 8A**: Docker Configuration - COMPLETE!
+- ✅ **Phase 9 (9A–9E)**: Authentication & User Accounts - COMPLETE!
 
 **Current Phase**:
-- ✅ **Phase 8A**: Docker Configuration (2-3 hrs) - COMPLETE
-  - Multi-stage Dockerfile with optimized builds
-  - Docker Compose with volume persistence
-  - Static file serving for frontend apps
-  - ESM module fixes for Node.js 22
-  - Database migrations on startup
-  - Tested and verified working deployment
-- 🎯 **PHASE 8A COMPLETE - Production Deployment Ready!**
+- ✅ **Phase 9 (9A–9E)**: Authentication (3-4 hrs) - COMPLETE
+  - Better Auth library (email/password, server-side sessions)
+  - `users`, `saved_quizzes`, `hosted_sessions`, `player_stats` schema
+  - CRUD for saved quizzes; history and stats endpoints
+  - Auth UI in host-app and player-app
+  - Comprehensive unit + integration tests
+  - **Known gap**: game-end code never writes `hosted_sessions`/`player_stats` — covered in Phase 9F
+- 🎯 **Next: Phase 9F — Granular Question Statistics & Post-Game Stat Recording**
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -64,7 +65,8 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ⏳ **Phase 8**: Deployment & Documentation (7-10 hours) - v1.0.0 launch
 
 **Future Vision** (Post-v1.0):
-- Phase 9: User Accounts (5-7 hrs)
+- ✅ Phase 9: User Accounts (9A–9E complete)
+- 🎯 Phase 9F: Granular Question Statistics & Post-Game Stat Recording (3-4 hrs)
 - Phase 10: Additional Question Types (4-6 hrs)
 - Phase 11: Team Mode (4-5 hrs)
 - 🟡 Phase 12: Analytics (3-4 hrs) - PARTIAL: Host question analytics complete
@@ -86,6 +88,14 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Database: Migrated from Drizzle+better-sqlite3 to Prisma v6 (no native rebuild issues)
 
 **Recent Achievements**:
+- ✅ **Feb 21-22, 2026 - Phase 9A–9E: Authentication & User Accounts** (6-8 hours)
+  - **Better Auth**: Email/password sign-up/in, server-side session cookies, CSRF protection
+  - **Host-app auth UI**: Sign-in/up modals, profile page, saved quizzes management, quiz history
+  - **Player-app auth UI**: Optional sign-in before joining; stats linked to user account
+  - **DB schema**: `users`, `saved_quizzes`, `hosted_sessions`, `player_stats` tables
+  - **API**: `/api/auth/*` (Better Auth), `/api/users/me`, `/api/users/me/history`, `/api/users/me/stats`, saved-quiz CRUD
+  - **Tests**: Comprehensive auth integration + user route unit tests
+  - **Known gap → Phase 9F**: Session-end code does not yet write `hosted_sessions`/`player_stats`; `UserQuestionStat` and `QuestionGlobalStat` tables not yet created
 - ✅ **Feb 12, 2026 - Phase 8A: Docker Configuration with Caddy** (3 hours)
   - **Multi-stage Dockerfile**: Builder stage compiles all packages, runtime stage runs production server
   - **Node.js 22-alpine**: Lightweight base image with production dependencies only
@@ -202,7 +212,8 @@ See [PHASE-7-8-features-deployment.md](phases/PHASE-7-8-features-deployment.md)
 
 ### 🔮 **Phases 9-15: Future Vision (Post-MVP)**
 See [PHASE-9-15-future.md](phases/PHASE-9-15-future.md)
-- Phase 9: User Accounts & Persistence
+- ✅ Phase 9: User Accounts & Persistence (9A–9E complete)
+- 🎯 Phase 9F: Granular Question Statistics & Post-Game Stat Recording
 - Phase 10: Additional Question Types
 - Phase 11: Team Mode & Collaboration
 - Phase 12: Advanced Analytics & Insights (Partial)
