@@ -279,4 +279,120 @@ userRoutes.get('/me/stats', requireAuth, async (c) => {
   }
 });
 
+/**
+ * GET /api/users/me/question-stats
+ * Per-question performance breakdown for the authenticated user.
+ * Sorted by accuracy ASC (weakest questions first).
+ * Optional ?bankId= to filter to one question bank.
+ */
+userRoutes.get('/me/question-stats', requireAuth, async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const url = new URL(c.req.url);
+  const bankId = url.searchParams.get('bankId') ?? undefined;
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 200);
+  const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
+
+  try {
+    const prisma = getPrisma();
+
+    const where = {
+      userId: user.id,
+      ...(bankId ? { questionBankId: bankId } : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      prisma.userQuestionStat.count({ where }),
+      prisma.userQuestionStat.findMany({
+        where,
+        orderBy: [
+          // Compute accuracy via raw fraction – sort weakest first
+          // Prisma doesn't support computed-column ordering, so we fetch all and sort in JS
+          { timesAnswered: 'desc' }, // secondary: prefer questions with more attempts
+        ],
+        skip: offset,
+        take: limit,
+      }),
+    ]);
+
+    // Sort by accuracy ASC (weakest first), then by timesAnswered DESC
+    const sorted = rows
+      .map((r) => ({
+        ...r,
+        accuracy: r.timesAnswered > 0 ? r.timesCorrect / r.timesAnswered : 0,
+        lastAnsweredAt: r.lastAnsweredAt ? r.lastAnsweredAt.getTime() : null,
+      }))
+      .sort((a, b) => {
+        if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy;
+        return b.timesAnswered - a.timesAnswered;
+      });
+
+    return c.json({ questions: sorted, total });
+  } catch (error) {
+    console.error('Error fetching question stats:', error);
+    return c.json({ error: 'Failed to fetch question stats' }, 500);
+  }
+});
+
+/**
+ * GET /api/users/me/weak-topics
+ * Aggregated accuracy by topic/tag across all questions the user has answered.
+ * Topics come from the in-memory question bank data.
+ */
+userRoutes.get('/me/weak-topics', requireAuth, async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const prisma = getPrisma();
+    const { questionBanks } = await import('../state.js');
+
+    // Fetch all question stats for the user
+    const userStats = await prisma.userQuestionStat.findMany({
+      where: { userId: user.id },
+    });
+
+    if (userStats.length === 0) {
+      return c.json({ topics: [] });
+    }
+
+    // Build a map from questionId → topics[] using loaded question banks
+    const topicAccMap = new Map<string, { timesAnswered: number; timesCorrect: number }>();
+
+    for (const stat of userStats) {
+      const bank = questionBanks.get(stat.questionBankId);
+      if (!bank) continue;
+
+      const question = bank.questions.find((q) => q.id === stat.questionId);
+      if (!question) continue;
+
+      const allTopics = [...(question.topics ?? []), ...(question.tags ?? [])];
+      const uniqueTopics = [...new Set(allTopics)];
+
+      for (const topic of uniqueTopics) {
+        const existing = topicAccMap.get(topic) ?? { timesAnswered: 0, timesCorrect: 0 };
+        topicAccMap.set(topic, {
+          timesAnswered: existing.timesAnswered + stat.timesAnswered,
+          timesCorrect: existing.timesCorrect + stat.timesCorrect,
+        });
+      }
+    }
+
+    const topics = Array.from(topicAccMap.entries())
+      .map(([topic, { timesAnswered, timesCorrect }]) => ({
+        topic,
+        timesAnswered,
+        timesCorrect,
+        accuracy: timesAnswered > 0 ? Math.round((timesCorrect / timesAnswered) * 1000) / 1000 : 0,
+      }))
+      .sort((a, b) => a.accuracy - b.accuracy); // weakest first
+
+    return c.json({ topics });
+  } catch (error) {
+    console.error('Error fetching weak topics:', error);
+    return c.json({ error: 'Failed to fetch weak topics' }, 500);
+  }
+});
+
 export default userRoutes;

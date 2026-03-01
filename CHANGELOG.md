@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
+- **[Phase 9F] Granular Question Statistics & Post-Game Stat Recording — full implementation**
+  - **Prisma schema** (`packages/api-server/prisma/schema.prisma`): added `userId?` to `Player`, `responseTimeMs` to `PlayerAnswer`, new `UserQuestionStat` model (per-user × per-question with `practiceWeight`), new `QuestionGlobalStat` model (`answerSelections` JSON, `empiricalDifficulty`)
+  - **Migration** `20260301152240_phase_9f_question_stats` applied; Prisma Client regenerated
+  - **`session-stats.ts`** (new): `recordSessionStats(sessionId)` helper — idempotent, writes `HostedSession`, `PlayerStat`, upserts `UserQuestionStat` (rolling avg, practiceWeight clamped 0.1–5.0), upserts `QuestionGlobalStat` (answerSelections JSON, empiricalDifficulty once ≥10 answers)
+  - **`routes/players.ts`**: auth middleware applied so authenticated players have `userId` stored on join
+  - **`routes/game.ts`**: `responseTimeMs` calculated from `questionStartedAt` and stored on every answer submission
+  - **`routes/sessions.ts`**: `recordSessionStats()` called from both `POST /:id/next` (natural last-question finish) and `POST /:id/end` (force-end)
+  - **`routes/users.ts`**: `GET /api/users/me/question-stats` (sorted by accuracy ASC, supports `bankId`/`limit`/`offset`) and `GET /api/users/me/weak-topics` (aggregated by topic from loaded question banks)
+  - **`routes/question-banks.ts`**: `GET /api/question-banks/:id/stats` — per-question stats with dominant distractor detection and `flagDifficultyMismatch` when empirical vs declared difficulty diverges > 0.3
+  - **In-memory DB schema** (`db/index.ts`): updated manual CREATE TABLE statements to include all new columns and tables so tests use the full schema
+  - **`session-stats.test.ts`** (new): 30 comprehensive tests covering `recordSessionStats()` unit tests (idempotency, practiceWeight clamping, rolling averages, empiricalDifficulty threshold), HTTP integration tests for all three new endpoints, player join auth, and `responseTimeMs` storage — all 30 pass
+
 - **[Docs] Phase 9F plan: Granular Question Statistics & Post-Game Stat Recording**
   - Documented known gap: session-end code never writes `hosted_sessions`/`player_stats` to DB
   - Designed `UserQuestionStat` table: per-user × per-question counters (`timesAnswered`, `timesCorrect`, rolling `averageResponseMs`, `practiceWeight` for future smart-practice mode)

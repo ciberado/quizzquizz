@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { questionBanks } from '../state.js';
 import { loadQuestionBanks } from '@quizzquizz/question-bank';
+import { getPrisma } from '../db/index.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -102,6 +103,96 @@ questionBankRoutes.get('/:id/questions', (c) => {
       tag: tag || null,
     },
   });
+});
+
+/**
+ * GET /api/question-banks/:id/stats
+ * Global question statistics for all questions in a bank.
+ * Returns empirical difficulty, answer selection distribution, and response time data.
+ * Useful for question bank authors to see real-world performance data.
+ */
+questionBankRoutes.get('/:id/stats', async (c) => {
+  const bankId = c.req.param('id');
+  const bank = questionBanks.get(bankId);
+
+  if (!bank) {
+    return c.json({ error: 'Question bank not found' }, 404);
+  }
+
+  try {
+    const prisma = getPrisma();
+
+    // Load global stats for all questions in this bank
+    const globalStats = await prisma.questionGlobalStat.findMany({
+      where: { questionBankId: bankId },
+    });
+
+    const statsMap = new Map(globalStats.map((s) => [s.questionId, s]));
+
+    const questions = bank.questions.map((question) => {
+      const stat = statsMap.get(question.id);
+
+      // Parse answerSelections JSON
+      let answerSelections: Record<string, number> = {};
+      try {
+        answerSelections = stat ? JSON.parse(stat.answerSelections) : {};
+      } catch {
+        answerSelections = {};
+      }
+
+      // Detect dominant distractors: wrong answers selected more than the correct answer
+      const correctIds = new Set(question.correctAnswerIds);
+      const correctSelections = question.correctAnswerIds.reduce(
+        (sum, id) => sum + (answerSelections[id] ?? 0),
+        0
+      );
+      const dominantDistractors = question.answers
+        .filter(
+          (a) =>
+            !correctIds.has(a.id) && (answerSelections[a.id] ?? 0) > correctSelections
+        )
+        .map((a) => a.id);
+
+      // Empirical difficulty divergence from declared difficulty
+      const declaredDifficultyScore =
+        question.difficulty === 'easy' ? 0.8 : question.difficulty === 'medium' ? 0.5 : 0.2;
+      const divergence =
+        stat?.empiricalDifficulty != null
+          ? Math.abs(stat.empiricalDifficulty - declaredDifficultyScore)
+          : null;
+
+      return {
+        questionId: question.id,
+        questionText: question.text,
+        difficulty: question.difficulty,
+        topics: question.topics,
+        tags: question.tags,
+        // Global stats (null if question has never appeared)
+        timesAppeared: stat?.timesAppeared ?? 0,
+        timesAnswered: stat?.timesAnswered ?? 0,
+        timesCorrect: stat?.timesCorrect ?? 0,
+        averageResponseMs: stat?.averageResponseMs ?? 0,
+        averageScore: stat?.averageScore ?? 0,
+        empiricalDifficulty: stat?.empiricalDifficulty ?? null,
+        answerSelections,
+        // Derived
+        dominantDistractors,
+        difficultyDivergence: divergence !== null ? Math.round(divergence * 1000) / 1000 : null,
+        flagDifficultyMismatch: divergence !== null && divergence > 0.3,
+        updatedAt: stat?.updatedAt.getTime() ?? null,
+      };
+    });
+
+    return c.json({
+      questionBankId: bankId,
+      questionBankName: bank.metadata.name,
+      totalQuestions: bank.questions.length,
+      questions,
+    });
+  } catch (error) {
+    console.error('Error fetching question bank stats:', error);
+    return c.json({ error: 'Failed to fetch question bank stats' }, 500);
+  }
 });
 
 // Reload question banks from disk (useful for hot-reloading during development)

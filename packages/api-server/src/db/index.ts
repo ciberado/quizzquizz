@@ -69,6 +69,8 @@ export async function initDatabase() {
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS player_answers`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS players`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS quiz_sessions`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS user_question_stats`);
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS question_global_stats`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS hosted_sessions`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS player_stats`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS saved_quizzes`);
@@ -159,6 +161,7 @@ export async function initDatabase() {
       CREATE TABLE players (
         id TEXT PRIMARY KEY,
         session_id TEXT NOT NULL REFERENCES quiz_sessions(id) ON DELETE CASCADE,
+        user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
         nickname TEXT NOT NULL,
         score INTEGER NOT NULL DEFAULT 0,
         joined_at BIGINT NOT NULL
@@ -173,7 +176,8 @@ export async function initDatabase() {
         selected_answer_ids TEXT NOT NULL,
         is_correct INTEGER NOT NULL,
         score INTEGER NOT NULL,
-        submitted_at BIGINT NOT NULL
+        submitted_at BIGINT NOT NULL,
+        response_time_ms INTEGER NOT NULL DEFAULT 0
       )
     `);
     
@@ -206,6 +210,38 @@ export async function initDatabase() {
       )
     `);
     
+    await client.$executeRawUnsafe(`
+      CREATE TABLE user_question_stats (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        question_id TEXT NOT NULL,
+        question_bank_id TEXT NOT NULL,
+        times_answered INTEGER NOT NULL DEFAULT 0,
+        times_correct INTEGER NOT NULL DEFAULT 0,
+        average_response_ms INTEGER NOT NULL DEFAULT 0,
+        last_answered_at BIGINT,
+        last_was_correct INTEGER NOT NULL DEFAULT 0,
+        practice_weight REAL NOT NULL DEFAULT 1.0,
+        UNIQUE(user_id, question_id)
+      )
+    `);
+
+    await client.$executeRawUnsafe(`
+      CREATE TABLE question_global_stats (
+        id TEXT PRIMARY KEY,
+        question_id TEXT NOT NULL UNIQUE,
+        question_bank_id TEXT NOT NULL,
+        times_appeared INTEGER NOT NULL DEFAULT 0,
+        times_answered INTEGER NOT NULL DEFAULT 0,
+        times_correct INTEGER NOT NULL DEFAULT 0,
+        average_response_ms INTEGER NOT NULL DEFAULT 0,
+        average_score INTEGER NOT NULL DEFAULT 0,
+        answer_selections TEXT NOT NULL DEFAULT '{}',
+        empirical_difficulty REAL,
+        updated_at BIGINT NOT NULL DEFAULT (unixepoch() * 1000)
+      )
+    `);
+
     await client.$executeRawUnsafe(`
       CREATE TABLE saved_quizzes (
         id TEXT PRIMARY KEY,

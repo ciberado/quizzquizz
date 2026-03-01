@@ -25,12 +25,13 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   
   // Relations
-  accounts      Account[]
-  sessions      Session[]
-  hostedSessions HostedSession[]
-  playerStats   PlayerStat[]
-  savedQuizzes  SavedQuiz[]
-  quizSessions  QuizSession[]
+  accounts           Account[]
+  sessions           Session[]
+  hostedSessions     HostedSession[]
+  playerStats        PlayerStat[]
+  savedQuizzes       SavedQuiz[]
+  quizSessions       QuizSession[]
+  userQuestionStats  UserQuestionStat[]
   
   @@map("users")
 }
@@ -113,6 +114,7 @@ model QuizSession {
 model Player {
   id        String   @id
   sessionId String   @map("session_id")
+  userId    String?  @map("user_id") // Authenticated player's user ID (null for anonymous)
   nickname  String
   score     Int      @default(0)
   joinedAt  DateTime @default(now()) @map("joined_at")
@@ -121,6 +123,7 @@ model Player {
   session QuizSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   answers PlayerAnswer[]
 
+  @@index([userId])
   @@map("players")
 }
 
@@ -132,6 +135,7 @@ model PlayerAnswer {
   isCorrect         Boolean  @map("is_correct")
   submittedAt       DateTime @map("submitted_at")
   score             Int      @default(0)
+  responseTimeMs    Int      @default(0) @map("response_time_ms") // ms from question start to submission
 
   // Relations
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
@@ -196,4 +200,48 @@ model PlayerStat {
   
   @@index([userId, playedAt])
   @@map("player_stats")
+}
+
+// Per-user, per-question performance across all sessions
+model UserQuestionStat {
+  id                String    @id
+  userId            String    @map("user_id")
+  questionId        String    @map("question_id")      // Stable question ID from question bank
+  questionBankId    String    @map("question_bank_id") // Which bank the question belongs to
+  timesAnswered     Int       @default(0) @map("times_answered")
+  timesCorrect      Int       @default(0) @map("times_correct")
+  averageResponseMs Int       @default(0) @map("average_response_ms")
+  lastAnsweredAt    DateTime? @map("last_answered_at")
+  lastWasCorrect    Boolean   @default(false) @map("last_was_correct")
+  // Spaced-repetition weight: ×1.5 on wrong (min 0.1), ×0.8 on correct (max 5.0)
+  // Used by future practice mode to surface questions the user consistently misses
+  practiceWeight    Float     @default(1.0) @map("practice_weight")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId, questionBankId])
+  @@index([userId, lastAnsweredAt])
+  @@map("user_question_stats")
+}
+
+// Aggregate performance per question across ALL players (authenticated + anonymous)
+model QuestionGlobalStat {
+  id                  String   @id
+  questionId          String   @unique @map("question_id")
+  questionBankId      String   @map("question_bank_id")
+  timesAppeared       Int      @default(0) @map("times_appeared")    // Sessions that included this question
+  timesAnswered       Int      @default(0) @map("times_answered")    // Actual answer submissions
+  timesCorrect        Int      @default(0) @map("times_correct")
+  averageResponseMs   Int      @default(0) @map("average_response_ms")
+  averageScore        Int      @default(0) @map("average_score")
+  // JSON map { "answerId": selectionCount } - reveals which distractors mislead players
+  answerSelections    String   @default("{}") @map("answer_selections")
+  // Computed from timesCorrect / timesAnswered once >= 10 answers exist
+  // 0.0 = never correct, 1.0 = always correct, null = insufficient data
+  empiricalDifficulty Float?   @map("empirical_difficulty")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([questionBankId])
+  @@map("question_global_stats")
 }

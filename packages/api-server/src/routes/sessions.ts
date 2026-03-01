@@ -6,6 +6,7 @@ import { generateId, generatePin, calculateAutoQuestionTime } from '@quizzquizz/
 import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
 import { authMiddleware } from '../auth/middleware.js';
+import { recordSessionStats } from '../session-stats.js';
 
 // Extend Hono with user context
 type Variables = {
@@ -293,6 +294,9 @@ sessionRoutes.post('/:id/next', async (c) => {
         },
       });
 
+      // Record post-game statistics (non-blocking)
+      void recordSessionStats(sessionId);
+
       return c.json({
         message: 'Quiz finished',
         status: 'finished',
@@ -353,6 +357,9 @@ sessionRoutes.post('/:id/end', async (c) => {
         questionStartedAt: null,
       },
     });
+
+    // Record post-game statistics (non-blocking)
+    void recordSessionStats(sessionId);
 
     return c.json({ message: 'Quiz ended' });
   } catch (error) {

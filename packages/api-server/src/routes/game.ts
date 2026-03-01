@@ -194,6 +194,9 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
 
     // Store answer
     const answerId = generateId();
+    const responseTimeMs = session.questionStartedAt
+      ? Math.max(0, Date.now() - Number(session.questionStartedAt))
+      : 0;
     await getPrisma().playerAnswer.create({
       data: {
         id: answerId,
@@ -203,6 +206,7 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
         isCorrect,
         submittedAt: new Date(),
         score,
+        responseTimeMs,
       },
     });
 

@@ -4,8 +4,22 @@ import { z } from 'zod';
 import { getPrisma } from '../db/index.js';
 import { generateId } from '@quizzquizz/common';
 import { getSessionQuestions } from '../session-utils.js';
+import { authMiddleware } from '../auth/middleware.js';
 
-const playerRoutes = new Hono();
+// Extend Hono with user context from authMiddleware
+type Variables = {
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    name?: string;
+  } | null;
+};
+
+const playerRoutes = new Hono<{ Variables: Variables }>();
+
+// Apply optional auth middleware to capture authenticated user on join
+playerRoutes.use('*', authMiddleware);
 
 // Join session request schema
 const JoinSessionSchema = z.object({
@@ -16,6 +30,7 @@ const JoinSessionSchema = z.object({
 // Join a session with PIN
 playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
   const { pin, nickname } = c.req.valid('json');
+  const user = c.get('user'); // Populated by authMiddleware if authenticated
 
   try {
     // Find session by PIN
@@ -49,6 +64,7 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
       data: {
         id: playerId,
         sessionId: session.id,
+        userId: user?.id ?? null, // Link to authenticated user if signed in
         nickname,
         score: 0,
         // joinedAt uses @default(now()) in schema
