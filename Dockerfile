@@ -34,6 +34,10 @@ RUN cd packages/api-server && npx prisma generate
 # Build all packages
 RUN npm run build --workspaces
 
+# Copy Prisma generated client into dist (excluded from tsc to avoid TS9006/TS4094 errors,
+# but the compiled db/index.js imports it at runtime as ../generated/prisma/index.js)
+RUN cp -r packages/api-server/src/generated packages/api-server/dist/
+
 # Stage 2: Production runtime
 FROM node:22-alpine AS runtime
 
@@ -60,17 +64,19 @@ RUN npm ci --omit=dev --ignore-scripts --workspaces
 
 # Copy built artifacts from builder
 # Copy backend built artifacts (these don't need sharing)
-COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./packages/common/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./packages/common/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./packages/question-bank/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./packages/question-bank/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./packages/api-server/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./packages/api-server/prisma
 
-# Copy frontend dist to a BUILD location (NOT /app/packages which is volume-mounted)
-# The entrypoint script will sync these to the shared volume on startup
+# Copy ALL dist artifacts to a safe BUILD location (NOT /app/packages which is volume-mounted).
+# The entrypoint script syncs everything from here to the shared volume on every startup,
+# ensuring upgrades always reflect the current image even when the volume already has old content.
 COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./dist-build/host-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./dist-build/player-app/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./dist-build/common/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dist-build/question-bank/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./dist-build/api-server/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./dist-build/api-server/prisma
 
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
@@ -79,8 +85,14 @@ RUN cd packages/api-server && npx prisma generate
 # Create directory for runtime data and set ownership
 RUN mkdir -p /data && chown nodejs:nodejs /data
 
-# Create directory for shared volume mount point
-RUN mkdir -p /app/packages/host-app/dist /app/packages/player-app/dist && \
+# Create directory for shared volume mount point (all packages that will be synced on startup)
+RUN mkdir -p \
+      /app/packages/api-server/dist \
+      /app/packages/api-server/prisma \
+      /app/packages/common/dist \
+      /app/packages/question-bank/dist \
+      /app/packages/host-app/dist \
+      /app/packages/player-app/dist && \
     chown -R nodejs:nodejs /app/packages
 
 # Copy default question banks (can be overridden with volume mount)

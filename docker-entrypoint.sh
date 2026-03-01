@@ -4,18 +4,29 @@
 
 set -e
 
-echo "🔄 Syncing frontend build artifacts to shared volume..."
+echo "🔄 Syncing build artifacts to shared volume..."
 
-# Create target directories if they don't exist
-mkdir -p /app/packages/host-app/dist
-mkdir -p /app/packages/player-app/dist
+# Sync all packages from the safe dist-build location to the volume-mounted packages dir.
+# This runs on every startup so upgrades always reflect the current image,
+# even when the named volume already contains an older build.
+for pkg in common question-bank api-server host-app player-app; do
+  src="/app/dist-build/${pkg}/dist"
+  dst="/app/packages/${pkg}/dist"
+  if [ -d "$src" ]; then
+    mkdir -p "$dst"
+    cp -rf "${src}/"* "$dst/"
+    echo "  ✓ ${pkg}/dist"
+  fi
+done
 
-# Copy fresh dist files from build location to shared volume
-# Using cp -r with explicit overwrite to ensure fresh files replace old ones
-cp -rf /app/dist-build/host-app/dist/* /app/packages/host-app/dist/
-cp -rf /app/dist-build/player-app/dist/* /app/packages/player-app/dist/
+# Sync Prisma schema and migrations (needed for runtime migrations)
+if [ -d /app/dist-build/api-server/prisma ]; then
+  mkdir -p /app/packages/api-server/prisma
+  cp -rf /app/dist-build/api-server/prisma/. /app/packages/api-server/prisma/
+  echo "  ✓ api-server/prisma"
+fi
 
-echo "✅ Frontend build artifacts synced successfully"
+echo "✅ All build artifacts synced successfully"
 
 # Execute the main command
 exec "$@"
