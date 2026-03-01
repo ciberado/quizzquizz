@@ -17,7 +17,8 @@ COPY packages/host-app/package*.json ./packages/host-app/
 COPY packages/player-app/package*.json ./packages/player-app/
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci --include=dev
+# Use --ignore-scripts: prisma schema isn't copied yet; explicit "prisma generate" runs later
+RUN npm ci --include=dev --ignore-scripts
 
 # Copy TypeScript config and source code
 COPY tsconfig.base.json ./
@@ -53,7 +54,9 @@ COPY --chown=nodejs:nodejs packages/question-bank/package*.json ./packages/quest
 COPY --chown=nodejs:nodejs packages/api-server/package*.json ./packages/api-server/
 
 # Install production dependencies only
-RUN npm ci --omit=dev --workspaces
+# Use --ignore-scripts to skip "prisma generate" postinstall (schema not copied yet).
+# The explicit "prisma generate" below runs after the schema is copied from builder.
+RUN npm ci --omit=dev --ignore-scripts --workspaces
 
 # Copy built artifacts from builder
 # Copy backend built artifacts (these don't need sharing)
