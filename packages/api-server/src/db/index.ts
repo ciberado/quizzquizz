@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma/index.js';
 
 // Prisma Client instance - lazily initialized
 let prismaInstance: PrismaClient | null = null;

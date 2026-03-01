@@ -10,6 +10,9 @@ build/
 out/
 *.tsbuildinfo
 
+# Prisma generated client (regenerated via postinstall)
+packages/api-server/src/generated/
+
 # Testing
 coverage/
 .nyc_output/
