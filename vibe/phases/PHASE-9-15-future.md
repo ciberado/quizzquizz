@@ -23,15 +23,34 @@ These phases represent the long-term direction of QuizzQuizz beyond the v1.0.0 M
 - [x] Host-app: saved quiz management, history page
 - [x] Player-app: optional sign-in before joining; stats recorded for authenticated players
 
-**Known gap**: `hosted_sessions` and `player_stats` records are **never actually written** from real game flow (only from test fixtures). Session finish logic (`POST /:id/next` last question, `POST /:id/end`) does not call any stat-recording code yet. See Phase 9F below.
+**Known gap**: ~~`hosted_sessions` and `player_stats` records are **never actually written** from real game flow (only from test fixtures). Session finish logic (`POST /:id/next` last question, `POST /:id/end`) does not call any stat-recording code yet.~~ **Resolved in Phase 9F** — `recordSessionStats()` is now called at both trigger points.
 
 **Deliverable**: Users can register, save custom quizzes, and view their history.
 
 ---
 
-## Phase 9F: Granular Question Statistics & Post-Game Stat Recording (Est. 3-4 hours)
+## Phase 9F: Granular Question Statistics & Post-Game Stat Recording ✅ COMPLETE (Mar 1, 2026)
 
 **Goal**: Actually persist stats when games end, and track performance at the individual-question level so users know which questions they repeatedly struggle with and question authors can see real-world difficulty data.
+
+**Implemented**:
+- [x] `recordSessionStats(sessionId)` helper — idempotent, called at both session-end trigger points
+- [x] `HostedSession` + `PlayerStat` written from real game flow (closed the known gap from 9E)
+- [x] `responseTimeMs` column on `player_answers` — calculated server-side from `questionStartedAt`
+- [x] `UserQuestionStat` model — per-user × per-question counters, rolling avg response time, `practiceWeight` (spaced-repetition weight, clamped 0.1–5.0)
+- [x] `QuestionGlobalStat` model — `timesAppeared`, `timesAnswered`, `timesCorrect`, `answerSelections` JSON, `empiricalDifficulty` (computed once ≥10 answers)
+- [x] `GET /api/users/me/question-stats?bankId=&limit=&offset=` — sorted weakest-first
+- [x] `GET /api/users/me/weak-topics` — accuracy by topic across all answered questions
+- [x] `GET /api/question-banks/:id/stats` — per-question stats with dominant distractor detection and `flagDifficultyMismatch` (empirical vs declared diverges > 0.3)
+- [x] **Bug fix**: cross-bank question ID collision — unique constraints widened to `(questionBankId, questionId)` via migration `20260301180000_fix_question_stat_cross_bank_scoping`
+- [x] **Infrastructure fix**: Prisma TS type resolution under `moduleResolution: bundler` — generator `output = "../src/generated/prisma"` bypasses broken `.prisma/client` package.json exports map
+- [x] 33 tests in `session-stats.test.ts` including cross-bank collision prevention suite; full api-server suite 193/195
+
+**Deliverable**: Every game completion writes complete stats. Users see which questions they struggle with; question bank authors see real-world difficulty and distractor effectiveness.
+
+---
+
+### Original design (for reference)
 
 ### Why question-level granularity matters
 
@@ -206,7 +225,7 @@ These come "for free" once the infrastructure is in place:
 3. **No backfill possible** for historical sessions (anonymous play lacks `userId`); `QuestionGlobalStat` starts counting from first session after migration
 4. Update `POST /:id/next` and `POST /:id/end` to call `recordSessionStats()` helper
 
-**Deliverable**: Every game completion writes complete stats. Users see which questions they struggle with; question bank authors see real-world difficulty and distractor effectiveness.
+**Deliverable**: ~~Every game completion writes complete stats.~~ ✅ Done — see implementation summary above.
 
 ---
 

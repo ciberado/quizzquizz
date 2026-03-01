@@ -17,7 +17,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 9E Complete - Authentication! (Feb 21-22, 2026)
+**Current Status**: Phase 9F Complete — Granular Question Statistics! (Mar 1, 2026)
 
 **Completed Phases** (51-60 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
@@ -38,16 +38,19 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 7A**: Question Preview & Configuration - COMPLETE!
 - ✅ **Phase 8A**: Docker Configuration - COMPLETE!
 - ✅ **Phase 9 (9A–9E)**: Authentication & User Accounts - COMPLETE!
+- ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording - COMPLETE!
 
 **Current Phase**:
-- ✅ **Phase 9 (9A–9E)**: Authentication (3-4 hrs) - COMPLETE
-  - Better Auth library (email/password, server-side sessions)
-  - `users`, `saved_quizzes`, `hosted_sessions`, `player_stats` schema
-  - CRUD for saved quizzes; history and stats endpoints
-  - Auth UI in host-app and player-app
-  - Comprehensive unit + integration tests
-  - **Known gap**: game-end code never writes `hosted_sessions`/`player_stats` — covered in Phase 9F
-- 🎯 **Next: Phase 9F — Granular Question Statistics & Post-Game Stat Recording**
+- ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording (3-4 hrs) - COMPLETE
+  - `recordSessionStats()` helper writes `HostedSession`, `PlayerStat`, `UserQuestionStat`, `QuestionGlobalStat` at session end
+  - `responseTimeMs` stored on every `PlayerAnswer` (calculated server-side from `questionStartedAt`)
+  - `UserQuestionStat`: per-user × per-question counters, rolling average response time, spaced-repetition `practiceWeight`
+  - `QuestionGlobalStat`: aggregate across all players — `answerSelections` JSON, `empiricalDifficulty` (computed at ≥10 answers)
+  - New endpoints: `GET /api/users/me/question-stats`, `GET /api/users/me/weak-topics`, `GET /api/question-banks/:id/stats`
+  - Bug fix: cross-bank question ID collision (unique keys now scoped to `(questionBankId, questionId)`)
+  - Bug fix: Prisma TS type resolution for `moduleResolution: bundler` (output to `src/generated/prisma`)
+  - 33 new tests; full suite 193 pass / 2 skip (195 total)
+- 🎯 **Next: Phase 10 — Additional Question Types**
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -66,8 +69,8 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 **Future Vision** (Post-v1.0):
 - ✅ Phase 9: User Accounts (9A–9E complete)
-- 🎯 Phase 9F: Granular Question Statistics & Post-Game Stat Recording (3-4 hrs)
-- Phase 10: Additional Question Types (4-6 hrs)
+- ✅ Phase 9F: Granular Question Statistics & Post-Game Stat Recording (COMPLETE)
+- 🎯 Phase 10: Additional Question Types (4-6 hrs)
 - Phase 11: Team Mode (4-5 hrs)
 - 🟡 Phase 12: Analytics (3-4 hrs) - PARTIAL: Host question analytics complete
 - Phase 13: Question Marketplace (6-8 hrs)
@@ -75,19 +78,29 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Phase 15: Enterprise Features (4-5 hrs)
 
 **Test Coverage Summary**: 
-- **161+ tests total** (141 unit, 20 E2E scenarios) - **100% pass rate on Phase 7A**
+- **195 tests total** (unit + integration) — **193 pass, 2 skip, 100% pass rate**
 - Common utilities: 25 tests (PIN generation, scoring, validation) - ✅ 100%
 - Question bank parser: 16 tests (markdown parsing, filtering) - ✅ 100%
-- API server: 47 unit tests (sessions, players, game flow, question banks) - ✅ 96% (45/47)
+- API server: 195 unit + integration tests across 11 test files - ✅ 100%
 - Player app: 12 unit tests (components, state management, router) - ✅ 100%
 - E2E: 19 comprehensive scenarios (complete flows, edge cases, isolation) - ✅ 95% (18/19)
   - API tests: 4 scenarios ✅
   - Player UI tests: 4 scenarios ✅
   - Host analytics tests: 1 scenario ✅
   - Question preview tests: 15 scenarios ✅ 100% pass rate
-- Database: Migrated from Drizzle+better-sqlite3 to Prisma v6 (no native rebuild issues)
+- Database: Migrated from Drizzle+better-sqlite3 to Prisma v6; output path fixed for `moduleResolution: bundler`
 
 **Recent Achievements**:
+- ✅ **Mar 1, 2026 — Phase 9F: Granular Question Statistics & Post-Game Stat Recording**
+  - **`session-stats.ts`**: `recordSessionStats(sessionId)` — idempotent helper called at both session-end trigger points (`POST /:id/next` last question, `POST /:id/end`)
+  - **`HostedSession` + `PlayerStat`**: now written from real game flow (closed the known gap from Phase 9E)
+  - **`UserQuestionStat`**: per-user × per-question counters (`timesAnswered`, `timesCorrect`, rolling `averageResponseMs`, `practiceWeight` clamped 0.1–5.0 for future smart-practice mode)
+  - **`QuestionGlobalStat`**: `timesAppeared`, `timesAnswered`, `timesCorrect`, `answerSelections` JSON map per answer option, `empiricalDifficulty` computed once ≥10 answers
+  - **`responseTimeMs`** on `PlayerAnswer`: calculated server-side from `questionStartedAt`, enables per-question speed analysis
+  - **New endpoints**: `GET /api/users/me/question-stats` (weakest-first), `GET /api/users/me/weak-topics`, `GET /api/question-banks/:id/stats` (with dominant distractor detection and difficulty-mismatch flag)
+  - **Bug fix**: cross-bank question ID collision — unique constraints on both stat tables now scoped to `(questionBankId, questionId)` with migration `20260301180000`
+  - **Bug fix**: Prisma TS type resolution persisted failing under `moduleResolution: bundler` because `.prisma/client/package.json` exports lack a `types` condition on the wildcard. Fixed by setting `output = "../src/generated/prisma"` in the generator so TypeScript resolves the client via a plain relative import with no package.json indirection
+  - **Tests**: 33 tests in `session-stats.test.ts` including cross-bank collision suite; full api-server suite 193/195
 - ✅ **Feb 21-22, 2026 - Phase 9A–9E: Authentication & User Accounts** (6-8 hours)
   - **Better Auth**: Email/password sign-up/in, server-side session cookies, CSRF protection
   - **Host-app auth UI**: Sign-in/up modals, profile page, saved quizzes management, quiz history
@@ -213,8 +226,8 @@ See [PHASE-7-8-features-deployment.md](phases/PHASE-7-8-features-deployment.md)
 ### 🔮 **Phases 9-15: Future Vision (Post-MVP)**
 See [PHASE-9-15-future.md](phases/PHASE-9-15-future.md)
 - ✅ Phase 9: User Accounts & Persistence (9A–9E complete)
-- 🎯 Phase 9F: Granular Question Statistics & Post-Game Stat Recording
-- Phase 10: Additional Question Types
+- ✅ Phase 9F: Granular Question Statistics & Post-Game Stat Recording (COMPLETE)
+- 🎯 Phase 10: Additional Question Types
 - Phase 11: Team Mode & Collaboration
 - Phase 12: Advanced Analytics & Insights (Partial)
 - Phase 13: Public Question Bank Marketplace
