@@ -222,14 +222,14 @@ export async function initDatabase() {
         last_answered_at BIGINT,
         last_was_correct INTEGER NOT NULL DEFAULT 0,
         practice_weight REAL NOT NULL DEFAULT 1.0,
-        UNIQUE(user_id, question_id)
+        UNIQUE(user_id, question_bank_id, question_id)
       )
     `);
 
     await client.$executeRawUnsafe(`
       CREATE TABLE question_global_stats (
         id TEXT PRIMARY KEY,
-        question_id TEXT NOT NULL UNIQUE,
+        question_id TEXT NOT NULL,
         question_bank_id TEXT NOT NULL,
         times_appeared INTEGER NOT NULL DEFAULT 0,
         times_answered INTEGER NOT NULL DEFAULT 0,
@@ -238,7 +238,8 @@ export async function initDatabase() {
         average_score INTEGER NOT NULL DEFAULT 0,
         answer_selections TEXT NOT NULL DEFAULT '{}',
         empirical_difficulty REAL,
-        updated_at BIGINT NOT NULL DEFAULT (unixepoch() * 1000)
+        updated_at BIGINT NOT NULL DEFAULT (unixepoch() * 1000),
+        UNIQUE(question_bank_id, question_id)
       )
     `);
 

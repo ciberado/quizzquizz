@@ -5,9 +5,12 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Fixed
+- **[api-server] Cross-bank question ID collision in stats tables** — `QuestionGlobalStat` had `questionId @unique` and `UserQuestionStat` had `@@unique([userId, questionId])`, meaning two question banks sharing the same question ID (e.g. `Q001`) would have their stats merged into a single row. Fixed by widening both unique constraints to include `questionBankId`: `@@unique([userId, questionBankId, questionId])` and `@@unique([questionBankId, questionId])`. Migration `20260301180000_fix_question_stat_cross_bank_scoping` drops the old single-field index and creates new composite unique indexes. In-memory DB schema in `db/index.ts` updated to match. All 6 lookup callsites in `session-stats.ts` updated to use the new composite Prisma accessor names (`userId_questionBankId_questionId`, `questionBankId_questionId`).
 - **[api-server] Prisma Client stale types after schema changes** — added `"postinstall": "prisma generate"` to `packages/api-server/package.json` so the client is regenerated automatically after every `npm install`, preventing `userQuestionStat`/`questionGlobalStat`/`userId`/`responseTimeMs` from appearing as unknown properties to TypeScript
 
 ### Added
+- **[api-server] Cross-bank collision prevention tests** — `session-stats.test.ts` now includes a `SECOND_BANK` fixture (shares question ID `sq1` with `TEST_BANK`) and a `Cross-bank question ID collision prevention` describe block with three test cases: separate `QuestionGlobalStat` rows per bank, separate `UserQuestionStat` rows per user+bank, and correct `?bankId=` filter on `GET /api/users/me/question-stats`
+
 - **[Phase 9F] Granular Question Statistics & Post-Game Stat Recording — full implementation**
   - **Prisma schema** (`packages/api-server/prisma/schema.prisma`): added `userId?` to `Player`, `responseTimeMs` to `PlayerAnswer`, new `UserQuestionStat` model (per-user × per-question with `practiceWeight`), new `QuestionGlobalStat` model (`answerSelections` JSON, `empiricalDifficulty`)
   - **Migration** `20260301152240_phase_9f_question_stats` applied; Prisma Client regenerated

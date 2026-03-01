@@ -219,7 +219,7 @@ model UserQuestionStat {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, questionId])
+  @@unique([userId, questionBankId, questionId])
   @@index([userId, questionBankId])
   @@index([userId, lastAnsweredAt])
   @@map("user_question_stats")
@@ -228,7 +228,7 @@ model UserQuestionStat {
 // Aggregate performance per question across ALL players (authenticated + anonymous)
 model QuestionGlobalStat {
   id                  String   @id
-  questionId          String   @unique @map("question_id")
+  questionId          String   @map("question_id")
   questionBankId      String   @map("question_bank_id")
   timesAppeared       Int      @default(0) @map("times_appeared")    // Sessions that included this question
   timesAnswered       Int      @default(0) @map("times_answered")    // Actual answer submissions
@@ -242,6 +242,6 @@ model QuestionGlobalStat {
   empiricalDifficulty Float?   @map("empirical_difficulty")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
-  @@index([questionBankId])
+  @@unique([questionBankId, questionId])
   @@map("question_global_stats")
 }

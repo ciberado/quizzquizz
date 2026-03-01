@@ -127,10 +127,14 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
 
         // ── 6b. UserQuestionStat (one row per user × question) ──────────
         for (const answer of player.answers) {
+          // Find the bank-level question to get questionBankId
+          const questionBankId = session.questionBankId;
+
           const existing = await prisma.userQuestionStat.findUnique({
             where: {
-              userId_questionId: {
+              userId_questionBankId_questionId: {
                 userId: player.userId,
+                questionBankId,
                 questionId: answer.questionId,
               },
             },
@@ -148,13 +152,11 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
             answer.isCorrect
           );
 
-          // Find the bank-level question to get questionBankId
-          const questionBankId = session.questionBankId;
-
           await prisma.userQuestionStat.upsert({
             where: {
-              userId_questionId: {
+              userId_questionBankId_questionId: {
                 userId: player.userId,
+                questionBankId,
                 questionId: answer.questionId,
               },
             },
@@ -186,8 +188,9 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
     // ── 7. QuestionGlobalStat (all players, including anonymous) ──────────
     // First: increment timesAppeared for every question that was in this session
     for (const question of questions) {
+      const bankId = session.questionBankId;
       const existing = await prisma.questionGlobalStat.findUnique({
-        where: { questionId: question.id },
+        where: { questionBankId_questionId: { questionBankId: bankId, questionId: question.id } },
       });
 
       if (!existing) {
@@ -195,7 +198,7 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
           data: {
             id: generateId(),
             questionId: question.id,
-            questionBankId: session.questionBankId,
+            questionBankId: bankId,
             timesAppeared: 1,
             timesAnswered: 0,
             timesCorrect: 0,
@@ -207,7 +210,7 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
         });
       } else {
         await prisma.questionGlobalStat.update({
-          where: { questionId: question.id },
+          where: { questionBankId_questionId: { questionBankId: bankId, questionId: question.id } },
           data: { timesAppeared: { increment: 1 } },
         });
       }
@@ -216,8 +219,9 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
     // Second: process each submitted answer for global stats
     for (const player of session.players) {
       for (const answer of player.answers) {
+        const bankId = session.questionBankId;
         const stat = await prisma.questionGlobalStat.findUnique({
-          where: { questionId: answer.questionId },
+          where: { questionBankId_questionId: { questionBankId: bankId, questionId: answer.questionId } },
         });
 
         if (!stat) continue; // Should not happen after the loop above
@@ -250,7 +254,7 @@ export async function recordSessionStats(sessionId: string): Promise<void> {
             : null;
 
         await prisma.questionGlobalStat.update({
-          where: { questionId: answer.questionId },
+          where: { questionBankId_questionId: { questionBankId: bankId, questionId: answer.questionId } },
           data: {
             timesAnswered: newTimesAnswered,
             timesCorrect: newTimesCorrect,

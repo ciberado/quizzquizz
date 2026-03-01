@@ -62,8 +62,32 @@ const TEST_BANK: QuestionBank = {
   ],
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Auth helpers (mirror users.test.ts pattern)
+// Second bank that intentionally reuses the same question ID "sq1" as TEST_BANK
+// to prove cross-bank stats never collide.
+const SECOND_BANK: QuestionBank = {
+  id: 'stats-test-bank-2',
+  metadata: {
+    name: 'Stats Test Bank 2',
+    defaultTimeLimit: 20,
+    topics: ['History'],
+  },
+  questions: [
+    {
+      id: 'sq1',  // ← same ID as TEST_BANK.sq1 — intentional collision test
+      text: 'Who invented the telephone?',
+      answers: [
+        { id: 'b1', text: 'Alexander Graham Bell' }, // correct
+        { id: 'b2', text: 'Thomas Edison' },
+        { id: 'b3', text: 'Nikola Tesla' },
+      ],
+      correctAnswerIds: ['b1'],
+      difficulty: 'easy',
+      topics: ['History'],
+      tags: ['inventions'],
+      timeLimit: 20,
+    },
+  ],
+};
 // ─────────────────────────────────────────────────────────────────────────────
 function extractToken(response: Response): string | null {
   const setCookie = response.headers.get('set-cookie');
@@ -177,6 +201,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
   beforeAll(async () => {
     // Register test question bank (supplement what's loaded from filesystem)
     questionBanks.set(TEST_BANK.id, TEST_BANK);
+    questionBanks.set(SECOND_BANK.id, SECOND_BANK);
   });
 
   beforeEach(async () => {
@@ -300,7 +325,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
       await recordSessionStats(sessionId);
 
       const uqs1 = await getPrisma().userQuestionStat.findUnique({
-        where: { userId_questionId: { userId, questionId: 'sq1' } },
+        where: { userId_questionBankId_questionId: { userId, questionBankId: TEST_BANK.id, questionId: 'sq1' } },
       });
       expect(uqs1).not.toBeNull();
       expect(uqs1!.timesAnswered).toBe(1);
@@ -311,7 +336,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
       expect(uqs1!.practiceWeight).toBeCloseTo(0.8, 5);
 
       const uqs2 = await getPrisma().userQuestionStat.findUnique({
-        where: { userId_questionId: { userId, questionId: 'sq2' } },
+        where: { userId_questionBankId_questionId: { userId, questionBankId: TEST_BANK.id, questionId: 'sq2' } },
       });
       expect(uqs2).not.toBeNull();
       expect(uqs2!.timesCorrect).toBe(0);
@@ -343,7 +368,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
       await recordSessionStats(s2);
 
       const uqs = await getPrisma().userQuestionStat.findUnique({
-        where: { userId_questionId: { userId, questionId: 'sq1' } },
+        where: { userId_questionBankId_questionId: { userId, questionBankId: TEST_BANK.id, questionId: 'sq1' } },
       });
       expect(uqs!.timesAnswered).toBe(2);
       expect(uqs!.timesCorrect).toBe(1);
@@ -359,8 +384,8 @@ describe('Phase 9F: Granular Question Statistics', () => {
 
       await recordSessionStats(sessionId);
 
-      const sq1 = await getPrisma().questionGlobalStat.findUnique({ where: { questionId: 'sq1' } });
-      const sq2 = await getPrisma().questionGlobalStat.findUnique({ where: { questionId: 'sq2' } });
+      const sq1 = await getPrisma().questionGlobalStat.findUnique({ where: { questionBankId_questionId: { questionBankId: TEST_BANK.id, questionId: 'sq1' } } });
+      const sq2 = await getPrisma().questionGlobalStat.findUnique({ where: { questionBankId_questionId: { questionBankId: TEST_BANK.id, questionId: 'sq2' } } });
       expect(sq1!.timesAppeared).toBe(1);
       expect(sq1!.timesAnswered).toBe(0); // no players/answers
       expect(sq2!.timesAppeared).toBe(1);
@@ -383,7 +408,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
 
       await recordSessionStats(sessionId);
 
-      const stat = await getPrisma().questionGlobalStat.findUnique({ where: { questionId: 'sq1' } });
+      const stat = await getPrisma().questionGlobalStat.findUnique({ where: { questionBankId_questionId: { questionBankId: TEST_BANK.id, questionId: 'sq1' } } });
       expect(stat!.timesAppeared).toBe(1);
       expect(stat!.timesAnswered).toBe(2);
       expect(stat!.timesCorrect).toBe(1);
@@ -435,7 +460,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
         await recordSessionStats(sid);
       }
 
-      const stat = await getPrisma().questionGlobalStat.findUnique({ where: { questionId: 'sq1' } });
+      const stat = await getPrisma().questionGlobalStat.findUnique({ where: { questionBankId_questionId: { questionBankId: TEST_BANK.id, questionId: 'sq1' } } });
       expect(stat!.timesAnswered).toBe(10);
       // empiricalDifficulty should now be set
       expect(stat!.empiricalDifficulty).not.toBeNull();
@@ -465,7 +490,7 @@ describe('Phase 9F: Granular Question Statistics', () => {
       expect(statCount).toBe(1);
 
       const uqs = await getPrisma().userQuestionStat.findUnique({
-        where: { userId_questionId: { userId, questionId: 'sq1' } },
+        where: { userId_questionBankId_questionId: { userId, questionBankId: TEST_BANK.id, questionId: 'sq1' } },
       });
       expect(uqs!.timesAnswered).toBe(1); // not 2
     });
@@ -503,14 +528,166 @@ describe('Phase 9F: Granular Question Statistics', () => {
       await recordSessionStats(sessionId);
 
       const uqs = await getPrisma().userQuestionStat.findUnique({
-        where: { userId_questionId: { userId, questionId: 'sq2' } },
+        where: { userId_questionBankId_questionId: { userId, questionBankId: TEST_BANK.id, questionId: 'sq2' } },
       });
       expect(uqs!.practiceWeight).toBeLessThanOrEqual(5.0);
     });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 2. responseTimeMs stored via HTTP answer submission
+  // 2. Cross-bank collision prevention
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('Cross-bank question ID collision prevention', () => {
+    it('keeps QuestionGlobalStat separate when two banks share a question ID', async () => {
+      // Both TEST_BANK and SECOND_BANK have a question with id 'sq1'.
+      // After recording stats for sessions from each bank, there must be
+      // TWO separate QuestionGlobalStat rows (one per bank), not one merged row.
+      const p1 = generateId();
+      const sid1 = await createFinishedSession({
+        players: [{
+          id: p1, nickname: 'PA', score: 500,
+          answers: [{ questionId: 'sq1', selectedAnswerIds: ['sa2'], isCorrect: true, score: 500, responseTimeMs: 3000 }],
+        }],
+      }); // uses TEST_BANK
+      await recordSessionStats(sid1);
+
+      // Session from SECOND_BANK
+      const p2 = generateId();
+      const sid2 = await getPrisma().quizSession.create({
+        data: {
+          id: generateId(),
+          pin: Math.random().toString().slice(2, 8),
+          hostToken: generateId(),
+          questionBankId: SECOND_BANK.id,
+          status: 'finished',
+          currentQuestionIndex: -1,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 3_600_000),
+        },
+      }).then(async (s) => {
+        await getPrisma().player.create({
+          data: { id: p2, sessionId: s.id, nickname: 'PB', score: 0, joinedAt: new Date() },
+        });
+        await getPrisma().playerAnswer.create({
+          data: {
+            id: generateId(), playerId: p2, questionId: 'sq1',
+            selectedAnswerIds: JSON.stringify(['b2']), isCorrect: false,
+            submittedAt: new Date(), score: 0, responseTimeMs: 5000,
+          },
+        });
+        return s.id;
+      });
+      await recordSessionStats(sid2);
+
+      // Must be 2 separate rows
+      const all = await getPrisma().questionGlobalStat.findMany({
+        where: { questionId: 'sq1' },
+        orderBy: { questionBankId: 'asc' },
+      });
+      expect(all).toHaveLength(2);
+      const fromBank1 = all.find((r) => r.questionBankId === TEST_BANK.id)!;
+      const fromBank2 = all.find((r) => r.questionBankId === SECOND_BANK.id)!;
+      expect(fromBank1).toBeDefined();
+      expect(fromBank2).toBeDefined();
+
+      // Bank1 stats: 1 answer, 1 correct
+      expect(fromBank1.timesAnswered).toBe(1);
+      expect(fromBank1.timesCorrect).toBe(1);
+
+      // Bank2 stats: 1 answer, 0 correct  
+      expect(fromBank2.timesAnswered).toBe(1);
+      expect(fromBank2.timesCorrect).toBe(0);
+    });
+
+    it('keeps UserQuestionStat separate when same user plays same question ID from two banks', async () => {
+      const { userId } = await signUp('xbank@test.com', 'xbank');
+
+      // Session in TEST_BANK: got sq1 correct
+      const p1 = generateId();
+      const sid1 = await createFinishedSession({
+        players: [{
+          id: p1, userId, nickname: 'XB', score: 500,
+          answers: [{ questionId: 'sq1', selectedAnswerIds: ['sa2'], isCorrect: true, score: 500, responseTimeMs: 3000 }],
+        }],
+      });
+      await recordSessionStats(sid1);
+
+      // Session in SECOND_BANK: got sq1 wrong — build the fixture manually
+      const p2 = generateId();
+      const sid2 = generateId();
+      await getPrisma().quizSession.create({
+        data: {
+          id: sid2, pin: Math.random().toString().slice(2, 8),
+          hostToken: generateId(), questionBankId: SECOND_BANK.id,
+          status: 'finished', currentQuestionIndex: -1,
+          createdAt: new Date(), expiresAt: new Date(Date.now() + 3_600_000),
+        },
+      });
+      await getPrisma().player.create({
+        data: { id: p2, sessionId: sid2, userId, nickname: 'XB', score: 0, joinedAt: new Date() },
+      });
+      await getPrisma().playerAnswer.create({
+        data: {
+          id: generateId(), playerId: p2, questionId: 'sq1',
+          selectedAnswerIds: JSON.stringify(['b2']), isCorrect: false,
+          submittedAt: new Date(), score: 0, responseTimeMs: 4000,
+        },
+      });
+      await recordSessionStats(sid2);
+
+      // Should have 2 separate UserQuestionStat rows: one per bank
+      const allUqs = await getPrisma().userQuestionStat.findMany({
+        where: { userId, questionId: 'sq1' },
+        orderBy: { questionBankId: 'asc' },
+      });
+      expect(allUqs).toHaveLength(2);
+
+      const uqsBank1 = allUqs.find((r) => r.questionBankId === TEST_BANK.id)!;
+      const uqsBank2 = allUqs.find((r) => r.questionBankId === SECOND_BANK.id)!;
+      expect(uqsBank1).toBeDefined();
+      expect(uqsBank2).toBeDefined();
+
+      // Bank1 record: correct answer → practiceWeight < 1.0
+      expect(uqsBank1.timesCorrect).toBe(1);
+      expect(uqsBank1.practiceWeight).toBeCloseTo(0.8, 5);
+
+      // Bank2 record: wrong answer → practiceWeight > 1.0
+      expect(uqsBank2.timesCorrect).toBe(0);
+      expect(uqsBank2.practiceWeight).toBeCloseTo(1.5, 5);
+    });
+
+    it('GET /me/question-stats with bankId filter returns only that bank', async () => {
+      const { userId, token } = await signUp('xbankfilter@test.com', 'xbankfilter');
+
+      // Seed stats for both banks under the same questionId
+      await getPrisma().userQuestionStat.createMany({
+        data: [
+          {
+            id: generateId(), userId, questionId: 'sq1', questionBankId: TEST_BANK.id,
+            timesAnswered: 3, timesCorrect: 2, averageResponseMs: 3000,
+            lastWasCorrect: true, practiceWeight: 0.8,
+          },
+          {
+            id: generateId(), userId, questionId: 'sq1', questionBankId: SECOND_BANK.id,
+            timesAnswered: 5, timesCorrect: 1, averageResponseMs: 6000,
+            lastWasCorrect: false, practiceWeight: 1.5,
+          },
+        ],
+      });
+
+      const res = await app.request(
+        `/api/users/me/question-stats?bankId=${TEST_BANK.id}`,
+        { headers: { Cookie: `better-auth.session_token=${token}` } }
+      );
+      const data = await res.json() as any;
+      expect(data.questions).toHaveLength(1);
+      expect(data.questions[0].questionBankId).toBe(TEST_BANK.id);
+      expect(data.questions[0].timesAnswered).toBe(3);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 3. responseTimeMs stored via HTTP answer submission
   // ═══════════════════════════════════════════════════════════════════════════
   describe('responseTimeMs in answer submissions', () => {
     it('stores non-zero responseTimeMs when question was started', async () => {
