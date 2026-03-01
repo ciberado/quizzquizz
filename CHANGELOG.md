@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[test] Autopace double-trigger prevention tests** — 5 unit tests for `QuestionDisplayScreen` verifying that `router.navigate('/leaderboard')` is called at most once regardless of whether the `allPlayersAnswered` poll path, the client-side countdown timer, or both trigger simultaneously. Covers: allPlayersAnswered before timer expiry, timer expiry with no answers, concurrent triggers, sequential poll after timer, and autopace-disabled cases (`packages/host-app/src/components/question-display-screen.test.ts`)
+
 ### Fixed
 - **[docker] Dockerfile `npm ci` fails due to `prisma generate` postinstall hook running before schema is copied** — added `--ignore-scripts` to both `npm ci` invocations (builder and runtime stages); the explicit `RUN cd packages/api-server && npx prisma generate` steps that follow the schema COPY already handle generation correctly
 - **[docker] TypeScript build fails on generated Prisma client files** — `composite: true` + `declaration: true` in tsconfig caused `TS9006`/`TS4094` errors on `src/generated/prisma/index.js`; fixed by adding `src/generated/**/*` to `exclude` in `packages/api-server/tsconfig.json` (Prisma ships its own `.d.ts` files)
