@@ -56,7 +56,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
   - Bug fix: cross-bank question ID collision (unique keys now scoped to `(questionBankId, questionId)`)
   - Bug fix: Prisma TS type resolution for `moduleResolution: bundler` (output to `src/generated/prisma`)
   - 33 new tests; full suite 193 pass / 2 skip (195 total)
-- 🎯 **Next: Phase 10 — Additional Question Types**
+- 🎯 **Next: Phase 7F — Question Bank Folder Navigation** (then Phase 10)
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -223,6 +223,7 @@ See [PHASE-7-8-features-deployment.md](phases/PHASE-7-8-features-deployment.md)
 - Phase 7C: Enhanced Leaderboard & Gamification
 - Phase 7D: Player Reconnection & Persistence
 - Phase 7E: Game Pause & Resume
+- 🎯 Phase 7F: Question Bank Folder Navigation
 - Phase 8A: Docker Configuration ✅
 - Phase 8B: Environment Configuration
 - Phase 8C: Build Optimization & Production Hardening

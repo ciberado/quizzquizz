@@ -263,6 +263,156 @@
 
 ---
 
+### Phase 7F: Question Bank Folder Navigation (Est. 3-4 hours)
+
+**Status**: NOT STARTED
+
+**Objective**: Organize question banks into a hierarchical folder structure so hosts can browse by category/topic before selecting a bank. The `question-banks/` directory becomes a tree instead of a flat bag of files. Soft links (symlinks) are fully supported for placing the same bank in multiple folders.
+
+**Design Decisions**:
+- **IDs**: Path-based — the bank ID is the lowercase relative path from `rootDir` to the file, without the `.md` extension, using `/` separators (e.g., `science/physics/electromagnetism`). Existing flat-root banks keep their IDs (e.g., `sample-general-knowledge`). Reserved filenames `bank.md` and `questions.md` at any depth are disallowed because those bare stems collide with the new fixed API routes.
+- **API**: `GET /api/question-banks` response shape changes from `{ questionBanks: [] }` to `{ tree: {...} }`. This is a **breaking change**: `host-app/api-client.ts` `getQuestionBanks()` and the corresponding E2E tests must be updated as part of this phase.
+- **Symlinks**: Resolved to canonical real path via `realpathSync`. A symlinked `.md` file's ID is the canonical path made relative to `rootDir` (without extension). If the canonical path falls **outside** `rootDir` (e.g., an absolute symlink to another filesystem location), the file is skipped with a warning. If the same canonical file is reached via two different symlinks, it appears in both folder positions in the tree but both entries carry the same `id`. Statistics are naturally shared because the `id` is identical.
+- **Folder display name**: stored and returned as the raw directory basename (e.g., `"science"`); no automatic capitalization. Clients render it as-is.
+- **UI**: Drill-down breadcrumb — click a folder card to enter, click breadcrumb segments to go back.
+
+---
+
+#### 7F-1: Loader — recursive tree scan (`@quizzquizz/question-bank`)
+
+- [ ] Add new types (export from `index.ts`):
+  ```typescript
+  interface QuestionBankSummary {
+    id: string;        // path-based, e.g. "science/physics/electromagnetism"
+    name: string;
+    description?: string;
+    topics: string[];
+    questionCount: number;
+  }
+
+  interface QuestionBankFolder {
+    name: string;      // directory basename, "" for root
+    path: string;      // relative path from root, "" for root
+    folders: QuestionBankFolder[];
+    banks: QuestionBankSummary[];
+  }
+  ```
+- [ ] Add `loadQuestionBankTree(rootDir: string): QuestionBankFolder`:
+  - Recursively traverse `rootDir`
+  - For each entry: use `lstatSync` (not `statSync`) so symlinks are detected, then `realpathSync` to get the canonical path
+  - If the canonical path is a `.md` file → compute `id` as the canonical path made relative to `rootDir`, without the `.md` extension (e.g., canonical `/…/question-banks/science/physics/electromagnetism.md` → id `science/physics/electromagnetism`). If the canonical path falls outside `rootDir`, skip the entry with a console warning.
+  - If the canonical path is a directory → recurse (pass the **logical** entry path as the folder position in the tree, so the logical tree structure is preserved even for directory symlinks). Track visited **canonical** directory real paths in a `Set<string>` to abort circular symlinks before recursing.
+  - Deduplication: if the same canonical `.md` real path is encountered more than once while traversing, include it in **all** logical folder positions in the tree (this is intentional — it's why you symlink). The `id` is the same for all occurrences.
+  - Sort entries: folders first (alphabetical by basename), then banks (alphabetical by `name` field from metadata)
+- [ ] Add `flattenBankTree(root: QuestionBankFolder): QuestionBank[]` utility — depth-first flattening for backward compat. **Must deduplicate by `id`** (use a `Set<string>` of seen IDs) so that symlinked banks appearing in multiple folder positions are included exactly once in the flattened output.
+- [ ] Keep `loadQuestionBanks(rootDir: string): QuestionBank[]` as a compatibility shim calling `flattenBankTree(loadQuestionBankTree(rootDir))`
+- [ ] Internal `Map<id, QuestionBank>` for O(1) lookup is unchanged; the tree is a separate data structure used only for the browse API
+
+---
+
+#### 7F-2: API — tree endpoint & bank-by-ID routes (`@quizzquizz/api-server`)
+
+- [ ] Update `GET /api/question-banks` response shape:
+  ```json
+  {
+    "tree": {
+      "name": "",
+      "path": "",
+      "folders": [
+        {
+          "name": "science",
+          "path": "science",
+          "folders": [
+            { "name": "physics", "path": "science/physics", "folders": [], "banks": [
+              { "id": "science/physics/electromagnetism", "name": "Electromagnetism", "topics": ["Physics"], "questionCount": 12 }
+            ]}
+          ],
+          "banks": []
+        }
+      ],
+      "banks": [
+        { "id": "sample-general-knowledge", "name": "General Knowledge", "topics": ["General"], "questionCount": 20 }
+      ]
+    }
+  }
+  ```
+  Folder `name` is the raw directory basename with no transformation. Clients are responsible for any display formatting.
+- [ ] **Breaking change migration**: update `host-app/src/api-client.ts` — replace `getQuestionBanks(): Promise<QuestionBankSummary[]>` with `getQuestionBankTree(): Promise<QuestionBankFolder>` that reads the `tree` key; update all call sites (session creation screen, saved-quiz screen) and any E2E tests that assert `{ questionBanks: [] }` in the response.
+- [ ] Bank detail routes — because bank IDs contain `/`, keep existing suffixed routes (`/questions`, `/stats`) but shift to a query-param pattern for the bank ID to avoid routing collisions:
+  - `GET /api/question-banks/bank?id=<bank-id>` — single bank detail (replaces `GET /api/question-banks/:id`)
+  - `GET /api/question-banks/questions?bankId=<bank-id>&...` — questions with filtering (replaces `GET /api/question-banks/:id/questions`)
+  - `GET /api/question-banks/stats?bankId=<bank-id>` — stats (replaces `GET /api/question-banks/:id/stats`)
+  - Keep the old `/:id` slug routes as fallback aliases; they remain safe for flat/no-slash IDs. **Note**: the fixed paths `/bank`, `/questions`, `/stats`, and `/reload` become reserved — a physical file named `bank.md`, `questions.md`, `stats.md`, or `reload.md` at the root level (or reached via the legacy `/:id` route) would be shadowed. Reserved stems are documented and disallowed by the loader (log a warning and skip).
+- [ ] `state.ts` — add `bankTree` state alongside the existing `questionBanks` map. Because ESM live-binding exports are read-only to importers, use a **mutable wrapper** or **exported setter** pattern:
+  ```typescript
+  // state.ts
+  let _bankTree: QuestionBankFolder = { name: '', path: '', folders: [], banks: [] };
+  export const getBankTree = (): QuestionBankFolder => _bankTree;
+  export const setBankTree = (tree: QuestionBankFolder): void => { _bankTree = tree; };
+  ```
+  Do **not** use `export let bankTree` — importers cannot reassign it on reload.
+- [ ] `index.ts` initialization — call `loadQuestionBankTree`, pass result to `setBankTree(...)`, then call `flattenBankTree` and populate `questionBanks` map
+- [ ] `POST /api/question-banks/reload` — call `setBankTree(...)` to replace the tree **and** repopulate `questionBanks` map
+
+---
+
+#### 7F-3: Host UI — drill-down breadcrumb browser (`@quizzquizz/host-app`)
+
+- [ ] Update `api-client.ts`:
+  - `getQuestionBankTree(): Promise<QuestionBankFolder>` — fetches tree from `GET /api/question-banks`
+  - `getQuestionBank(id: string): Promise<QuestionBank>` — fetches `GET /api/question-banks/bank?id=<id>`
+  - `getQuestionBankQuestions(bankId: string, filters): Promise<...>` — fetches questions via new query-param route
+- [ ] New `<qz-bank-browser>` web component (replaces flat grid in session creation screen):
+  - Internal state: `currentPath: string[]` (path segments to current folder)
+  - On mount: fetch tree, store root in component, render current level
+  - Render at current level:
+    - **Breadcrumb bar**: `All Banks > Science > Physics` — each segment is a clickable link
+    - **Folder cards** (📁 icon): folder name, recursive bank count (e.g., "8 banks")
+    - **Bank cards** (📋 icon): name, description, topics chips, question count
+  - Click folder → push segment to `currentPath`, re-render
+  - Click breadcrumb segment → slice `currentPath` to that depth, re-render
+  - Click bank → emit `bank-selected` event with bank ID, parent `CreateSessionScreen` handles navigation to preview
+  - Edge case: root with no subfolders → render flat grid (identical to previous behavior)
+  - Edge case: empty folder → show "No question banks in this folder" message
+- [ ] `styles.css` — add folder card styles (distinct from bank cards, folder icon, subtle background)
+- [ ] Update `CreateSessionScreen` (or wherever the bank list currently lives) to use `<qz-bank-browser>` instead of the flat grid
+
+---
+
+#### 7F-4: Stats & database compatibility
+
+- [ ] No schema migration needed. Bank IDs in `saved_quizzes`, `hosted_sessions`, `UserQuestionStat`, `QuestionGlobalStat` are plain strings. New banks just use path-based IDs; existing records keep their flat IDs.
+- [ ] `reload-question-banks.sh` — update example output comments to show folder structure
+- [x] `QUESTION-BANK-FORMAT.md` — "Directory Organization" section already added (Mar 4, 2026); covers folder IDs, naming, symlinks, and host UI navigation
+
+---
+
+#### 7F-5: Tests
+
+- [ ] `@quizzquizz/question-bank` unit tests:
+  - `loadQuestionBankTree` returns correct nested structure for multi-level fixture dirs
+  - Symlinked `.md` in two dirs → same `id`, appears in both folder positions in tree
+  - Symlink pointing outside `rootDir` → skipped with warning, rest of tree unaffected
+  - Circular symlink directory → detected (canonical path already visited), gracefully skipped
+  - Empty subdirectory → included as a `QuestionBankFolder` with empty `banks` and `folders`
+  - `flattenBankTree` deduplicates: a bank reachable via two symlinks appears exactly once in the output array
+  - `flattenBankTree` depth-first order matches expectation
+- [ ] `@quizzquizz/api-server` unit tests:
+  - `GET /api/question-banks` returns `{ tree: {...} }` with correct shape (not the old `{ questionBanks: [] }`)
+  - `GET /api/question-banks/bank?id=<path-id>` returns correct bank
+  - `GET /api/question-banks/questions?bankId=<path-id>` returns questions with filtering
+  - `POST /api/question-banks/reload` rebuilds both tree (`getBankTree()` returns new structure) and map
+- [ ] `@quizzquizz/host-app` unit tests:
+  - `getQuestionBankTree()` parses `{ tree: {...} }` response correctly
+  - `BankBrowser` renders folder cards and bank cards for a given tree level
+  - Breadcrumb updates correctly on folder navigation and segment click
+
+**Dependencies**: Phase 7A complete (question preview screen is the destination after bank selection).
+
+**Deliverable**: `question-banks/` can be organized into nested subdirectories. Hosts see a drill-down folder browser when creating a session and can navigate through any depth of nesting. Symlinks let the same bank appear in multiple categories without duplicating the file or splitting its statistics.
+
+---
+
 ## Phase 8: Deployment & Documentation
 
 **Goal**: Make the project deployable and production-ready.

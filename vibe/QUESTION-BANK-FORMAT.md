@@ -196,5 +196,63 @@ question-banks/
 ```
 
 - Lowercase, hyphen-separated names recommended (`my-movie-trivia.md`).
-- The filename stem becomes the bank's `id` as-is.
-- All `.md` files in `question-banks/` are loaded automatically on server start.
+- The filename stem becomes the bank's `id` as-is (for flat layouts with no subdirectories).
+- All `.md` files under `question-banks/` (at any depth) are loaded automatically on server start.
+
+---
+
+## Directory organization (Phase 7F)
+
+Question banks can be organized into **nested subdirectories**. The loader traverses the `question-banks/` tree recursively and builds a folder hierarchy that the host UI can browse.
+
+### Bank ID with directories
+
+The bank ID becomes the **relative path from the root**, using `/` as the separator, without the `.md` extension:
+
+```
+question-banks/
+  sample-general-knowledge.md          →  id: "sample-general-knowledge"
+  science/
+    physics/
+      electromagnetism.md              →  id: "science/physics/electromagnetism"
+      mechanics.md                     →  id: "science/physics/mechanics"
+    chemistry/
+      organic-chemistry.md             →  id: "science/chemistry/organic-chemistry"
+  history/
+    world-war-ii.md                    →  id: "history/world-war-ii"
+```
+
+### Naming conventions for directories
+
+- Lowercase, hyphen-separated directory names recommended.
+- Directory basenames are used **as-is** as the folder label shown to the host — no automatic capitalization or transformation is applied. Name directories accordingly (e.g., prefer `science` or `general-knowledge` over `SCIENCE`).
+- Nest as deeply as needed; there is no hard limit.
+- The bare stems `bank`, `questions`, `stats`, and `reload` are **reserved** at any depth because they collide with fixed API route paths. Files named `bank.md`, `questions.md`, `stats.md`, or `reload.md` will be skipped by the loader with a warning.
+
+### Symlinks
+
+Soft links are fully supported. A symlink can point to either a `.md` file or a subdirectory:
+
+```bash
+# Add the same bank to a curated "Best Of" folder without duplicating the file
+mkdir -p question-banks/best-of
+ln -s ../science/physics/electromagnetism.md question-banks/best-of/electromagnetism.md
+```
+
+**ID resolution**: the bank's ID is derived from the **canonical real path** (resolved with `realpathSync`), made relative to the `question-banks/` root and stripped of the `.md` extension. The same physical file always gets the same ID regardless of which symlink reached it. Statistics (correct/incorrect counts, empirical difficulty) are therefore shared across all appearances of the bank in the tree.
+
+**Out-of-root symlinks**: if a symlink's canonical path falls outside the `question-banks/` directory (e.g., an absolute symlink to an entirely different location on disk), that entry is **skipped** with a console warning and the rest of the tree loads normally.
+
+**Circular symlink protection**: the loader tracks visited canonical directory real paths; a cycle is detected and that branch is silently skipped.
+
+### Host UI navigation (Phase 7F)
+
+The host app displays a **drill-down breadcrumb browser** on the session creation screen:
+
+- The root level shows top-level folders (📁) and any banks living at the root (📋).
+- Clicking a folder descends into it; the breadcrumb updates (`All Banks > Science > Physics`).
+- Clicking a breadcrumb segment navigates back up to that level.
+- Clicking a bank card opens the existing question preview screen.
+- Folders display the total number of banks they contain recursively (e.g., "5 banks").
+
+If the `question-banks/` directory has no subdirectories (flat layout), the browser skips the folder-navigation UI and shows a simple grid, identical to the pre-7F behaviour.
