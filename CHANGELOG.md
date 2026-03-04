@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
-### Changed
+### Fixed
+- **[autopace] Timer restarts after all-players-answered early stop** — when `allPlayersAnswered=true` was detected, `stopTimer()` cleared the interval but left `this.timeRemaining > 0` and `timerInterval===null`. The next 2-second poll saw that combination and called `startTimer()` again, causing the timer to jump and count down a second time (looked "accelerated"). Fixed by adding `this.earlyStop = true`, `this.timeRemaining = 0`, and `this.wasTimerActive = false` in the early-stop branch; the `earlyStop` flag guards all subsequent poll recalculations so the timer stays at 0.
+- **[autopace] Correct answers not revealed when all players answered early** — `render()` was called from the early-stop branch but `isTimerActive = this.timeRemaining > 0` was still `true` (timeRemaining hadn't been zeroed), so the answer cards never showed the green "correct" state. Setting `timeRemaining = 0` before `render()` ensures `isTimerActive = false` and the answer reveal fires immediately.
+- **[autopace] No visual feedback while waiting for auto-leaderboard transition** — after early stop, the host saw a frozen timer with no indication that anything was happening before the leaderboard suddenly appeared. Now the timer label shows "✅ All players answered!" and the controls area shows a spinner with "Showing leaderboard in a moment…" (autopace) or the normal "Show Leaderboard" button (manual pace).
+- **[autopace] Leaderboard could double-schedule auto-advance** — `wasFirstLoad` was the sole guard against duplicate autopace timeouts; a spurious leaderboard-data change (e.g. late answer scores, transient empty response) could satisfy `wasFirstLoad=true` again and schedule a second `handleNextQuestion()` / `handleViewFinalResults()` call, potentially skipping the last question. Added a `!this.autoNavigateTimeout` guard so the timeout is only ever scheduled once per leaderboard mount.
+- **Files changed**: `packages/host-app/src/components/question-display-screen.ts`, `packages/host-app/src/components/leaderboard-screen.ts`
+
 - **[deps] Upgrade vulnerable dependencies and fix `npm run dev` to start all three apps concurrently** — installed `concurrently` at root and updated the root `dev` script to start `api-server`, `host-app`, and `player-app` in parallel (previously only `api-server` would start due to sequential workspace execution). Upgraded `vitest`/`@vitest/ui` 1.x → 3.2.4, `vite` 5.x → 6.4.1, `happy-dom` 12.x → 20.8.3 (CRITICAL RCE fix), `hono` → 4.12.5, `markdown-it` → 14.1.1; resolved transitive `ajv` and `minimatch` ReDoS issues via `npm audit fix`. Total vulnerabilities reduced from 11 to 0.
 
 ### Added

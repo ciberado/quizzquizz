@@ -39,6 +39,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private automaticPace: boolean = false; // Auto-advance enabled
   private serverTime: number = 0; // Server's current time for clock synchronization
   private isNavigating: boolean = false; // Prevent concurrent API calls
+  private earlyStop: boolean = false; // Set when all players answered early (prevents timer restart in polls)
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -107,15 +108,24 @@ export class QuestionDisplayScreen extends HTMLElement {
         const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
         this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
         this.serverTime = session.serverTime; // Store server time for synchronized timer
-        const elapsed = Math.floor((this.serverTime - Number(session.questionStartedAt)) / 1000);
-        this.timeRemaining = Math.max(0, timeLimit - elapsed);
-        newGameState.timeRemaining = this.timeRemaining;
-        
-        if (this.timeRemaining > 0 && !this.timerInterval) {
-          this.startTimer();
-        } else if (this.timeRemaining <= 0) {
-          // Timer already expired from server - just stop timer and show correct answers
-          this.stopTimer();
+
+        if (!this.earlyStop) {
+          // Only recalculate from server when not in early-stop mode (all players answered)
+          // Without this guard, the next poll after stopTimer() restarts the timer because
+          // timerInterval===null but timeRemaining>0.
+          const elapsed = Math.floor((this.serverTime - Number(session.questionStartedAt)) / 1000);
+          this.timeRemaining = Math.max(0, timeLimit - elapsed);
+          newGameState.timeRemaining = this.timeRemaining;
+
+          if (this.timeRemaining > 0 && !this.timerInterval) {
+            this.startTimer();
+          } else if (this.timeRemaining <= 0) {
+            // Timer already expired from server - just stop timer and show correct answers
+            this.stopTimer();
+          }
+        } else {
+          // Early-stop mode: keep timeRemaining at 0 so answers stay revealed
+          newGameState.timeRemaining = 0;
         }
       }
 
@@ -136,8 +146,14 @@ export class QuestionDisplayScreen extends HTMLElement {
         if (allPlayersAnswered && isTimerActive) {
           // All players answered before timer expired - show correct answers for 4 seconds
           console.log('✅ All players answered - will show leaderboard in 4s');
-          this.stopTimer(); // Stop the timer since everyone answered
-          this.render(); // Re-render to show correct answers
+          // FIX: set earlyStop BEFORE the poll cycle's next render so that:
+          //  1. timeRemaining is forced to 0 → render() shows answer reveal
+          //  2. subsequent polls skip server-recalculation → timer never restarts
+          this.earlyStop = true;
+          this.timeRemaining = 0;
+          this.wasTimerActive = false; // Prevent false timerStateChanged in next poll
+          this.stopTimer();
+          this.render(); // Re-render now with isTimerActive=false → correct answers revealed
           this.autoNavigateTimeout = window.setTimeout(() => {
             console.log('🚀 Auto-navigating to leaderboard');
             router.navigate('/leaderboard');
@@ -367,15 +383,23 @@ export class QuestionDisplayScreen extends HTMLElement {
           <div class="timer-value ${this.timeRemaining <= 5 ? 'warning' : ''}">
             ${this.formatTime(this.timeRemaining)}
           </div>
-          <div class="timer-label">${isTimerActive ? 'seconds remaining' : 'Time\'s up!'}</div>
+          <div class="timer-label">
+            ${isTimerActive
+              ? 'seconds remaining'
+              : (this.earlyStop ? '✅ All players answered!' : 'Time\'s up!')}
+          </div>
         </div>
 
         <div class="controls">
-          ${!isTimerActive ? `
-            <button class="btn-primary" id="next-button">
-              Show Leaderboard
-            </button>
-          ` : ''}
+          ${!isTimerActive
+            ? (this.automaticPace
+              ? `<div class="autopace-status">
+                   <div class="autopace-spinner"></div>
+                   <span>${this.earlyStop ? 'Showing leaderboard in a moment…' : 'Loading leaderboard…'}</span>
+                 </div>`
+              : `<button class="btn-primary" id="next-button">Show Leaderboard</button>`
+              )
+            : ''}
           <button class="btn-secondary" id="end-button">End Quiz</button>
         </div>
       </div>
@@ -580,8 +604,28 @@ export class QuestionDisplayScreen extends HTMLElement {
       .controls {
         display: flex;
         justify-content: center;
+        align-items: center;
         gap: 2rem;
         margin-top: auto;
+      }
+
+      .autopace-status {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.5rem;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+      }
+
+      .autopace-spinner {
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 3px solid var(--color-border);
+        border-top-color: var(--color-primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        flex-shrink: 0;
       }
 
       .loading {

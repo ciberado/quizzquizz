@@ -88,8 +88,10 @@ export class LeaderboardScreen extends HTMLElement {
         this.leaderboard = newLeaderboard;
         this.render();
         
-        // If automatic pace is enabled and this is the first load, schedule auto-advance
-        if (wasFirstLoad && this.automaticPace && this.sessionStatus === 'playing') {
+        // If automatic pace is enabled and this is the first load, schedule auto-advance.
+        // Guard with !this.autoNavigateTimeout to prevent double-scheduling when
+        // leaderboardChanged fires multiple times (e.g. late scores, empty leaderboard race).
+        if (wasFirstLoad && this.automaticPace && this.sessionStatus === 'playing' && !this.autoNavigateTimeout) {
           const hasMoreQuestions = this.currentQuestionIndex < this.totalQuestions - 1;
           if (hasMoreQuestions) {
             console.log('⏱️ Automatic pace enabled - will advance to next question in 4s');
