@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Changed
+- **[deps] Upgrade vulnerable dependencies and fix `npm run dev` to start all three apps concurrently** — installed `concurrently` at root and updated the root `dev` script to start `api-server`, `host-app`, and `player-app` in parallel (previously only `api-server` would start due to sequential workspace execution). Upgraded `vitest`/`@vitest/ui` 1.x → 3.2.4, `vite` 5.x → 6.4.1, `happy-dom` 12.x → 20.8.3 (CRITICAL RCE fix), `hono` → 4.12.5, `markdown-it` → 14.1.1; resolved transitive `ajv` and `minimatch` ReDoS issues via `npm audit fix`. Total vulnerabilities reduced from 11 to 0.
+
 ### Added
 - **[test] Autopace double-trigger prevention tests** — 5 unit tests for `QuestionDisplayScreen` verifying that `router.navigate('/leaderboard')` is called at most once regardless of whether the `allPlayersAnswered` poll path, the client-side countdown timer, or both trigger simultaneously. Covers: allPlayersAnswered before timer expiry, timer expiry with no answers, concurrent triggers, sequential poll after timer, and autopace-disabled cases (`packages/host-app/src/components/question-display-screen.test.ts`)
 

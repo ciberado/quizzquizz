@@ -36,7 +36,6 @@ vi.mock('../api-client', () => ({
 // ── Import the component AFTER mocks are registered ─────────────────────────
 // Importing the module self-registers 'question-display-screen' via the
 // customElements.define call at the bottom of the module.
-import type { QuestionDisplayScreen } from './question-display-screen';
 import './question-display-screen';
 
 const TAG = 'question-display-screen';
