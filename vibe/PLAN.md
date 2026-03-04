@@ -17,7 +17,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 9F Complete — Granular Question Statistics! (Mar 1, 2026)
+**Current Status**: Phase 9F Complete + Phase 7B autopace bug fixes (Mar 4, 2026)
 
 **Completed Phases** (51-60 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
@@ -41,6 +41,12 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording - COMPLETE!
 
 **Current Phase**:
+- ✅ **Phase 7B autopace bug fixes** (Mar 4, 2026):
+  - Fixed timer restart after all-players-answered early stop (`earlyStop` flag on `QuestionDisplayScreen`)
+  - Fixed correct answers not revealed on early stop (zero `timeRemaining` before `render()`)
+  - Added visual feedback: "✅ All players answered!" label + spinner + "Showing leaderboard in a moment…"
+  - Fixed leaderboard double-schedule (`!autoNavigateTimeout` guard in `LeaderboardScreen`)
+  - Verified: 60/60 unit tests, 15/15 E2E tests, Playwright MCP live run (full Q1→leaderboard→Q2→Q3 chain)
 - ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording (3-4 hrs) - COMPLETE
   - `recordSessionStats()` helper writes `HostedSession`, `PlayerStat`, `UserQuestionStat`, `QuestionGlobalStat` at session end
   - `responseTimeMs` stored on every `PlayerAnswer` (calculated server-side from `questionStartedAt`)

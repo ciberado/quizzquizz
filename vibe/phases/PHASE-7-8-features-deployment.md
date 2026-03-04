@@ -139,13 +139,19 @@
   - Tests: 7 new tests, all 114 tests passing (39 common + 75 API)
   - Use case: Perfect for varied question banks with different complexity levels
 
-- ✅ **Auto-advance on completion** (Feb 20, 2026):
+- ✅ **Auto-advance on completion** (Feb 20, 2026 — bug-fixed Mar 4, 2026):
   - Quiz progresses when all players submit their answers
   - No waiting for timer to expire when everyone is done
   - API exposes `allPlayersAnswered` flag to host
   - Host shows correct answers for 4s then navigates to leaderboard
   - Combines with automatic pace for fully hands-free quiz experience
   - Use case: Keeps quiz moving efficiently, reduces dead time
+  - **Bug fixes (Mar 4, 2026 — commit `ce04b79`)**:
+    - Timer restart after early stop: `stopTimer()` left `timeRemaining > 0`; next poll restarted timer (appeared accelerated). Fixed by adding `earlyStop` flag that zeroes `timeRemaining` and blocks subsequent server recalculation in `QuestionDisplayScreen`.
+    - Correct answers not revealed: `isTimerActive` was still `true` at render time; zeroing `timeRemaining` first makes `isTimerActive = false` so answer cards turn green immediately.
+    - No visual feedback during 4s delay: timer label now shows "✅ All players answered!" and controls area shows spinner with "Showing leaderboard in a moment…".
+    - Leaderboard double-schedule / last-question skip: `wasFirstLoad` guard alone was insufficient; added `!this.autoNavigateTimeout` to `LeaderboardScreen` preventing duplicate `handleNextQuestion()` calls.
+    - Verified: 60/60 unit tests; 4 API + 10 player-UI + 1 host E2E tests pass; Playwright MCP live run confirmed correct-answer reveal, spinner, and full Q1→leaderboard→Q2→Q3 chain without skips.
 
 - ✅ **Automatic pace feature** (Feb 12, 2026):
   - Optional automatic quiz progression without host interaction

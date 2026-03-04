@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
-## [Unreleased]
+## 2026-03-04
 
 ### Fixed
 - **[autopace] Timer restarts after all-players-answered early stop** — when `allPlayersAnswered=true` was detected, `stopTimer()` cleared the interval but left `this.timeRemaining > 0` and `timerInterval===null`. The next 2-second poll saw that combination and called `startTimer()` again, causing the timer to jump and count down a second time (looked "accelerated"). Fixed by adding `this.earlyStop = true`, `this.timeRemaining = 0`, and `this.wasTimerActive = false` in the early-stop branch; the `earlyStop` flag guards all subsequent poll recalculations so the timer stays at 0.
