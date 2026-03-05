@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, statSync } from 'fs';
-import { join, extname } from 'path';
+import { readFileSync, readdirSync, statSync, realpathSync } from 'fs';
+import { join, extname, relative, isAbsolute } from 'path';
 import {
   Question,
   QuestionBank,
@@ -260,45 +260,197 @@ export function parseQuestionBank(content: string, bankId: string): QuestionBank
   return result.data;
 }
 
-/**
- * Load a question bank from a file
- */
-export function loadQuestionBank(filePath: string): QuestionBank {
-  const content = readFileSync(filePath, 'utf-8');
-  const bankId = filePath.split('/').pop()?.replace('.md', '') || 'unknown';
-  return parseQuestionBank(content, bankId);
+// ─── Tree types ──────────────────────────────────────────────────────────────
+
+/** Lightweight bank descriptor used inside folder trees (no question payload). */
+export interface QuestionBankSummary {
+  id: string;
+  name: string;
+  description?: string;
+  topics: string[];
+  questionCount: number;
 }
 
+/** Node in the question-bank folder tree. */
+export interface QuestionBankFolder {
+  /** Raw directory basename (empty string for root). */
+  name: string;
+  /** Relative path from rootDir using '/' separators (empty string for root). */
+  path: string;
+  folders: QuestionBankFolder[];
+  banks: QuestionBankSummary[];
+}
+
+/** Result of loadQuestionBankTree — tree for browsing + full bank map for lookups. */
+export interface LoadQuestionBankTreeResult {
+  tree: QuestionBankFolder;
+  /** Canonical id → full QuestionBank (deduplicated across symlinks). */
+  banks: Map<string, QuestionBank>;
+}
+
+/** File-stem IDs that collide with fixed API route paths; skipped by the loader. */
+const RESERVED_STEMS = new Set(['bank', 'questions', 'stats', 'reload']);
+
+// ─── File-level loaders ──────────────────────────────────────────────────────
+
 /**
- * Load all question banks from a directory
+ * Load a question bank from a file.
+ * @param filePath  Absolute path to the .md file.
+ * @param bankId    Explicit id; defaults to the filename stem.
  */
-export function loadQuestionBanks(dirPath: string): QuestionBank[] {
-  const banks: QuestionBank[] = [];
+export function loadQuestionBank(filePath: string, bankId?: string): QuestionBank {
+  const content = readFileSync(filePath, 'utf-8');
+  const resolvedId = bankId ?? (filePath.split('/').pop()?.replace('.md', '') || 'unknown');
+  return parseQuestionBank(content, resolvedId);
+}
 
-  try {
-    const files = readdirSync(dirPath);
+// ─── Tree loader ─────────────────────────────────────────────────────────────
 
-    for (const file of files) {
-      if (extname(file) !== '.md') continue;
+/**
+ * Recursively scan `rootDir` and return a folder tree of summaries plus a
+ * deduplicated Map of full QuestionBank objects keyed by canonical id.
+ *
+ * Symlinked .md files are included at every logical position in the tree but
+ * share a single id (canonical path relative to rootDir) so statistics remain
+ * unified.  Symlinks that point outside rootDir are skipped with a warning.
+ * Circular directory symlinks are detected via ancestor tracking and skipped.
+ */
+export function loadQuestionBankTree(rootDir: string): LoadQuestionBankTreeResult {
+  const realRoot = realpathSync(rootDir);
+  const banksMap = new Map<string, QuestionBank>();
 
-      const filePath = join(dirPath, file);
-      const stat = statSync(filePath);
+  function buildFolder(
+    logicalDir: string,
+    folderName: string,
+    folderPath: string,
+    ancestorRealDirs: ReadonlySet<string>,
+  ): QuestionBankFolder {
+    const folder: QuestionBankFolder = { name: folderName, path: folderPath, folders: [], banks: [] };
 
-      if (stat.isFile()) {
-        try {
-          const bank = loadQuestionBank(filePath);
-          banks.push(bank);
-        } catch (error) {
-          console.error(`Failed to load question bank ${file}:`, error);
+    let entries: string[];
+    try {
+      entries = readdirSync(logicalDir);
+    } catch {
+      return folder;
+    }
+
+    for (const entry of entries) {
+      const logicalEntryPath = join(logicalDir, entry);
+
+      let realPath: string;
+      try {
+        realPath = realpathSync(logicalEntryPath);
+      } catch {
+        continue; // dangling symlink or permission error
+      }
+
+      let realStat: ReturnType<typeof statSync>;
+      try {
+        realStat = statSync(realPath);
+      } catch {
+        continue;
+      }
+
+      if (realStat.isFile() && extname(entry) === '.md') {
+        // Compute id from canonical path relative to realRoot
+        const relPath = relative(realRoot, realPath);
+        if (relPath.startsWith('..') || isAbsolute(relPath)) {
+          console.warn(`[question-bank] Skipping ${logicalEntryPath}: canonical path is outside rootDir`);
+          continue;
         }
+        const bankId = relPath.replace(/\.md$/, '').replace(/\\/g, '/'); // normalise on Windows
+
+        // Reject reserved stems (root-level only, where id has no '/')
+        if (!bankId.includes('/') && RESERVED_STEMS.has(bankId)) {
+          console.warn(`[question-bank] Skipping ${logicalEntryPath}: id "${bankId}" is reserved`);
+          continue;
+        }
+
+        // Load full bank once per canonical id; reuse on subsequent encounters
+        let bank: QuestionBank;
+        if (banksMap.has(bankId)) {
+          bank = banksMap.get(bankId)!;
+        } else {
+          try {
+            bank = loadQuestionBank(realPath, bankId);
+            banksMap.set(bankId, bank);
+          } catch (err) {
+            console.warn(`[question-bank] Failed to load ${realPath}: ${err}`);
+            continue;
+          }
+        }
+
+        folder.banks.push({
+          id: bank.id,
+          name: bank.metadata.name,
+          description: bank.metadata.description,
+          topics: bank.metadata.topics,
+          questionCount: bank.questions.length,
+        });
+
+      } else if (realStat.isDirectory()) {
+        if (ancestorRealDirs.has(realPath)) {
+          console.warn(`[question-bank] Skipping ${logicalEntryPath}: circular symlink detected`);
+          continue;
+        }
+        const childAncestors = new Set(ancestorRealDirs);
+        childAncestors.add(realPath);
+        const subFolderPath = folderPath ? `${folderPath}/${entry}` : entry;
+        const subFolder = buildFolder(realPath, entry, subFolderPath, childAncestors);
+        folder.folders.push(subFolder);
       }
     }
-  } catch (error) {
-    console.error(`Failed to read directory ${dirPath}:`, error);
+
+    // Sort: folders first (alphabetical), then banks (alphabetical by display name)
+    folder.folders.sort((a, b) => a.name.localeCompare(b.name));
+    folder.banks.sort((a, b) => a.name.localeCompare(b.name));
+    return folder;
   }
 
-  return banks;
+  const initialAncestors = new Set<string>([realRoot]);
+  const tree = buildFolder(realRoot, '', '', initialAncestors);
+  return { tree, banks: banksMap };
 }
+
+// ─── Flatten utility ─────────────────────────────────────────────────────────
+
+/**
+ * Depth-first flatten of a QuestionBankFolder tree into a deduplicated array
+ * of full QuestionBank objects.  A single canonical bank that appears at
+ * multiple logical locations (via symlinks) is included exactly once.
+ */
+export function flattenBankTree(
+  root: QuestionBankFolder,
+  banks: Map<string, QuestionBank>,
+): QuestionBank[] {
+  const seenIds = new Set<string>();
+  const result: QuestionBank[] = [];
+
+  function traverse(folder: QuestionBankFolder): void {
+    for (const summary of folder.banks) {
+      if (!seenIds.has(summary.id)) {
+        seenIds.add(summary.id);
+        const bank = banks.get(summary.id);
+        if (bank) result.push(bank);
+      }
+    }
+    for (const sub of folder.folders) traverse(sub);
+  }
+
+  traverse(root);
+  return result;
+}
+
+/**
+ * Load all question banks from a directory (compatibility shim).
+ * Returns full QuestionBank objects, deduplicated by canonical id.
+ */
+export function loadQuestionBanks(dirPath: string): QuestionBank[] {
+  const { banks } = loadQuestionBankTree(dirPath);
+  return Array.from(banks.values());
+}
+
+// ─── Filter / random utilities ───────────────────────────────────────────────
 
 /**
  * Filter questions by criteria

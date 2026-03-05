@@ -1,5 +1,15 @@
-import { describe, it, expect } from 'vitest';
-import { parseQuestionBank, filterQuestions, getRandomQuestions } from './index';
+import { describe, it, expect, afterEach } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import {
+  parseQuestionBank,
+  filterQuestions,
+  getRandomQuestions,
+  loadQuestionBankTree,
+  flattenBankTree,
+  loadQuestionBanks,
+} from './index';
 import type { Question } from '@quizzquizz/common';
 
 describe('parseQuestionBank', () => {
@@ -313,5 +323,185 @@ describe('getRandomQuestions', () => {
     const original = [...questions];
     getRandomQuestions(questions, 2);
     expect(questions).toEqual(original);
+  });
+});
+
+// ─── Tree loader tests ────────────────────────────────────────────────────────
+
+/** Minimal valid question bank markdown for fixture files. */
+function minimalBankMd(name: string): string {
+  return `# Question Bank: ${name}
+
+## Metadata
+- **Topics**: test
+
+---
+
+## Questions
+
+### Q001
+**Difficulty**: easy
+
+What is 1+1?
+
+- [x] 2
+- [ ] 3
+
+---
+`;
+}
+
+/** Create a temp dir, run tests, delete it after. */
+function makeTmpDir(): string {
+  return mkdtempSync(join(tmpdir(), 'qb-test-'));
+}
+
+describe('loadQuestionBankTree', () => {
+  const tmps: string[] = [];
+  afterEach(() => {
+    for (const d of tmps) {
+      try { rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
+    tmps.length = 0;
+  });
+
+  it('returns root-level banks with filename-stem ids', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    writeFileSync(join(dir, 'my-bank.md'), minimalBankMd('My Bank'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    expect(tree.banks).toHaveLength(1);
+    expect(tree.banks[0]!.id).toBe('my-bank');
+    expect(banks.has('my-bank')).toBe(true);
+    expect(banks.get('my-bank')!.metadata.name).toBe('My Bank');
+  });
+
+  it('returns nested structure with path-based ids', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'science', 'physics'), { recursive: true });
+    writeFileSync(join(dir, 'science', 'physics', 'mechanics.md'), minimalBankMd('Mechanics'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    expect(tree.folders).toHaveLength(1);
+    const science = tree.folders[0]!;
+    expect(science.name).toBe('science');
+    expect(science.path).toBe('science');
+    const physics = science.folders[0]!;
+    expect(physics.name).toBe('physics');
+    expect(physics.path).toBe('science/physics');
+    expect(physics.banks[0]!.id).toBe('science/physics/mechanics');
+    expect(banks.has('science/physics/mechanics')).toBe(true);
+  });
+
+  it('symlinked .md in two dirs → same id, appears in both folder positions', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'a'));
+    mkdirSync(join(dir, 'b'));
+    writeFileSync(join(dir, 'a', 'shared.md'), minimalBankMd('Shared Bank'));
+    symlinkSync(join(dir, 'a', 'shared.md'), join(dir, 'b', 'shared.md'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    const aBank = tree.folders.find(f => f.name === 'a')!.banks[0]!;
+    const bBank = tree.folders.find(f => f.name === 'b')!.banks[0]!;
+    expect(aBank.id).toBe('a/shared');
+    expect(bBank.id).toBe('a/shared'); // same canonical id
+    expect(banks.size).toBe(1); // only one entry in map
+  });
+
+  it('symlink outside rootDir is skipped with no crash', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    const outsideDir = makeTmpDir(); tmps.push(outsideDir);
+    writeFileSync(join(outsideDir, 'outside.md'), minimalBankMd('Outside'));
+    symlinkSync(join(outsideDir, 'outside.md'), join(dir, 'outside.md'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    expect(tree.banks).toHaveLength(0);
+    expect(banks.size).toBe(0);
+  });
+
+  it('empty subdirectory is included as empty folder', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'empty-folder'));
+    const { tree } = loadQuestionBankTree(dir);
+    expect(tree.folders).toHaveLength(1);
+    expect(tree.folders[0]!.name).toBe('empty-folder');
+    expect(tree.folders[0]!.banks).toHaveLength(0);
+    expect(tree.folders[0]!.folders).toHaveLength(0);
+  });
+
+  it('folders are sorted alphabetically, banks are sorted by display name', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'z-folder'));
+    mkdirSync(join(dir, 'a-folder'));
+    writeFileSync(join(dir, 'z-bank.md'), minimalBankMd('Zebra'));
+    writeFileSync(join(dir, 'a-bank.md'), minimalBankMd('Aardvark'));
+    const { tree } = loadQuestionBankTree(dir);
+    expect(tree.folders[0]!.name).toBe('a-folder');
+    expect(tree.folders[1]!.name).toBe('z-folder');
+    expect(tree.banks[0]!.name).toBe('Aardvark');
+    expect(tree.banks[1]!.name).toBe('Zebra');
+  });
+
+  it('reserved root-level stems are skipped', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    writeFileSync(join(dir, 'bank.md'), minimalBankMd('Bank Reserved'));
+    writeFileSync(join(dir, 'questions.md'), minimalBankMd('Questions Reserved'));
+    writeFileSync(join(dir, 'ok.md'), minimalBankMd('OK'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    expect(banks.size).toBe(1);
+    expect(tree.banks[0]!.id).toBe('ok');
+  });
+});
+
+describe('flattenBankTree', () => {
+  const tmps: string[] = [];
+  afterEach(() => {
+    for (const d of tmps) {
+      try { rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
+    tmps.length = 0;
+  });
+
+  it('returns banks depth-first', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'sub'));
+    writeFileSync(join(dir, 'root-bank.md'), minimalBankMd('Root'));
+    writeFileSync(join(dir, 'sub', 'sub-bank.md'), minimalBankMd('Sub'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    const flat = flattenBankTree(tree, banks);
+    expect(flat).toHaveLength(2);
+    // root bank comes first (banks before sub-folders processing); sub second
+    const ids = flat.map(b => b.id);
+    expect(ids).toContain('root-bank');
+    expect(ids).toContain('sub/sub-bank');
+  });
+
+  it('deduplicates symlinked banks — each canonical id appears exactly once', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'a'));
+    mkdirSync(join(dir, 'b'));
+    writeFileSync(join(dir, 'a', 'shared.md'), minimalBankMd('Shared'));
+    symlinkSync(join(dir, 'a', 'shared.md'), join(dir, 'b', 'shared.md'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    const flat = flattenBankTree(tree, banks);
+    expect(flat).toHaveLength(1);
+    expect(flat[0]!.id).toBe('a/shared');
+  });
+});
+
+describe('loadQuestionBanks (compatibility shim)', () => {
+  const tmps: string[] = [];
+  afterEach(() => {
+    for (const d of tmps) {
+      try { rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
+    tmps.length = 0;
+  });
+
+  it('returns all banks including nested dirs, deduplicated', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    mkdirSync(join(dir, 'sub'));
+    writeFileSync(join(dir, 'root.md'), minimalBankMd('Root'));
+    writeFileSync(join(dir, 'sub', 'nested.md'), minimalBankMd('Nested'));
+    const banks = loadQuestionBanks(dir);
+    expect(banks).toHaveLength(2);
+    const ids = banks.map(b => b.id).sort();
+    expect(ids).toEqual(['root', 'sub/nested']);
   });
 });

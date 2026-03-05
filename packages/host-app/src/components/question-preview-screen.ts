@@ -58,8 +58,10 @@ export class QuestionPreviewScreen extends BaseComponent {
 
   protected async onMount(): Promise<void> {
     // Extract bankId from path: /preview/:bankId
+    // bankId may be URL-encoded (e.g. "science%2Fphysics%2Felectromagnetism")
+    // to preserve slashes in path-based IDs without confusing the hash router.
     const pathParts = window.location.hash.split('/');
-    this.bankId = pathParts[2] || '';
+    this.bankId = pathParts[2] ? decodeURIComponent(pathParts[2]) : '';
 
     if (!this.bankId) {
       router.navigate('/create');
@@ -72,12 +74,14 @@ export class QuestionPreviewScreen extends BaseComponent {
 
   private async loadBank(): Promise<void> {
     try {
-      const banks = await api.getQuestionBanks();
-      this.bank = banks.find(b => b.id === this.bankId) || null;
-      
-      if (!this.bank) {
-        throw new Error('Question bank not found');
-      }
+      const bankData = await api.getQuestionBankDetails(this.bankId);
+      this.bank = {
+        id: this.bankId,
+        name: bankData.metadata.name,
+        description: bankData.metadata.description,
+        topics: bankData.metadata.topics,
+        questionCount: bankData.questions.length,
+      };
 
       // Extract available topics from bank metadata
       this.availableTopics = this.bank.topics || [];
@@ -94,28 +98,18 @@ export class QuestionPreviewScreen extends BaseComponent {
     this.showLoading('Loading questions...');
 
     try {
-      // Build query params
-      const params = new URLSearchParams();
-      params.set('page', this.currentPage.toString());
-      params.set('limit', this.limit.toString());
-
+      const qParams: { page?: number; limit?: number; difficulty?: string; topic?: string } = {
+        page: this.currentPage,
+        limit: this.limit,
+      };
       if (this.selectedDifficulties.size > 0) {
-        params.set('difficulty', Array.from(this.selectedDifficulties).join(','));
+        qParams.difficulty = Array.from(this.selectedDifficulties).join(',');
       }
-
       if (this.selectedTopics.size > 0) {
-        params.set('topic', Array.from(this.selectedTopics).join(','));
+        qParams.topic = Array.from(this.selectedTopics).join(',');
       }
 
-      const apiBaseUrl = import.meta.env?.DEV ? 'http://localhost:3000' : window.location.origin;
-      const url = `${apiBaseUrl}/api/question-banks/${this.bankId}/questions?${params.toString()}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      this.preview = await response.json();
+      this.preview = await api.getQuestionBankQuestions(this.bankId, qParams) as QuestionPreviewResponse;
       
       // If selectAllMode, auto-select all questions in preview
       if (this.selectAllMode && this.preview) {

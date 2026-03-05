@@ -336,6 +336,47 @@ button.loading::after {
   font-size: calc(var(--font-size-base) * 0.9);
 }
 
+/* Bank browser breadcrumb */
+.bank-browser-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-base);
+}
+
+.breadcrumb-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.breadcrumb-link:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.breadcrumb-sep {
+  color: var(--color-text-muted);
+}
+
+.breadcrumb-current {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* Folder card variant — subdued background to distinguish from bank cards */
+.bank-browser-folder-card {
+  background: rgba(102, 126, 234, 0.05);
+  border-style: dashed;
+  text-align: center;
+}
+
 /* Loading state */
 .loading-container {
   display: flex;

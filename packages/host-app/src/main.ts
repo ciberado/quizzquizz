@@ -7,6 +7,7 @@ import { ErrorBoundary } from './error-boundary';
 // Import screen components
 import './components/auth-header';
 import './components/login-screen';
+import './components/bank-browser';
 import './components/create-session-screen';
 import './components/question-preview-screen';
 import './components/lobby-screen';

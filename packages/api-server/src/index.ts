@@ -3,8 +3,8 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serve } from '@hono/node-server';
 import { initDatabase } from './db/index.js';
-import { loadQuestionBanks } from '@quizzquizz/question-bank';
-import { questionBanks } from './state.js';
+import { loadQuestionBankTree } from '@quizzquizz/question-bank';
+import { questionBanks, setBankTree } from './state.js';
 import sessionRoutes from './routes/sessions.js';
 import playerRoutes from './routes/players.js';
 import gameRoutes from './routes/game.js';
@@ -81,14 +81,15 @@ async function initialize() {
     join(__dirname, '../../../question-banks');
   
   console.log(`📚 Loading question banks from: ${questionBanksPath}`);
-  const banks = loadQuestionBanks(questionBanksPath);
+  const { tree, banks } = loadQuestionBankTree(questionBanksPath);
+  setBankTree(tree);
   
-  for (const bank of banks) {
-    questionBanks.set(bank.id, bank);
-    console.log(`   ✓ Loaded: ${bank.metadata.name} (${bank.questions.length} questions)`);
+  for (const [id, bank] of banks) {
+    questionBanks.set(id, bank);
+    console.log(`   ✓ Loaded: ${bank.metadata.name} [${id}] (${bank.questions.length} questions)`);
   }
   
-  console.log(`✅ Loaded ${banks.length} question bank(s)`);
+  console.log(`✅ Loaded ${banks.size} question bank(s)`);
   
   // Start session cleanup job (runs every 60 minutes by default)
   const cleanupIntervalMinutes = parseInt(process.env.CLEANUP_INTERVAL_MINUTES || '60', 10);

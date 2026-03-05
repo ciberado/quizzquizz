@@ -19,13 +19,20 @@ interface PlayerWithAnswerStatus extends Player {
   hasAnswered: boolean;
 }
 
-// Simplified question bank for listing (from API /question-banks endpoint)
-interface QuestionBankSummary {
+// Question bank types matching the API tree response
+export interface QuestionBankSummary {
   id: string;
   name: string;
   description?: string;
-  topics?: string[];
+  topics: string[];
   questionCount: number;
+}
+
+export interface QuestionBankFolder {
+  name: string;       // raw directory basename, '' for root
+  path: string;       // relative path from root, '' for root
+  folders: QuestionBankFolder[];
+  banks: QuestionBankSummary[];
 }
 
 // API base URL (configurable via environment)
@@ -172,11 +179,38 @@ export function cancelAllRequests(): void {
  */
 export const api = {
   /**
-   * Get list of available question banks
+   * Get the full folder tree of available question banks.
    */
-  async getQuestionBanks(): Promise<QuestionBankSummary[]> {
-    const response = await apiRequest<{ questionBanks: QuestionBankSummary[] }>('/api/question-banks');
-    return response.questionBanks;
+  async getQuestionBankTree(): Promise<QuestionBankFolder> {
+    const response = await apiRequest<{ tree: QuestionBankFolder }>('/api/question-banks');
+    return response.tree;
+  },
+
+  /**
+   * Get full details of a single question bank by ID.
+   */
+  async getQuestionBankDetails(id: string): Promise<{
+    id: string; metadata: { name: string; description?: string; topics: string[]; defaultTimeLimit: number }; questions: unknown[];
+  }> {
+    const encoded = encodeURIComponent(id);
+    return apiRequest(`/api/question-banks/bank?id=${encoded}`);
+  },
+
+  /**
+   * Get questions from a bank with filtering and pagination.
+   */
+  async getQuestionBankQuestions(
+    bankId: string,
+    params: { page?: number; limit?: number; difficulty?: string; topic?: string; tag?: string } = {}
+  ): Promise<unknown> {
+    const qs = new URLSearchParams();
+    qs.set('bankId', bankId);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.difficulty) qs.set('difficulty', params.difficulty);
+    if (params.topic) qs.set('topic', params.topic);
+    if (params.tag) qs.set('tag', params.tag);
+    return apiRequest(`/api/question-banks/questions?${qs.toString()}`);
   },
 
   /**

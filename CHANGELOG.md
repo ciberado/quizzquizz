@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## Unreleased
+
+### Added
+- **[phase-7f] Question bank folder navigation** — host can now drill into nested directories of question banks
+  - `@quizzquizz/question-bank`: `loadQuestionBankTree()` builds a `QuestionBankFolder` tree from a root directory; supports symlinks (resolved via `realpathSync`, out-of-root links skipped with warning, circular links detected via visited-path `Set`); `flattenBankTree()` deduplicates by ID; `loadQuestionBanks()` kept as backward-compat shim; reserved stems (`bank`, `questions`, `stats`, `reload`) are skipped at any depth
+  - `api-server`: `GET /api/question-banks` now returns `{ tree: QuestionBankFolder }` (breaking change from `{ questionBanks: [] }`); new fixed routes `GET /bank?id=`, `GET /questions?bankId=`, `GET /stats?bankId=`; legacy `GET /:id`, `GET /:id/questions`, `GET /:id/stats` kept for backward compat; `POST /reload` rebuilds both tree and flat map
+  - `api-server/state`: `getBankTree()`/`setBankTree()` setter pattern (ESM-safe; `export let` can't be reassigned by importers)
+  - `host-app`: `<qz-bank-browser>` web component with breadcrumb drill-down; flat-grid fallback when root has no sub-folders; emits `bank-selected` CustomEvent; `CreateSessionScreen` delegates entirely to `<qz-bank-browser>`; `QuestionPreviewScreen` uses `getQuestionBankDetails` + `getQuestionBankQuestions`; path IDs URL-encoded on navigate, decoded on extraction
+  - CSS: breadcrumb nav + folder card styles
+
+### Changed
+- `api-server` `GET /api/question-banks` response shape changed from `{ questionBanks: QuestionBank[] }` to `{ tree: QuestionBankFolder }` (Phase 7F breaking change)
+
 ## 2026-03-04
 
 ### Fixed

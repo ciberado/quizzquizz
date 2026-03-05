@@ -23,7 +23,7 @@ describe('API Client', () => {
         json: async () => ({ error: 'Session not found' }),
       });
 
-      await expect(api.getQuestionBanks()).rejects.toThrow(ApiError);
+      await expect(api.getQuestionBankTree()).rejects.toThrow(ApiError);
     });
 
     it('should include error data in ApiError', async () => {
@@ -47,7 +47,7 @@ describe('API Client', () => {
     it('should handle network errors', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(api.getQuestionBanks()).rejects.toThrow(ApiError);
+      await expect(api.getQuestionBankTree()).rejects.toThrow(ApiError);
     });
 
     it('should handle non-JSON error responses', async () => {
@@ -61,23 +61,28 @@ describe('API Client', () => {
         text: async () => 'Server error occurred',
       });
 
-      await expect(api.getQuestionBanks()).rejects.toThrow(ApiError);
+      await expect(api.getQuestionBankTree()).rejects.toThrow(ApiError);
     });
   });
 
   describe('Question Banks', () => {
-    it('should fetch question banks', async () => {
-      const mockBanks = [
-        { id: 'bank-1', name: 'General Knowledge', questions: [] },
-        { id: 'bank-2', name: 'Science', questions: [] },
-      ];
+    it('should fetch the question bank tree', async () => {
+      const mockTree = {
+        name: '',
+        path: '',
+        folders: [],
+        banks: [
+          { id: 'bank-1', name: 'General Knowledge', topics: [], questionCount: 10 },
+          { id: 'bank-2', name: 'Science', topics: [], questionCount: 15 },
+        ],
+      };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ questionBanks: mockBanks }),
+        json: async () => ({ tree: mockTree }),
       });
 
-      const result = await api.getQuestionBanks();
+      const result = await api.getQuestionBankTree();
 
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:3000/api/question-banks',
@@ -87,7 +92,45 @@ describe('API Client', () => {
           }),
         })
       );
-      expect(result).toEqual(mockBanks);
+      expect(result).toEqual(mockTree);
+      expect(result.banks).toHaveLength(2);
+    });
+
+    it('should fetch a single bank by id via getQuestionBankDetails', async () => {
+      const mockBank = {
+        id: 'bank-1',
+        metadata: { name: 'General Knowledge', topics: [], defaultTimeLimit: 20 },
+        questions: [],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBank,
+      });
+
+      const result = await api.getQuestionBankDetails('bank-1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/question-banks/bank?id=bank-1',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        })
+      );
+      expect(result.metadata.name).toBe('General Knowledge');
+    });
+
+    it('should encode slashes in bank IDs for getQuestionBankDetails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'science/physics/electromagnetism', metadata: { name: 'Electromagnetism', topics: [], defaultTimeLimit: 20 }, questions: [] }),
+      });
+
+      await api.getQuestionBankDetails('science/physics/electromagnetism');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/question-banks/bank?id=science%2Fphysics%2Felectromagnetism',
+        expect.any(Object)
+      );
     });
 
     it('should reload question banks', async () => {

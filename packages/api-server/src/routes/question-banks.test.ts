@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Hono } from 'hono';
 import questionBankRoutes from '../routes/question-banks';
-import { questionBanks } from '../state';
+import { questionBanks, setBankTree } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
 
 const app = new Hono();
@@ -64,36 +64,80 @@ describe('Question Bank Routes', () => {
 
     questionBanks.set('test-bank-1', testBank1);
     questionBanks.set('test-bank-2', testBank2);
+
+    // Set up the folder tree so GET /api/question-banks includes these banks
+    setBankTree({
+      name: '', path: '', folders: [],
+      banks: [
+        { id: 'test-bank-1', name: testBank1.metadata.name, description: testBank1.metadata.description, topics: testBank1.metadata.topics, questionCount: testBank1.questions.length },
+        { id: 'test-bank-2', name: testBank2.metadata.name, description: testBank2.metadata.description, topics: testBank2.metadata.topics, questionCount: testBank2.questions.length },
+      ],
+    });
   });
 
   describe('GET /api/question-banks', () => {
-    it('should list all question banks', async () => {
+    it('should return a folder tree with the banks at root', async () => {
       const res = await request('/api/question-banks');
       expect(res.status).toBe(200);
       const data: any = await res.json();
-      expect(data.questionBanks).toHaveLength(2);
+      expect(data.tree).toBeDefined();
+      expect(data.tree.banks).toHaveLength(2);
     });
 
-    it('should include question count', async () => {
+    it('should include question count in tree banks', async () => {
       const res = await request('/api/question-banks');
       const data: any = await res.json();
-      const bank1 = data.questionBanks.find((b: any) => b.id === 'test-bank-1');
-      const bank2 = data.questionBanks.find((b: any) => b.id === 'test-bank-2');
+      const bank1 = data.tree.banks.find((b: any) => b.id === 'test-bank-1');
+      const bank2 = data.tree.banks.find((b: any) => b.id === 'test-bank-2');
       expect(bank1).toBeDefined();
       expect(bank2).toBeDefined();
       expect(bank1.questionCount).toBe(1);
       expect(bank2.questionCount).toBe(2);
     });
 
-    it('should include optional description', async () => {
+    it('should include optional description in tree banks', async () => {
       const res = await request('/api/question-banks');
       const data: any = await res.json();
-      const bank1 = data.questionBanks.find((b: any) => b.id === 'test-bank-1');
-      const bank2 = data.questionBanks.find((b: any) => b.id === 'test-bank-2');
+      const bank1 = data.tree.banks.find((b: any) => b.id === 'test-bank-1');
+      const bank2 = data.tree.banks.find((b: any) => b.id === 'test-bank-2');
       expect(bank1).toBeDefined();
       expect(bank2).toBeDefined();
       expect(bank1.description).toBe('A test bank');
       expect(bank2.description).toBeUndefined();
+    });
+  });
+
+  describe('GET /api/question-banks/bank?id=', () => {
+    it('should return full question bank by query param id', async () => {
+      const res = await request('/api/question-banks/bank?id=test-bank-1');
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(data.id).toBe('test-bank-1');
+      expect(data.metadata.name).toBe('Test Bank 1');
+    });
+
+    it('should return 400 when id param is missing', async () => {
+      const res = await request('/api/question-banks/bank');
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 for unknown id', async () => {
+      const res = await request('/api/question-banks/bank?id=no-such-bank');
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/question-banks/questions?bankId=', () => {
+    it('should return questions for a bank', async () => {
+      const res = await request('/api/question-banks/questions?bankId=test-bank-2');
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(data.questions).toHaveLength(2);
+    });
+
+    it('should return 400 when bankId is missing', async () => {
+      const res = await request('/api/question-banks/questions');
+      expect(res.status).toBe(400);
     });
   });
 
