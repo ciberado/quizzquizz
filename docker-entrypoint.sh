@@ -28,9 +28,11 @@ fi
 
 echo "✅ All build artifacts synced successfully"
 
-# Ensure the data directory exists for SQLite (may not be created if volume is empty)
+# Ensure the data directory exists and is writable by the nodejs user.
+# This handles pre-existing named volumes that may have been created with root ownership.
 mkdir -p /data
+chown nodejs:nodejs /data
 echo "📁 Data directory ready: /data"
 
-# Execute the main command
-exec "$@"
+# Drop from root to nodejs for the actual server process
+exec su-exec nodejs:nodejs "$@"

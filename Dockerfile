@@ -42,7 +42,7 @@ RUN cp -r packages/api-server/src/generated packages/api-server/dist/
 FROM node:22-alpine AS runtime
 
 # Install runtime dependencies only
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init su-exec
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -99,11 +99,10 @@ RUN mkdir -p \
 COPY --chown=nodejs:nodejs question-banks/ ./question-banks/
 
 # Copy entrypoint script
-COPY --chown=nodejs:nodejs docker-entrypoint.sh /usr/local/bin/
+COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Switch to non-root user
-USER nodejs
+# Run as root so the entrypoint can fix volume ownership, then drops to nodejs via su-exec
 
 # Set environment variables
 ENV NODE_ENV=production \

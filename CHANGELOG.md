@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-03-06
+
+### Fixed
+- **[fix/db-permissions] Fix SQLite volume permission error on container startup**
+  - `docker-entrypoint.sh`: runs as root, calls `chown nodejs:nodejs /data` to fix ownership of pre-existing named volumes, then drops privileges via `su-exec nodejs:nodejs`
+  - `Dockerfile`: installed `su-exec`; removed `USER nodejs` directive so the entrypoint runs as root and can repair ownership regardless of how the volume was originally created
+
 ## [0.1.1] — 2026-03-06
 
 ### Fixed
