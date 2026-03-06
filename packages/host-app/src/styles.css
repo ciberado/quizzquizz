@@ -454,44 +454,52 @@ button.loading::after {
 .leaderboard-screen {
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   animation: fadeIn 0.5s ease-in;
 }
 
 .leaderboard-header {
   text-align: center;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
 }
 
 .leaderboard-header h1 {
-  font-size: 64px;
+  font-size: 48px;
   background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .question-progress {
-  font-size: var(--font-size-large);
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
 }
 
+/* Side-by-side: list on left, buttons on right */
+.leaderboard-body {
+  display: flex;
+  gap: var(--spacing-lg);
+  align-items: flex-start;
+}
+
 .leaderboard-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
+  gap: var(--spacing-sm);
+  min-width: 0;
 }
 
 .leaderboard-entry {
   display: grid;
-  grid-template-columns: 100px 1fr 200px;
+  grid-template-columns: 72px 1fr 140px;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   background: var(--color-surface);
   border-radius: var(--border-radius);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
   border: 2px solid var(--color-border);
   transition: all var(--transition-base);
   animation: slideIn 0.5s ease-out backwards;
@@ -536,18 +544,18 @@ button.loading::after {
 }
 
 .entry-rank .medal {
-  font-size: 56px;
+  font-size: 36px;
   display: block;
 }
 
 .entry-rank .rank-number {
-  font-size: 36px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--color-text-secondary);
 }
 
 .entry-nickname {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
@@ -556,7 +564,7 @@ button.loading::after {
 }
 
 .entry-score {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--color-primary);
   text-align: right;
@@ -572,9 +580,10 @@ button.loading::after {
 .leaderboard-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  align-items: center;
-  margin-top: var(--spacing-xl);
+  gap: var(--spacing-sm); /* match leaderboard-list gap so buttons align with entries */
+  align-items: stretch;
+  flex-shrink: 0;
+  width: 220px;
 }
 
 .btn-primary {
@@ -595,9 +604,20 @@ button.loading::after {
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
-.btn-large {
-  min-width: 400px;
-  padding: var(--spacing-lg) var(--spacing-xl);
+.leaderboard-actions .btn-action {
+  width: 100%;
+  overflow: visible;
+  white-space: normal;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  line-height: 1.25;
+  font-size: var(--font-size-base);
+  /* entry height = medal(36px × 1.5 line-height = 54px) + 2×padding-md(24px) + 2×border(2px) + subpixel = 109px */
+  height: calc(2 * var(--spacing-md) + 54px + 7px);
+  padding: var(--spacing-sm);
+  box-sizing: border-box;
 }
 
 .btn-secondary {
@@ -1748,4 +1768,15 @@ button.loading::after {
   .timer-value {
     font-size: 48px;
   }
+}
+
+/* Hide auth bar during active question display */
+body:has(question-display-screen) auth-header {
+  display: none;
+}
+body:has(question-display-screen) #app {
+  height: 100dvh;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
 }

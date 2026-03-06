@@ -376,31 +376,30 @@ export class QuestionDisplayScreen extends HTMLElement {
           }).join('')}
         </div>
 
-        <div class="timer-section ${!isTimerActive ? 'expired' : ''}">
-          <div class="timer-bar">
-            <div class="timer-progress" style="width: ${isTimerActive ? (this.timeRemaining / this.currentTimeLimit) * 100 : 0}%"></div>
+        <div class="timer-controls-row">
+          <div class="timer-section ${!isTimerActive ? 'expired' : ''}">
+            <div class="timer-bar">
+              <div class="timer-progress" style="width: ${isTimerActive ? (this.timeRemaining / this.currentTimeLimit) * 100 : 0}%"></div>
+            </div>
+            <div class="timer-value ${this.timeRemaining <= 5 ? 'warning' : ''}">
+              ${isTimerActive
+                ? this.formatTime(this.timeRemaining)
+                : (this.earlyStop ? '✅ All players answered!' : 'Time\'s up!')}
+            </div>
           </div>
-          <div class="timer-value ${this.timeRemaining <= 5 ? 'warning' : ''}">
-            ${this.formatTime(this.timeRemaining)}
-          </div>
-          <div class="timer-label">
-            ${isTimerActive
-              ? 'seconds remaining'
-              : (this.earlyStop ? '✅ All players answered!' : 'Time\'s up!')}
-          </div>
-        </div>
 
-        <div class="controls">
-          ${!isTimerActive
-            ? (this.automaticPace
-              ? `<div class="autopace-status">
-                   <div class="autopace-spinner"></div>
-                   <span>${this.earlyStop ? 'Showing leaderboard in a moment…' : 'Loading leaderboard…'}</span>
-                 </div>`
-              : `<button class="btn-primary" id="next-button">Show Leaderboard</button>`
-              )
-            : ''}
-          <button class="btn-secondary" id="end-button">End Quiz</button>
+          <div class="controls">
+            ${!isTimerActive
+              ? (this.automaticPace
+                ? `<div class="autopace-status">
+                     <div class="autopace-spinner"></div>
+                     <span>${this.earlyStop ? 'Showing leaderboard in a moment…' : 'Loading leaderboard…'}</span>
+                   </div>`
+                : `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`
+                )
+              : ''}
+            <button class="btn-secondary btn-action" id="end-button">End Quiz</button>
+          </div>
         </div>
       </div>
     `;
@@ -435,9 +434,12 @@ export class QuestionDisplayScreen extends HTMLElement {
       .question-display-screen {
         display: flex;
         flex-direction: column;
-        gap: 2rem;
-        padding: 2rem;
-        min-height: 100vh;
+        gap: 1rem;
+        padding: 1rem;
+        height: 100dvh;
+        height: 100vh;
+        overflow: hidden;
+        box-sizing: border-box;
       }
 
       .question-header {
@@ -447,7 +449,7 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .question-number {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 600;
         color: var(--color-text-secondary);
       }
@@ -459,25 +461,25 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .answered-count {
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 700;
         color: var(--color-primary);
       }
 
       .player-stats .label {
-        font-size: 1rem;
+        font-size: 0.875rem;
         color: var(--color-text-secondary);
       }
 
       .question-content {
         background: var(--color-surface);
-        padding: 3rem;
+        padding: 1.25rem 2rem;
         border-radius: 1rem;
         box-shadow: var(--shadow-lg);
       }
 
       .question-text {
-        font-size: var(--font-size-question);
+        font-size: clamp(1.5rem, 3.5vw, 2.5rem);
         font-weight: 600;
         line-height: 1.4;
         text-align: center;
@@ -487,20 +489,12 @@ export class QuestionDisplayScreen extends HTMLElement {
       .answers-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-        margin: 2rem 0;
+        gap: 0.75rem;
+        margin: 0.75rem 0;
       }
 
       .answer-card {
-        background: var(--color-surface);
-        padding: 2rem;
-        border-radius: 1rem;
-        border: 3px solid var(--color-border);
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        transition: all 0.3s ease;
-        position: relative;
+        padding-left: 5rem; /* push text right to clear the absolute-positioned label */
       }
 
       .answer-card.correct {
@@ -515,7 +509,8 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .answer-card.correct .answer-label {
-        color: #2d7a4e;
+        background: var(--color-success);
+        color: white;
       }
 
       @keyframes pulse-correct {
@@ -524,46 +519,79 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .answer-label {
-        font-size: 2.5rem;
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2.75rem;
+        height: 2.75rem;
+        background: var(--color-primary);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
         font-weight: 700;
-        color: var(--color-primary);
-        min-width: 3rem;
-        text-align: center;
+        color: white;
       }
 
       .answer-text {
-        font-size: 1.5rem;
+        font-size: clamp(1rem, 1.8vw, 1.375rem);
         line-height: 1.4;
         flex: 1;
+        padding-left: 0;
       }
 
       .correct-indicator {
-        font-size: 3rem;
+        font-size: 2rem;
         color: var(--color-success);
         position: absolute;
-        right: 1.5rem;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
         animation: bounce-in 0.5s ease;
       }
 
       @keyframes bounce-in {
-        0% { transform: scale(0); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
+        0% { transform: translateY(-50%) scale(0); }
+        50% { transform: translateY(-50%) scale(1.2); }
+        100% { transform: translateY(-50%) scale(1); }
       }
 
+      .timer-controls-row {
+        display: flex;
+        align-items: stretch;
+        gap: 1.5rem;
+      }
+
+      /* Reset global .timer-section styles */
       .timer-section {
+        flex: 1;
         display: flex;
         flex-direction: column;
+        justify-content: center;
         align-items: center;
-        gap: 1rem;
+        gap: 0.5rem;
+        background: var(--color-surface);
+        border-radius: var(--border-radius);
+        padding: var(--spacing-md);
+        margin: 0;
       }
 
+      /* Keep background but drop the orange border when expired */
+      .timer-section.expired {
+        background: var(--color-surface);
+        border: none;
+      }
+
+      /* Reset global .timer-bar margin */
       .timer-bar {
         width: 100%;
-        height: 1rem;
+        height: 0.75rem;
         background: var(--color-border);
         border-radius: 0.5rem;
         overflow: hidden;
+        margin: 0;
       }
 
       .timer-progress {
@@ -572,11 +600,21 @@ export class QuestionDisplayScreen extends HTMLElement {
         transition: width 1s linear;
       }
 
+      /* Override global font-family and font-size on timer-value */
       .timer-value {
-        font-size: 6rem;
+        font-size: 3rem;
         font-weight: 700;
         color: var(--color-text);
+        font-family: var(--font-family);
         line-height: 1;
+        text-align: center;
+      }
+
+      .timer-section.expired .timer-value {
+        font-size: 1.75rem;
+        color: var(--color-error);
+        font-weight: 700;
+        font-family: var(--font-family);
       }
 
       .timer-value.warning {
@@ -590,23 +628,27 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .timer-label {
-        font-size: 1.5rem;
+        font-size: 1rem;
         color: var(--color-text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.1em;
       }
 
-      .timer-section.expired .timer-label {
-        color: var(--color-error);
-        font-weight: 600;
-      }
-
       .controls {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 2rem;
-        margin-top: auto;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        flex-shrink: 0;
+      }
+
+      .btn-action {
+        flex: 1;
+        white-space: nowrap;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+        width: auto;
+        min-width: 0;
       }
 
       .autopace-status {

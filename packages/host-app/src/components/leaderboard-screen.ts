@@ -225,32 +225,39 @@ export class LeaderboardScreen extends HTMLElement {
           <p class="question-progress">After Question ${this.currentQuestionIndex + 1} of ${this.totalQuestions}</p>
         </div>
 
-        ${top10.length === 0 ? `
-          <div class="empty-leaderboard">
-            <p>No players yet!</p>
-          </div>
-        ` : `
-          <div class="leaderboard-list">
-            ${top10.map((entry) => this.renderLeaderboardEntry(entry)).join('')}
-          </div>
-        `}
-
-        <div class="leaderboard-actions">
-          ${showNextButton ? `
-            <button class="btn-primary btn-large" data-action="next">
-              Next Question →
-            </button>
+        <div class="leaderboard-body">
+          ${top10.length === 0 ? `
+            <div class="empty-leaderboard">
+              <p>No players yet!</p>
+            </div>
           ` : `
-            <button class="btn-primary btn-large" data-action="final">
-              View Final Results 🎉
-            </button>
+            <div class="leaderboard-list">
+              ${top10.map((entry) => this.renderLeaderboardEntry(entry)).join('')}
+            </div>
           `}
-          
-          ${this.sessionStatus === 'playing' ? `
-            <button class="btn-secondary" data-action="end">
-              End Quiz Now
-            </button>
-          ` : ''}
+
+          <div class="leaderboard-actions">
+            ${this.automaticPace ? `
+              <div class="autopace-status">
+                <div class="autopace-spinner"></div>
+                <span>Auto-advancing…</span>
+              </div>
+            ` : showNextButton ? `
+              <button class="btn-primary btn-action" data-action="next">
+                Next Question →
+              </button>
+            ` : `
+              <button class="btn-primary btn-action" data-action="final">
+                View Final Results 🎉
+              </button>
+            `}
+
+            ${this.sessionStatus === 'playing' ? `
+              <button class="btn-secondary btn-action" data-action="end">
+                End Quiz Now
+              </button>
+            ` : ''}
+          </div>
         </div>
       </div>
     `;
