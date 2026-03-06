@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file, organized b
 
 ### Changed
 - `api-server` `GET /api/question-banks` response shape changed from `{ questionBanks: QuestionBank[] }` to `{ tree: QuestionBankFolder }` (Phase 7F breaking change)
+- `question-banks/`: expanded sample data — added 8 new question banks in nested directories (`science/physics/`, `science/biology/`, `history/modern/`, `pop-culture/`) plus `featured-physics` symlink → `science/physics` to exercise symlink resolution and deduplication in e2e tests
 
 ## 2026-03-04
 
