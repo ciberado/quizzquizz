@@ -270,7 +270,7 @@ export async function initDatabase() {
       // Ensure the data directory exists before attempting migrations
       const dbUrl = process.env.DATABASE_URL ?? '';
       const dbPathMatch = dbUrl.match(/^file:(.+)$/);
-      if (dbPathMatch) {
+      if (dbPathMatch?.[1]) {
         const { dirname } = await import('path');
         const dataDir = dirname(dbPathMatch[1]);
         try {
