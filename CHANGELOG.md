@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## [Unreleased]
+
+### Fixed
+- **[fix/screens] Host app question & leaderboard screen layout polish**
+  - Answer cards: letters A/B/C/D now visible during timer (label box absolutely positioned with white text); vertical centering fixed via `translateY(-50%)`; card height driven by global `min-height: 120px`
+  - Correct-answer indicator: green circle now vertically centered in card row
+  - Leaderboard: buttons placed side-by-side with score list; button height and gap match entry row dimensions for pixel-perfect alignment; reduced font sizes throughout
+
 ## [0.1.0] — 2026-03-06
 
 ### Added
