@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-03-06
+
+### Fixed
+- **[fix/db-init] Ensure data directory exists before running Prisma migrations**
+  - `docker-entrypoint.sh`: `mkdir -p /data` added before starting the server so the SQLite data directory is always present
+  - `api-server/db`: production migration path now parses `DATABASE_URL`, extracts the parent directory, and calls `mkdirSync(..., { recursive: true })` before `prisma migrate deploy`
+
 ### Fixed
 - **[fix/screens] Host app question & leaderboard screen layout polish**
   - Answer cards: letters A/B/C/D now visible during timer (label box absolutely positioned with white text); vertical centering fixed via `translateY(-50%)`; card height driven by global `min-height: 120px`

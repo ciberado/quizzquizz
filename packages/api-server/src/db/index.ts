@@ -265,6 +265,22 @@ export async function initDatabase() {
     if (process.env.NODE_ENV === 'production') {
       console.log('🔄 Running database migrations...');
       const { execSync } = await import('child_process');
+      const { mkdirSync } = await import('fs');
+
+      // Ensure the data directory exists before attempting migrations
+      const dbUrl = process.env.DATABASE_URL ?? '';
+      const dbPathMatch = dbUrl.match(/^file:(.+)$/);
+      if (dbPathMatch) {
+        const { dirname } = await import('path');
+        const dataDir = dirname(dbPathMatch[1]);
+        try {
+          mkdirSync(dataDir, { recursive: true });
+          console.log(`📁 Ensured data directory exists: ${dataDir}`);
+        } catch (err) {
+          console.warn(`⚠️  Could not create data directory ${dataDir}:`, err);
+        }
+      }
+
       try {
         // Run migrations in production
         execSync('npx prisma migrate deploy', {

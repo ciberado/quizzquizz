@@ -28,5 +28,9 @@ fi
 
 echo "✅ All build artifacts synced successfully"
 
+# Ensure the data directory exists for SQLite (may not be created if volume is empty)
+mkdir -p /data
+echo "📁 Data directory ready: /data"
+
 # Execute the main command
 exec "$@"
