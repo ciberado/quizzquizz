@@ -16,12 +16,12 @@
     # API routes - proxy to Node.js API server
     # Match both /api and /api/*
     handle /api* {
-        reverse_proxy quizzquizz:3000
+        reverse_proxy localhost:3000
     }
 
     # Health check endpoint - proxy to Node.js API server
     handle /health {
-        reverse_proxy quizzquizz:3000
+        reverse_proxy localhost:3000
     }
 
     # Host app - serve static files directly from filesystem

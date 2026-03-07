@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-03-07
+
+### Fixed
+- **[fix/caddy-proxy] Fix Caddyfile proxy target for Tailscale network mode**
+  - `Caddyfile`: Changed reverse_proxy target from `quizzquizz:3000` to `localhost:3000` to work correctly when Caddy uses Tailscale network namespace
+
 ## [0.1.3] — 2026-03-07
 
 ### Fixed
