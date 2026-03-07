@@ -17,6 +17,8 @@ services:
       - LOG_LEVEL=info
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-this-to-a-secure-random-secret-in-production}
       - BETTER_AUTH_BASE_URL=${BETTER_AUTH_BASE_URL:-http://localhost:3000}
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
+      - PRODUCTION_HTTPS=${PRODUCTION_HTTPS:-false}
     volumes:
       # Persist SQLite database
       - quiz-data:/data

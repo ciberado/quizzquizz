@@ -29,7 +29,7 @@ export const auth = betterAuth({
   advanced: {
     generateId: () => generateId(),
     cookieSameSite: "lax",
-    useSecureCookies: false, // Always false for local Docker/HTTP testing
+    useSecureCookies: process.env.PRODUCTION_HTTPS === 'true', // true for HTTPS deployments
     crossSubDomainCookies: {
       enabled: false,
     },

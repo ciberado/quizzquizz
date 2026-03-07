@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-03-07
+
+### Fixed
+- **[fix/auth-https] Fix Better Auth returning 404 for `/api/auth/get-session` on HTTPS deployments**
+  - `auth/config.ts`: `useSecureCookies` now driven by `PRODUCTION_HTTPS=true` env var instead of hardcoded `false`
+  - `docker-compose.yml`: expose `CORS_ORIGIN` and `PRODUCTION_HTTPS` env vars with safe defaults
+  - `.env.example`: document required env vars for public HTTPS deployments (`BETTER_AUTH_BASE_URL`, `CORS_ORIGIN`, `PRODUCTION_HTTPS`)
+
 ## [0.1.2] — 2026-03-06
 
 ### Fixed
