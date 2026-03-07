@@ -17,8 +17,8 @@
     "@hono/node-server": "^1.19.9",
     "@hono/zod-validator": "^0.2.1",
     "@prisma/client": "^6.19.2",
-    "@quizzquizz/common": "0.1.2",
-    "@quizzquizz/question-bank": "0.1.2",
+    "@quizzquizz/common": "0.2.0",
+    "@quizzquizz/question-bank": "0.2.0",
     "better-auth": "^1.4.18",
     "hono": "^4.12.5",
     "prisma": "^6.19.2"
