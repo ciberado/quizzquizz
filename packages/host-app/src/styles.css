@@ -309,6 +309,8 @@ button.loading::after {
   padding: var(--spacing-lg);
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .question-bank-card:hover {
@@ -331,9 +333,11 @@ button.loading::after {
 .bank-meta {
   display: flex;
   gap: var(--spacing-md);
-  margin-top: var(--spacing-sm);
+  margin-top: auto;
+  padding-top: var(--spacing-sm);
   color: var(--color-text-secondary);
   font-size: calc(var(--font-size-base) * 0.9);
+  justify-content: center;
 }
 
 /* Bank browser breadcrumb */

@@ -3,6 +3,7 @@ import { api } from '../api-client';
 import { router } from '../router';
 import { handleApiError } from '../error-handler';
 import type { BankBrowser } from './bank-browser';
+import { clearBankTreeCache } from './bank-browser';
 
 /**
  * Create Session Screen
@@ -29,7 +30,8 @@ export class CreateSessionScreen extends BaseComponent {
     try {
       const result = await api.reloadQuestionBanks();
       console.log('✅ Question banks reloaded:', result);
-      await this.browser()?.loadTree();
+      clearBankTreeCache();
+      await this.browser()?.loadTree(true);
       if (button) {
         button.textContent = '✅ Reloaded!';
         setTimeout(() => { if (button) { button.textContent = '🔄 Refresh Banks'; button.disabled = false; } }, 2000);

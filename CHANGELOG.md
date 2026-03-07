@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.1.6] — 2026-03-07
+
+### Added
+- **[feat/bank-browser-history] Browser back/forward support in question bank folder navigation**
+  - `packages/host-app/src/components/bank-browser.ts`: folder drill-down now pushes real browser history entries via hash (`#/create?folder=science%2Fphysics`); back button walks back through folder levels and returns to the same folder after previewing a bank
+  - Module-level tree cache prevents redundant API fetches on each hash-change re-mount
+  - `packages/host-app/src/components/create-session-screen.ts`: `clearBankTreeCache()` called on Refresh Banks so fresh data is fetched
+- **[feat/bank-browser-hidden] Exclude hidden directories (e.g. `.git`) from question bank tree**
+  - `packages/question-bank/src/index.ts`: skip any filesystem entry whose name starts with `.`
+- **[feat/bank-browser-layout] Pin question/bank count to bottom-centre of each card**
+  - `packages/host-app/src/styles.css`: `.question-bank-card` uses `flex-column`; `.bank-meta` uses `margin-top: auto` and `justify-content: center`
+
+### Tests
+- `packages/host-app/src/components/bank-browser.test.ts`: fixed tests broken by hash-navigation refactor; added 14 new unit tests covering `hashForPath`, `readPathFromHash`, `enterFolder`/`navigateTo` routing, `validatedPath`, and `clearBankTreeCache`
+- `packages/question-bank/src/index.test.ts`: added test asserting hidden files and directories are excluded from the tree
+- `e2e/bank-browser.spec.ts`: new Playwright spec (7 tests) covering hidden-directory exclusion at API and UI level, folder card rendering, browser Back button behaviour, breadcrumb navigation, and post-preview Back return
+
 ## [0.1.5] — 2026-03-07
 
 ### Fixed

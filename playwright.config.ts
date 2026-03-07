@@ -50,6 +50,14 @@ export default defineConfig({
         viewport: { width: 1920, height: 1080 },
       },
     },
+    {
+      name: 'bank-browser-tests',
+      testMatch: '**/bank-browser.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
   ],
 
   // Start the API server and host/player apps before running tests

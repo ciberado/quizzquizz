@@ -1,6 +1,16 @@
 import { BaseComponent } from './base-component';
 import { api, QuestionBankFolder, QuestionBankSummary } from '../api-client';
 import { handleApiError } from '../error-handler';
+import { router } from '../router';
+
+// Module-level cache so folder drill-down (which re-mounts the component via
+// hash navigation) never triggers a redundant API fetch.
+let treeCache: QuestionBankFolder | null = null;
+
+/** Called by CreateSessionScreen after a successful Refresh Banks API call. */
+export function clearBankTreeCache(): void {
+  treeCache = null;
+}
 
 /**
  * <qz-bank-browser>
@@ -23,17 +33,58 @@ export class BankBrowser extends BaseComponent {
 
   // ─── Data loading ──────────────────────────────────────────────────────────
 
-  async loadTree(): Promise<void> {
+  /** Read the folder path encoded in the current URL hash as `?folder=a/b/c`. */
+  private readPathFromHash(): string[] {
+    const hash = window.location.hash;
+    const queryStart = hash.indexOf('?');
+    if (queryStart === -1) return [];
+    const params = new URLSearchParams(hash.slice(queryStart + 1));
+    const folder = params.get('folder');
+    return folder ? folder.split('/').filter(Boolean) : [];
+  }
+
+  /** Returns the hash fragment to use for a given folder path. */
+  private hashForPath(path: string[]): string {
+    return path.length === 0
+      ? '/create'
+      : `/create?folder=${encodeURIComponent(path.join('/'))}`;
+  }
+
+  async loadTree(forceRefresh = false): Promise<void> {
+    if (!forceRefresh && treeCache) {
+      this.rootTree = treeCache;
+      this.currentPath = this.readPathFromHash();
+      // Ensure path is valid; fall back to root if a segment is missing.
+      this.currentPath = this.validatedPath(this.currentPath);
+      this.render();
+      return;
+    }
     this.showLoading('Loading question banks...');
     try {
-      this.rootTree = await api.getQuestionBankTree();
-      this.currentPath = [];
+      const tree = await api.getQuestionBankTree();
+      treeCache = tree;
+      this.rootTree = tree;
+      this.currentPath = this.validatedPath(this.readPathFromHash());
       this.render();
     } catch (error) {
       console.error('Failed to load question bank tree:', error);
       handleApiError(error, 'Loading question banks');
       this.showError('Could not load question banks. Please check if the API server is running.');
     }
+  }
+
+  /** Truncate a path at the first segment that doesn't exist in the tree. */
+  private validatedPath(path: string[]): string[] {
+    if (!this.rootTree) return [];
+    let node: QuestionBankFolder = this.rootTree;
+    const valid: string[] = [];
+    for (const segment of path) {
+      const child = node.folders.find((f) => f.name === segment);
+      if (!child) break;
+      valid.push(segment);
+      node = child;
+    }
+    return valid;
   }
 
   // ─── Navigation helpers ────────────────────────────────────────────────────
@@ -44,7 +95,7 @@ export class BankBrowser extends BaseComponent {
     let node: QuestionBankFolder = this.rootTree;
     for (const segment of this.currentPath) {
       const child = node.folders.find((f) => f.name === segment);
-      if (!child) return null;
+      if (!child) return this.rootTree; // stale path → fall back to root
       node = child;
     }
     return node;
@@ -56,13 +107,14 @@ export class BankBrowser extends BaseComponent {
   }
 
   private enterFolder(name: string): void {
-    this.currentPath = [...this.currentPath, name];
-    this.render();
+    const newPath = [...this.currentPath, name];
+    // Navigate via hash so the browser records a history entry — Back button
+    // will pop back to the previous folder level.
+    router.navigate(this.hashForPath(newPath));
   }
 
   private navigateTo(depth: number): void {
-    this.currentPath = this.currentPath.slice(0, depth);
-    this.render();
+    router.navigate(this.hashForPath(this.currentPath.slice(0, depth)));
   }
 
   private selectBank(bankId: string): void {

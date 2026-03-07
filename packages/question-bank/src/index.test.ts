@@ -438,6 +438,22 @@ describe('loadQuestionBankTree', () => {
     expect(tree.banks[1]!.name).toBe('Zebra');
   });
 
+  it('ignores hidden files and directories (names starting with ".")', () => {
+    const dir = makeTmpDir(); tmps.push(dir);
+    // A visible bank that should be loaded
+    writeFileSync(join(dir, 'visible.md'), minimalBankMd('Visible'));
+    // A hidden markdown file — should be skipped
+    writeFileSync(join(dir, '.hidden.md'), minimalBankMd('Hidden File'));
+    // A hidden directory (e.g. .git) — should be skipped entirely
+    mkdirSync(join(dir, '.git'));
+    writeFileSync(join(dir, '.git', 'some-bank.md'), minimalBankMd('Inside Git'));
+    const { tree, banks } = loadQuestionBankTree(dir);
+    expect(banks.size).toBe(1);
+    expect(tree.banks).toHaveLength(1);
+    expect(tree.banks[0]!.id).toBe('visible');
+    expect(tree.folders).toHaveLength(0);
+  });
+
   it('reserved root-level stems are skipped', () => {
     const dir = makeTmpDir(); tmps.push(dir);
     writeFileSync(join(dir, 'bank.md'), minimalBankMd('Bank Reserved'));

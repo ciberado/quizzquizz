@@ -335,6 +335,8 @@ export function loadQuestionBankTree(rootDir: string): LoadQuestionBankTreeResul
     }
 
     for (const entry of entries) {
+      if (entry.startsWith('.')) continue; // skip hidden files/directories
+
       const logicalEntryPath = join(logicalDir, entry);
 
       let realPath: string;
