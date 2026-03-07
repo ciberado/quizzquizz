@@ -18,16 +18,15 @@
 #   sudo systemctl reload caddy
 
 {$PUBLIC_DOMAIN:quizzquizz.aprender.cloud} {
-    # Reverse proxy to Tailscale endpoint
-    reverse_proxy https://{$TAILSCALE_HOST:quizzquizz.snow-burbot.ts.net} {
+    # Reverse proxy to Docker Caddy on the Tailscale node (port 80).
+    # Docker Caddy handles path routing: /api* → Node.js :3000, /host* → host-app, /* → player-app.
+    # Do NOT proxy directly to port 3000 (Node.js) — that bypasses path remapping.
+    reverse_proxy http://{$TAILSCALE_HOST:quizzquizz.snow-burbot.ts.net}:80 {
         # Forward original host and client info
         header_up Host {upstream_hostport}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
-        
-        # Tailscale provides valid HTTPS certificates
-        # No need to skip verification
     }
     
     # Enable compression

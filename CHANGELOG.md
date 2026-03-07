@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-03-07
+
+### Fixed
+- **[fix/caddy-proxy] Fix Caddyfile.proxy pointing to wrong port on Tailscale node**
+  - `Caddyfile.proxy`: Changed reverse_proxy target from `:3000` (Node.js directly) back to `:80` (Docker Caddy), preserving path routing for `/api*`, `/host*`, and `/*`
+
 ## [0.1.4] — 2026-03-07
 
 ### Fixed
