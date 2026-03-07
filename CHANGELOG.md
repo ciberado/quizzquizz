@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-03-07
+
+### Changed
+- Bumped all packages to `0.2.0` (minor bump) — the bank browser folder navigation feature introduced in `0.1.6` constitutes new user-facing functionality
+
 ## [0.1.6] — 2026-03-07
 
 ### Added
