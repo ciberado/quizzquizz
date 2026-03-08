@@ -49,26 +49,26 @@ export class AuthHeader extends BaseComponent {
 
   render() {
     this.innerHTML = `
-      <div style="background: #1a1a1a; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <h2 style="margin: 0; font-size: 1.5rem; color: #00d4ff;">QuizzQuizz</h2>
-          <span style="color: #666;">Host</span>
+      <div style="background: #1a1a1a; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; font-size: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <h2 style="margin: 0; font-size: 24px; color: #00d4ff;">QuizzQuizz</h2>
+          <span style="color: #666; font-size: 16px;">Host</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 16px;">
           ${this.user ? `
-            <span style="color: #aaa;">
+            <span style="color: #aaa; font-size: 16px;">
               👤 ${this.user.name || this.user.email}
             </span>
             <button 
               class="auth-logout-btn"
-              style="background: #ff4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;"
+              style="background: #ff4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;"
             >
               Logout
             </button>
           ` : `
             <button 
               class="auth-login-btn"
-              style="background: #00d4ff; color: black; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem;"
+              style="background: #00d4ff; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;"
             >
               Login / Sign Up
             </button>
