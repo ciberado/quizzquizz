@@ -18,9 +18,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 9F Complete + Phase 7B autopace bug fixes (Mar 4, 2026)
+**Current Status**: Phase 12 (Analytics) Complete (Mar 9, 2026)
 
-**Completed Phases** (51-60 hours development time):
+**Completed Phases** (55-65 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
 - ✅ **Phase 1**: Common Package & Question Bank Parser - 41 tests passing
 - ✅ **Phase 2**: API Server Core - 41 tests passing (26 unit + 15 E2E)
@@ -35,28 +35,19 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 5C**: Game Control & Question Display - Question presenter with timer
 - ✅ **Phase 5D**: Leaderboard & Results - Complete host MVP experience
 - ✅ **Phase 6**: Polish & Integration - COMPLETE!
-- 🟡 **Phase 12**: Advanced Analytics (Partial) - Host question analytics complete!
 - ✅ **Phase 7A**: Question Preview & Configuration - COMPLETE!
 - ✅ **Phase 8A**: Docker Configuration - COMPLETE!
 - ✅ **Phase 9 (9A–9E)**: Authentication & User Accounts - COMPLETE!
 - ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording - COMPLETE!
+- ✅ **Phase 12**: Advanced Analytics - COMPLETE! (Mar 9, 2026)
 
 **Current Phase**:
-- ✅ **Phase 7B autopace bug fixes** (Mar 4, 2026):
-  - Fixed timer restart after all-players-answered early stop (`earlyStop` flag on `QuestionDisplayScreen`)
-  - Fixed correct answers not revealed on early stop (zero `timeRemaining` before `render()`)
-  - Added visual feedback: "✅ All players answered!" label + spinner + "Showing leaderboard in a moment…"
-  - Fixed leaderboard double-schedule (`!autoNavigateTimeout` guard in `LeaderboardScreen`)
-  - Verified: 60/60 unit tests, 15/15 E2E tests, Playwright MCP live run (full Q1→leaderboard→Q2→Q3 chain)
-- ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording (3-4 hrs) - COMPLETE
-  - `recordSessionStats()` helper writes `HostedSession`, `PlayerStat`, `UserQuestionStat`, `QuestionGlobalStat` at session end
-  - `responseTimeMs` stored on every `PlayerAnswer` (calculated server-side from `questionStartedAt`)
-  - `UserQuestionStat`: per-user × per-question counters, rolling average response time, spaced-repetition `practiceWeight`
-  - `QuestionGlobalStat`: aggregate across all players — `answerSelections` JSON, `empiricalDifficulty` (computed at ≥10 answers)
-  - New endpoints: `GET /api/users/me/question-stats`, `GET /api/users/me/weak-topics`, `GET /api/question-banks/:id/stats`
-  - Bug fix: cross-bank question ID collision (unique keys now scoped to `(questionBankId, questionId)`)
-  - Bug fix: Prisma TS type resolution for `moduleResolution: bundler` (output to `src/generated/prisma`)
-  - 33 new tests; full suite 193 pass / 2 skip (195 total)
+- ✅ **Phase 12**: Analytics package + UI — COMPLETE (Mar 9, 2026)
+  - `@quizzquizz/analytics` backend library: shared stats (rolling avg, percentiles, slope, stddev, histogram, streaks, quality score), host modules (session report, bank health, engagement, comparative), player modules (dashboard, accuracy trend, weak topics, response profile, practice, global comparison) — **47 unit tests**
+  - `@quizzquizz/analytics-ui` standalone Vite frontend (base `/analytics/`, port 3003): hash router, Web Component screens for all 10 analytics views, LRU-cached API client
+  - `/api/analytics/*` routes: `requireAuth` + ownership 403 checks, 30s LRU cache — **17 authorization tests**
+  - host-app + player-app: "Analytics" nav links
+  - Caddyfile, Dockerfile, entrypoint: analytics packages fully integrated in Docker setup
 - 🎯 **Next: Phase 7F — Question Bank Folder Navigation** (then Phase 10)
 
 **Upcoming MVP Phases**:

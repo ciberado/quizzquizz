@@ -14,6 +14,9 @@ npm run dev --workspace=@quizzquizz/player-app
 # Start host UI (port 3001)
 npm run dev --workspace=@quizzquizz/host-app
 
+# Start analytics UI (port 3003)
+npm run dev --workspace=@quizzquizz/analytics-ui
+
 # Start all in development mode
 npm run dev --workspaces
 ```
@@ -97,6 +100,7 @@ npm run docker:clean
 | API Server      | 3000 | http://localhost:3000        | REST API endpoints           |
 | Host App        | 3001 | http://localhost:3001        | Host/presenter UI            |
 | Player App      | 3002 | http://localhost:3002        | Player participation UI      |
+| Analytics UI    | 3003 | http://localhost:3003        | Analytics dashboard          |
 | Docker (Caddy)  | 3000 | http://localhost:3000        | Production reverse proxy     |
 
 ---
@@ -114,6 +118,7 @@ npm run docker:clean
 - All services: `http://localhost:3000`
   - `/` → Player app
   - `/host` → Host app
+  - `/analytics` → Analytics UI
   - `/api/*` → API endpoints
 
 ---
