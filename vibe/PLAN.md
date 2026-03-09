@@ -14,6 +14,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
   - [PHASE-6-polish.md](phases/PHASE-6-polish.md) - Polish & integration
   - [PHASE-7-8-features-deployment.md](phases/PHASE-7-8-features-deployment.md) - Features & deployment
   - [PHASE-9-15-future.md](phases/PHASE-9-15-future.md) - Future vision (post-MVP)
+  - [PHASE-12-analytics.md](phases/PHASE-12-analytics.md) - Analytics package (detailed sub-phases)
 
 ## Progress Summary
 
@@ -78,7 +79,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ Phase 9F: Granular Question Statistics & Post-Game Stat Recording (COMPLETE)
 - 🎯 Phase 10: Additional Question Types (4-6 hrs)
 - Phase 11: Team Mode (4-5 hrs)
-- 🟡 Phase 12: Analytics (3-4 hrs) - PARTIAL: Host question analytics complete
+- 🟡 Phase 12: Analytics (17-24 hrs) - PARTIAL: Host question analytics complete; [detailed plan](phases/PHASE-12-analytics.md)
 - Phase 13: Question Marketplace (6-8 hrs)
 - Phase 14: Native Mobile Apps (20+ hrs)
 - Phase 15: Enterprise Features (4-5 hrs)
@@ -236,7 +237,14 @@ See [PHASE-9-15-future.md](phases/PHASE-9-15-future.md)
 - ✅ Phase 9F: Granular Question Statistics & Post-Game Stat Recording (COMPLETE)
 - 🎯 Phase 10: Additional Question Types
 - Phase 11: Team Mode & Collaboration
-- Phase 12: Advanced Analytics & Insights (Partial)
+- 🟡 Phase 12: Analytics Package (17-24 hrs) — [detailed plan](phases/PHASE-12-analytics.md), [design doc](ANALYTICS-PACKAGE.md)
+  - 12A: Package scaffolding & shared computation library
+  - 12B: Host analytics backend
+  - 12C: Player analytics backend
+  - 12D: API routes & authorization
+  - 12E: Analytics-UI shared components & host screens
+  - 12F: Analytics-UI player screens & linking
+  - 12G: Docker & deployment integration
 - Phase 13: Public Question Bank Marketplace
 - Phase 14: Mobile Apps (Native)
 - Phase 15: Advanced Hosting Features

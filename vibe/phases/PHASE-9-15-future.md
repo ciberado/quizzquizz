@@ -301,52 +301,36 @@ These come "for free" once the infrastructure is in place:
 
 ---
 
-## Phase 12: Advanced Analytics & Insights (Est. 3-4 hours)
+## Phase 12: Analytics Package (Est. 17-24 hours)
 
-**Goal**: Provide detailed analytics for hosts and players.
+**Goal**: Provide detailed analytics exploration for hosts and players via two new packages (`@quizzquizz/analytics` backend + `@quizzquizz/analytics-ui` frontend).
 
-**Scope**:
-- [x] **Host question analytics** (COMPLETE - Feb 11, 2026):
-  - [x] Question accuracy analysis (% correct/incorrect per question)
-  - [x] Total responses per question
-  - [x] Sortable by question order or accuracy
-  - [x] Expandable details with full question text
-  - [x] Difficulty badge and topic tags display
-  - [x] Answer option breakdown (selection count & percentage per option)
-  - [x] Color-coded accuracy visualization (bars + percentages)
-  - [x] Compact horizontal layout (stats left, badges right)
-  - [x] API: `GET /api/sessions/:id/question-stats` with host token auth
-  - [x] Component: `question-stats-table` custom element
+**Design document**: [ANALYTICS-PACKAGE.md](../ANALYTICS-PACKAGE.md)
+
+**Detailed implementation plan**: [PHASE-12-analytics.md](PHASE-12-analytics.md)
+
+**Completed work**:
+- [x] **Host question analytics** (Feb 11, 2026):
+  - [x] `GET /api/sessions/:id/question-stats` with host token auth
+  - [x] `question-stats-table` component — sortable, expandable, color-coded accuracy bars
   - [x] E2E test: 27 steps validating all functionality
-- [ ] Remaining host analytics:
-  - Time taken per question (avg, min, max) — requires `responseTimeMs` column added in Phase 9F
-  - Player performance distribution
-  - Export results to CSV/JSON
-  - Empirical difficulty divergence alerts (declared vs actual) — powered by `QuestionGlobalStat` from Phase 9F
-  - Dominant distractor detection — wrong answer selected more than the correct answer
-- [ ] Player insights (requires Phase 9F data):
-  - Personal performance over time (accuracy trend across sessions)
-  - Strengths and weaknesses by topic — `GET /api/users/me/weak-topics`
-  - Comparison to global averages via `QuestionGlobalStat`
-  - Improvement tracking (rolling 5-session average)
-  - Practice mode — surface high-`practiceWeight` questions the user keeps missing
-- [ ] Real-time stats:
-  - Live dashboard during game
-  - Answer distribution graphs
-  - Response time histograms
-  - Engagement metrics (% answered)
-- [ ] Question bank statistics:
-  - Most used questions
-  - Highest/lowest success rates
-  - Recommend difficulty adjustments
-  - Tag effectiveness analysis
-- [ ] Reporting:
-  - Printable PDF reports
-  - Email summaries post-quiz
-  - Share results link
-  - LMS integration (export to Moodle, Canvas)
 
-**Deliverable**: Data-driven insights to improve teaching and learning.
+**Sub-phases** (see [PHASE-12-analytics.md](PHASE-12-analytics.md) for full task breakdown):
+- [ ] **12A**: Package scaffolding & shared computation library (2–3 hrs)
+- [ ] **12B**: Host analytics backend — session report, bank health, engagement, comparison (3–4 hrs)
+- [ ] **12C**: Player analytics backend — dashboard, trends, topics, practice, global comparison (3–4 hrs)
+- [ ] **12D**: API routes & authorization — all endpoints require auth, ownership checks (2–3 hrs)
+- [ ] **12E**: Analytics-UI — shared components & host screens (3–4 hrs)
+- [ ] **12F**: Analytics-UI — player screens & linking from existing apps (3–4 hrs)
+- [ ] **12G**: Docker & deployment integration (1–2 hrs)
+
+**Key design decisions**:
+- Backend analytics package is **read-only** — never writes to the database
+- Frontend is a **separate Vite app** (`analytics-ui`) — not embedded in host-app or player-app
+- **Authorization**: all endpoints require authentication; players see only own data; hosts see only own sessions
+- **Admin role** deferred to a later phase
+
+**Deliverable**: Data-driven insights to improve teaching and learning. Hosts explore session and bank performance; players track progress, weak topics, and get practice recommendations.
 
 ---
 

@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file, organized by date.
 
 ## [Unreleased]
+### Added
+- **[docs/analytics] Analytics package design + phase plan**
+  - Added `vibe/ANALYTICS-PACKAGE.md` design document (backend analytics + analytics-ui frontend)
+  - Added `vibe/phases/PHASE-12-analytics.md` detailed Phase 12 plan (12A–12G)
+  - Linked Phase 12 plan from `vibe/PLAN.md` and updated `vibe/phases/PHASE-9-15-future.md`
 
 ## [0.2.1] — 2026-03-09
 
