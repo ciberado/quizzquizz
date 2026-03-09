@@ -51,7 +51,7 @@ export class AuthHeader extends BaseComponent {
     this.innerHTML = `
       <div style="background: #1a1a1a; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; font-size: 16px;">
         <div style="display: flex; align-items: center; gap: 16px;">
-          <h2 style="margin: 0; font-size: 24px; color: #00d4ff;">QuizzQuizz</h2>
+          <h2 style="margin: 0; font-size: 24px; line-height: 1; color: #00d4ff;">QuizzQuizz</h2>
           <span style="color: #666; font-size: 16px;">Player</span>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
@@ -61,14 +61,14 @@ export class AuthHeader extends BaseComponent {
             </span>
             <button 
               class="auth-logout-btn"
-              style="background: #ff4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;"
+              style="background: #ff4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-height: auto; line-height: 1.2;"
             >
               Logout
             </button>
           ` : `
             <button 
               class="auth-login-btn"
-              style="background: #00d4ff; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;"
+              style="background: #00d4ff; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; min-height: auto; line-height: 1.2;"
             >
               Login / Sign Up
             </button>
