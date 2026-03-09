@@ -99,21 +99,29 @@ async function initialize() {
 }
 
 // Initialize before starting (async initialization)
-initialize().then(() => {
-  const port = parseInt(process.env.PORT || '3000', 10);
-  const hostname = process.env.HOST || '0.0.0.0';
+// Skip binding to a port during tests — test files use app.request() directly.
+if (process.env.NODE_ENV !== 'test') {
+  initialize().then(() => {
+    const port = parseInt(process.env.PORT || '3000', 10);
+    const hostname = process.env.HOST || '0.0.0.0';
 
-  console.log(`🚀 QuizzQuizz API Server starting on http://${hostname}:${port}...`);
+    console.log(`🚀 QuizzQuizz API Server starting on http://${hostname}:${port}...`);
 
-  serve({
-    fetch: app.fetch,
-    port,
-    hostname,
+    serve({
+      fetch: app.fetch,
+      port,
+      hostname,
+    });
+  }).catch(error => {
+    console.error('❌ Failed to initialize server:', error);
+    process.exit(1);
   });
-}).catch(error => {
-  console.error('❌ Failed to initialize server:', error);
-  process.exit(1);
-});
+} else {
+  // In test mode: still initialize DB and question banks, but don't bind a port.
+  initialize().catch(error => {
+    console.error('❌ Failed to initialize in test mode:', error);
+  });
+}
 
 // Export app for testing
 export default app;
