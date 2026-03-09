@@ -4,10 +4,16 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 ### Added
-- **[docs/analytics] Analytics package design + phase plan**
-  - Added `vibe/ANALYTICS-PACKAGE.md` design document (backend analytics + analytics-ui frontend)
-  - Added `vibe/phases/PHASE-12-analytics.md` detailed Phase 12 plan (12A–12G)
-  - Linked Phase 12 plan from `vibe/PLAN.md` and updated `vibe/phases/PHASE-9-15-future.md`
+- **[feat/analytics] Phase 12: Analytics package + UI implementation**
+  - `packages/analytics/`: New `@quizzquizz/analytics` backend library — loaders, shared stats (rolling average, percentiles, slope, stddev, histogram, streaks, quality score), host modules (session report, bank health, engagement, comparative), player modules (dashboard, accuracy trend, weak topics, response profile, practice recommendations, global comparison); 47 unit tests
+  - `packages/analytics-ui/`: New `@quizzquizz/analytics-ui` standalone frontend (Web Components + Vite, base `/analytics/`) — host and player screens, bar/line chart components, hash-based router, LRU-cached API client
+  - `packages/api-server/src/routes/analytics.ts`: REST routes under `/api/analytics/*` with `requireAuth` middleware, per-endpoint ownership checks (403), 30s LRU cache; 17 authorization tests
+  - `packages/api-server/src/index.ts`: Analytics routes mounted at `/api/analytics`
+  - `packages/host-app/`: Added "Analytics" nav link pointing to `/analytics/#/host/banks`
+  - `packages/player-app/`: Added "Analytics" nav link pointing to `/analytics/#/player/dashboard`
+  - `Caddyfile`: Added `/analytics*` route serving `analytics-ui` dist with path-prefix stripping
+  - `Dockerfile`: Builder and runtime stages include `analytics` and `analytics-ui` packages
+  - `docker-entrypoint.sh`: Syncs `analytics` and `analytics-ui` dist to shared volume on startup
 
 ## [0.2.1] — 2026-03-09
 

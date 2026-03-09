@@ -95,6 +95,10 @@ export class ResultsScreen extends BaseComponent {
           
           <div class="results-actions">
             <button class="play-again-btn">Play Again</button>
+            <a class="analytics-link" href="/analytics/#/player/dashboard"
+               target="_blank" rel="noopener noreferrer">
+              View My Analytics 📊
+            </a>
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ echo "🔄 Syncing build artifacts to shared volume..."
 # Sync all packages from the safe dist-build location to the volume-mounted packages dir.
 # This runs on every startup so upgrades always reflect the current image,
 # even when the named volume already contains an older build.
-for pkg in common question-bank api-server host-app player-app; do
+for pkg in common question-bank api-server analytics host-app player-app analytics-ui; do
   src="/app/dist-build/${pkg}/dist"
   dst="/app/packages/${pkg}/dist"
   if [ -d "$src" ]; then

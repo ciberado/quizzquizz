@@ -11,6 +11,7 @@ import gameRoutes from './routes/game.js';
 import questionBankRoutes from './routes/question-banks.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
+import analyticsRoutes from './routes/analytics.js';
 import { startCleanupJob } from './session-cleanup.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -60,6 +61,7 @@ app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/sta
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
 app.route('/api/question-banks', questionBankRoutes);
+app.route('/api/analytics', analyticsRoutes);
 
 // In production, static files are served by Caddy reverse proxy
 // This simplifies the Node.js server - no need for static file serving

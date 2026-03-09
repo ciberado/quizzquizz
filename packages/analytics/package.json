@@ -1,0 +1,33 @@
+{
+  "name": "@quizzquizz/analytics",
+  "version": "0.2.1",
+  "description": "Analytics computation library for QuizzQuizz",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b --watch",
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@quizzquizz/common": "*",
+    "date-fns": "^3.6.0",
+    "lru-cache": "^11.0.0",
+    "simple-statistics": "^7.8.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.4"
+  }
+}

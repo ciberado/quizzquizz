@@ -1,0 +1,23 @@
+{
+  "name": "@quizzquizz/analytics-ui",
+  "version": "0.2.1",
+  "description": "Analytics dashboard frontend app",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@quizzquizz/common": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "vite": "^6.4.1",
+    "vitest": "^3.2.4"
+  }
+}

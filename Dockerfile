@@ -13,6 +13,8 @@ COPY package*.json ./
 COPY packages/common/package*.json ./packages/common/
 COPY packages/question-bank/package*.json ./packages/question-bank/
 COPY packages/api-server/package*.json ./packages/api-server/
+COPY packages/analytics/package*.json ./packages/analytics/
+COPY packages/analytics-ui/package*.json ./packages/analytics-ui/
 COPY packages/host-app/package*.json ./packages/host-app/
 COPY packages/player-app/package*.json ./packages/player-app/
 
@@ -25,6 +27,8 @@ COPY tsconfig.base.json ./
 COPY packages/common/ ./packages/common/
 COPY packages/question-bank/ ./packages/question-bank/
 COPY packages/api-server/ ./packages/api-server/
+COPY packages/analytics/ ./packages/analytics/
+COPY packages/analytics-ui/ ./packages/analytics-ui/
 COPY packages/host-app/ ./packages/host-app/
 COPY packages/player-app/ ./packages/player-app/
 
@@ -56,6 +60,7 @@ COPY --chown=nodejs:nodejs package*.json ./
 COPY --chown=nodejs:nodejs packages/common/package*.json ./packages/common/
 COPY --chown=nodejs:nodejs packages/question-bank/package*.json ./packages/question-bank/
 COPY --chown=nodejs:nodejs packages/api-server/package*.json ./packages/api-server/
+COPY --chown=nodejs:nodejs packages/analytics/package*.json ./packages/analytics/
 
 # Install production dependencies only
 # Use --ignore-scripts to skip "prisma generate" postinstall (schema not copied yet).
@@ -73,6 +78,8 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./pack
 # ensuring upgrades always reflect the current image even when the volume already has old content.
 COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./dist-build/host-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./dist-build/player-app/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics-ui/dist ./dist-build/analytics-ui/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/dist ./dist-build/analytics/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./dist-build/common/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dist-build/question-bank/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./dist-build/api-server/dist
@@ -91,8 +98,10 @@ RUN mkdir -p \
       /app/packages/api-server/prisma \
       /app/packages/common/dist \
       /app/packages/question-bank/dist \
+      /app/packages/analytics/dist \
       /app/packages/host-app/dist \
-      /app/packages/player-app/dist && \
+      /app/packages/player-app/dist \
+      /app/packages/analytics-ui/dist && \
     chown -R nodejs:nodejs /app/packages
 
 # Copy default question banks (can be overridden with volume mount)

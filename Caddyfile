@@ -32,6 +32,14 @@
         file_server
     }
 
+    # Analytics UI - serve static files directly from filesystem
+    handle /analytics* {
+        root * /app/packages/analytics-ui/dist
+        uri strip_prefix /analytics
+        try_files {path} /index.html
+        file_server
+    }
+
     # Player app - serve static files directly from filesystem (root and all other routes)
     handle /* {
         root * /app/packages/player-app/dist

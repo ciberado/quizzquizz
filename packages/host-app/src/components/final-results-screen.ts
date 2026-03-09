@@ -195,6 +195,11 @@ export class FinalResultsScreen extends HTMLElement {
           <button class="btn-primary btn-large" data-action="new-quiz">
             Create New Quiz 🎮
           </button>
+          <a class="btn-secondary btn-large" data-action="view-analytics"
+             href="/analytics/#/host/sessions/${state.getState().sessionId ?? ''}"
+             target="_blank" rel="noopener noreferrer">
+            View Session Analytics 📊
+          </a>
         </div>
       </div>
     `;

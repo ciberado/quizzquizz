@@ -3,13 +3,12 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "src/generated/**/*"],
+  "exclude": ["src/**/*.test.ts"],
   "references": [
-    { "path": "../common" },
-    { "path": "../question-bank" },
-    { "path": "../analytics" }
+    { "path": "../common" }
   ]
 }
