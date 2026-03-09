@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-03-09
+
+### Fixed
+- **[fix/top-bar-height] Standardize top bar height across host and player apps**
+  - `packages/host-app/src/components/auth-header.ts`: replaced `rem` units with absolute `px` values; added `min-height: auto` and `line-height: 1.2` to button inline styles to override the host app's global `button { min-height: 60px }` rule; added `line-height: 1` to the `<h2>` to prevent the host body `line-height: 1.6` from adding extra height
+  - `packages/player-app/src/components/auth-header.ts`: same `px` units, `min-height: auto`, and `line-height` overrides applied for symmetry so both bars render at identical height
+
 ## [0.2.0] — 2026-03-07
 
 ### Changed
