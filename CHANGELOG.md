@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file, organized by date.
 
 ## [Unreleased]
+
+## [0.2.2] — 2026-03-11
+
+### Added
+- **[feat/analytics-player-sessions] Player session history & detail analytics views**
+  - `packages/api-server/src/routes/analytics.ts`: `GET /api/analytics/me/sessions` — full session history list enriched with question bank name; `GET /api/analytics/me/sessions/:id` — per-session detail with per-question stats, per-topic accuracy breakdown; both ownership-checked and LRU-cached
+  - `packages/analytics-ui/src/api-client.ts`: added `sessionHistory()` and `sessionDetail(sessionId)` API client methods
+  - `packages/analytics-ui/src/components/player/session-history.ts` (new): Session History page — table of all played sessions with date, quiz name, nickname, score, rank, accuracy, correct count, avg time; clickable rows linking to session detail
+  - `packages/analytics-ui/src/components/player/session-detail.ts` (new): Session Detail page — stat cards (score/rank/accuracy/correct/avg time), per-topic accuracy bar chart, per-question breakdown table (✅/❌, topic tags, score, response time); breadcrumb navigation
+  - `packages/analytics-ui/src/components/player/dashboard.ts`: recent session rows are now clickable; added "View →" links and "View all sessions →" footer; added Session History nav card
+  - `packages/analytics-ui/src/components/player/weak-topics.ts`: renamed to "Topics Overview"; added horizontal color-coded accuracy bar chart above detail table
+  - `packages/analytics-ui/src/components/shared/ui.ts`: sidebar updated with "Session History" and "Topics Overview" links
+  - `packages/analytics-ui/src/components/shared/charts.ts`: fixed bar chart value label — always render as percentage when `maxValue ≤ 1` (was incorrectly showing raw `1` for 100% values)
+  - `packages/analytics-ui/src/main.ts`: registered `/player/sessions` and `/player/sessions/:id` routes
+  - `packages/analytics-ui/src/styles.css`: new CSS classes — clickable rows, breadcrumb, topic tags, score-cell, detail-link, muted, monospace, page-subtitle
+
+### Fixed
+- **[fix/analytics-tests] Pre-existing FK constraint failures in analytics auth tests**
+  - `packages/api-server/src/routes/analytics.test.ts`: 3 `HostedSession`-owning tests were missing the `QuizSession` rows required by the FK — added `quizSession.create()`/`createMany()` calls; 10 new tests added for `GET /me/sessions` and `GET /me/sessions/:id` (auth, ownership, empty list, enrichment, ordering); all 27 tests passing
+
+## [0.2.1-analytics] — 2026-03-11
+
 ### Added
 - **[feat/analytics] Phase 12: Analytics package + UI implementation**
   - `packages/analytics/`: New `@quizzquizz/analytics` backend library — loaders, shared stats (rolling average, percentiles, slope, stddev, histogram, streaks, quality score), host modules (session report, bank health, engagement, comparative), player modules (dashboard, accuracy trend, weak topics, response profile, practice recommendations, global comparison); 47 unit tests

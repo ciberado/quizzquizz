@@ -32,8 +32,9 @@ export function msToSeconds(ms: number): string {
 export function navSidebar(activeRoute: string): string {
   const links = [
     { href: '#/player/dashboard', label: 'My Dashboard' },
+    { href: '#/player/sessions', label: 'Session History' },
+    { href: '#/player/topics', label: 'Topics Overview' },
     { href: '#/player/trend', label: 'Accuracy Trend' },
-    { href: '#/player/topics', label: 'Weak Topics' },
     { href: '#/player/speed', label: 'Response Profile' },
     { href: '#/player/practice', label: 'Practice' },
     { href: '#/player/compare', label: 'Global Comparison' },

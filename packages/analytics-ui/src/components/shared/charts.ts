@@ -110,7 +110,7 @@ export function renderBarChart(
           <div class="bar-track">
             <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
           </div>
-          <span class="bar-value">${typeof item.value === 'number' && item.value % 1 !== 0 ? (item.value * 100).toFixed(1) + '%' : item.value}</span>
+          <span class="bar-value">${maxVal <= 1 ? (item.value * 100).toFixed(1) + '%' : item.value}</span>
         </div>`;
     })
     .join('\n');

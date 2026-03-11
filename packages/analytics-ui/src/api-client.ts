@@ -43,6 +43,9 @@ export const api = {
     ),
 
   // Player endpoints
+  sessionHistory: () => apiFetch('/api/analytics/me/sessions'),
+  sessionDetail: (sessionId: string) =>
+    apiFetch(`/api/analytics/me/sessions/${encodeURIComponent(sessionId)}`),
   dashboard: () => apiFetch('/api/analytics/me/dashboard'),
   accuracyTrend: () => apiFetch('/api/analytics/me/accuracy-trend'),
   weakTopics: (bankId?: string) =>

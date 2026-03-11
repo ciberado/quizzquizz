@@ -1,9 +1,11 @@
 /**
- * Player: Weak Topics
+ * Player: Topics Overview
  * Route: #/player/topics
+ * Shows performance per topic across all played quizzes.
  */
 import { api } from '../../api-client.js';
 import { renderLoading, renderApiError, pageLayout, pct } from '../shared/ui.js';
+import { renderBarChart } from '../shared/charts.js';
 
 type Topic = { topic: string; accuracy: number; timesAnswered: number; timesCorrect: number; questionCount: number };
 type WeakTopicsReport = { topics: Topic[]; totalQuestionsAnalysed: number; bankId: string | null };
@@ -35,10 +37,16 @@ export async function renderWeakTopics(app: HTMLElement): Promise<void> {
     .join('');
 
   const content = `
-    <p class="hint">Topics sorted weakest first. Questions analysed: ${data.totalQuestionsAnalysed}</p>
+    <p class="hint">Across all quizzes — questions analysed: ${data.totalQuestionsAnalysed}. Topics sorted weakest first.</p>
+
+    ${data.topics.length === 0 ? '' : `
+    <div class="card">
+      <h2>Accuracy by Topic</h2>
+      <div id="topics-bar-chart"></div>
+    </div>`}
 
     <div class="card">
-      <h2>Topic Accuracy Breakdown</h2>
+      <h2>Topic Details</h2>
       ${data.topics.length === 0
         ? '<p>No topic data yet. Play some games first!</p>'
         : `<table class="data-table sortable">
@@ -48,5 +56,18 @@ export async function renderWeakTopics(app: HTMLElement): Promise<void> {
     </div>
   `;
 
-  app.innerHTML = pageLayout('#/player/topics', 'Weak Topics', content);
+  app.innerHTML = pageLayout('#/player/topics', 'Topics Overview', content);
+
+  // Render bar chart after DOM update
+  if (data.topics.length > 0) {
+    const container = document.getElementById('topics-bar-chart');
+    if (container) {
+      const items = data.topics.map((t) => ({
+        label: t.topic,
+        value: t.accuracy,
+        color: t.accuracy < 0.4 ? '#ef4444' : t.accuracy < 0.7 ? '#f59e0b' : '#10b981',
+      }));
+      renderBarChart(container, items, { maxValue: 1 });
+    }
+  }
 }

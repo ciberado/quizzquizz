@@ -10,6 +10,8 @@ import { renderWeakTopics } from './components/player/weak-topics.js';
 import { renderResponseProfile } from './components/player/response-profile.js';
 import { renderPractice } from './components/player/practice.js';
 import { renderGlobalComparison } from './components/player/global-comparison.js';
+import { renderSessionHistory } from './components/player/session-history.js';
+import { renderSessionDetail } from './components/player/session-detail.js';
 import { renderSessionReport } from './components/host/session-report.js';
 import { renderBankHealth } from './components/host/bank-health.js';
 import { renderEngagement } from './components/host/engagement.js';
@@ -21,6 +23,8 @@ const router = new Router();
 
 // Player routes
 router.on('/player/dashboard', () => renderDashboard(app));
+router.on('/player/sessions/:id', (params) => renderSessionDetail(app, params));
+router.on('/player/sessions', () => renderSessionHistory(app));
 router.on('/player/trend', () => renderAccuracyTrend(app));
 router.on('/player/topics', () => renderWeakTopics(app));
 router.on('/player/speed', () => renderResponseProfile(app));

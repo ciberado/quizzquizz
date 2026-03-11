@@ -367,6 +367,208 @@ analyticsRoutes.get(
   },
 );
 
+// ─── Player: Session History ──────────────────────────────────────────────────
+
+analyticsRoutes.get('/me/sessions', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const prisma = getPrisma();
+
+  const key = cacheKey('session-history', user.id, {});
+  const cached = cache.get(key);
+  if (cached) return c.json(cached);
+
+  const stats = await prisma.playerStat.findMany({
+    where: { userId: user.id },
+    orderBy: { playedAt: 'desc' },
+  });
+
+  const sessionIds = stats.map((s) => s.sessionId);
+
+  // Enrich with bank info from HostedSession
+  const hostedSessions = sessionIds.length
+    ? await prisma.hostedSession.findMany({
+        where: { sessionId: { in: sessionIds } },
+        select: { sessionId: true, questionBankId: true, questionBankName: true },
+      })
+    : [];
+
+  const bankInfoBySession = new Map(
+    hostedSessions.map((h) => [
+      h.sessionId,
+      { questionBankId: h.questionBankId, questionBankName: h.questionBankName },
+    ]),
+  );
+
+  // For sessions without HostedSession, fall back to QuizSession (if not expired)
+  const missingSessions = sessionIds.filter((id) => !bankInfoBySession.has(id));
+  if (missingSessions.length > 0) {
+    const quizSessions = await prisma.quizSession.findMany({
+      where: { id: { in: missingSessions } },
+      select: { id: true, questionBankId: true },
+    });
+    for (const qs of quizSessions) {
+      const bank = questionBanks.get(qs.questionBankId);
+      bankInfoBySession.set(qs.id, {
+        questionBankId: qs.questionBankId,
+        questionBankName: bank?.metadata.name ?? qs.questionBankId,
+      });
+    }
+  }
+
+  const sessions = stats.map((s) => {
+    const bankInfo = bankInfoBySession.get(s.sessionId);
+    return {
+      sessionId: s.sessionId,
+      nickname: s.nickname,
+      questionBankId: bankInfo?.questionBankId ?? null,
+      questionBankName: bankInfo?.questionBankName ?? null,
+      finalScore: s.finalScore,
+      finalRank: s.finalRank,
+      correctAnswers: s.correctAnswers,
+      totalQuestions: s.totalQuestions,
+      accuracy: s.totalQuestions > 0 ? s.correctAnswers / s.totalQuestions : 0,
+      averageTime: s.averageTime,
+      playedAt: s.playedAt.toISOString(),
+    };
+  });
+
+  const result = { sessions };
+  cache.set(key, result);
+  return c.json(result);
+});
+
+// ─── Player: Session Detail ───────────────────────────────────────────────────
+
+analyticsRoutes.get('/me/sessions/:id', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const sessionId = c.req.param('id') ?? '';
+  const prisma = getPrisma();
+
+  const key = cacheKey('session-detail', user.id, { sessionId });
+  const cached = cache.get(key);
+  if (cached) return c.json(cached);
+
+  // Ownership: user must have a PlayerStat for this session
+  const stat = await prisma.playerStat.findFirst({
+    where: { userId: user.id, sessionId },
+  });
+  if (!stat) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+
+  // Resolve bank info
+  let questionBankId: string | null = null;
+  let questionBankName: string | null = null;
+
+  const hosted = await prisma.hostedSession.findFirst({
+    where: { sessionId },
+    select: { questionBankId: true, questionBankName: true },
+  });
+  if (hosted) {
+    questionBankId = hosted.questionBankId;
+    questionBankName = hosted.questionBankName;
+  } else {
+    const quizSession = await prisma.quizSession.findUnique({
+      where: { id: sessionId },
+      select: { questionBankId: true },
+    });
+    if (quizSession) {
+      questionBankId = quizSession.questionBankId;
+      const bank = questionBanks.get(quizSession.questionBankId);
+      questionBankName = bank?.metadata.name ?? quizSession.questionBankId;
+    }
+  }
+
+  // Try to load per-question answers (only available if session not yet cleaned up)
+  type QuestionDetail = {
+    questionId: string;
+    questionText: string | null;
+    topics: string[];
+    isCorrect: boolean;
+    score: number;
+    responseTimeMs: number;
+    selectedAnswerIds: string[];
+    correctAnswerIds: string[];
+  };
+
+  let questions: QuestionDetail[] | null = null;
+  const topicsInSession: { topic: string; correct: number; total: number; accuracy: number }[] = [];
+
+  const player = await prisma.player.findFirst({
+    where: { sessionId, userId: user.id },
+    include: { answers: { orderBy: { submittedAt: 'asc' } } },
+  });
+
+  if (player && player.answers.length > 0) {
+    const bank = questionBankId ? questionBanks.get(questionBankId) : undefined;
+    const questionMap = new Map(bank?.questions.map((q) => [q.id, q]) ?? []);
+
+    questions = player.answers.map((a) => {
+      const question = questionMap.get(a.questionId);
+      const selectedIds = Array.isArray(a.selectedAnswerIds)
+        ? (a.selectedAnswerIds as string[])
+        : (() => {
+            try {
+              return JSON.parse(a.selectedAnswerIds as unknown as string) as string[];
+            } catch {
+              return [];
+            }
+          })();
+
+      return {
+        questionId: a.questionId,
+        questionText: question?.text ?? null,
+        topics: question?.topics ?? [],
+        isCorrect: a.isCorrect,
+        score: a.score,
+        responseTimeMs: a.responseTimeMs,
+        selectedAnswerIds: selectedIds,
+        correctAnswerIds: question?.correctAnswerIds ?? [],
+      };
+    });
+
+    // Compute per-topic accuracy for this session
+    const topicMap = new Map<string, { correct: number; total: number }>();
+    for (const q of questions) {
+      for (const topic of q.topics) {
+        const existing = topicMap.get(topic) ?? { correct: 0, total: 0 };
+        topicMap.set(topic, {
+          correct: existing.correct + (q.isCorrect ? 1 : 0),
+          total: existing.total + 1,
+        });
+      }
+    }
+    for (const [topic, counts] of topicMap.entries()) {
+      topicsInSession.push({
+        topic,
+        correct: counts.correct,
+        total: counts.total,
+        accuracy: counts.total > 0 ? counts.correct / counts.total : 0,
+      });
+    }
+    topicsInSession.sort((a, b) => a.accuracy - b.accuracy);
+  }
+
+  const result = {
+    sessionId: stat.sessionId,
+    nickname: stat.nickname,
+    questionBankId,
+    questionBankName,
+    finalScore: stat.finalScore,
+    finalRank: stat.finalRank,
+    correctAnswers: stat.correctAnswers,
+    totalQuestions: stat.totalQuestions,
+    accuracy: stat.totalQuestions > 0 ? stat.correctAnswers / stat.totalQuestions : 0,
+    averageTime: stat.averageTime,
+    playedAt: stat.playedAt.toISOString(),
+    questions,
+    topicsInSession,
+  };
+
+  cache.set(key, result);
+  return c.json(result);
+});
+
 // ─── Player: Global Comparison ────────────────────────────────────────────────
 
 analyticsRoutes.get(

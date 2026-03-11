@@ -261,3 +261,42 @@ button:hover { opacity: 0.9; }
 .error-page { text-align: center; padding: 4rem; }
 .error-page h1 { font-size: 4rem; color: var(--text-muted); }
 .error-page a { color: var(--accent); }
+
+/* Clickable table rows */
+.data-table tr.clickable-row { cursor: pointer; }
+.data-table tr.clickable-row:hover td { background: var(--surface2); }
+
+/* Detail link */
+.detail-link { color: var(--accent); text-decoration: none; font-size: 0.8rem; white-space: nowrap; }
+.detail-link:hover { text-decoration: underline; }
+
+/* Breadcrumb */
+.breadcrumb { margin-bottom: 0.5rem; font-size: 0.85rem; }
+.breadcrumb a { color: var(--accent); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* Page subtitle (quiz name · date) */
+.page-subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
+
+/* Topic tags inside question rows */
+.topic-tag { display: inline-block; background: var(--surface2); border-radius: 4px; padding: 0 0.4rem; font-size: 0.75rem; margin-right: 0.25rem; color: var(--text-muted); }
+
+/* Muted text */
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* Monospace cell */
+.monospace { font-family: monospace; font-size: 0.875rem; }
+
+/* Score cell */
+.score-cell { font-weight: 600; }
+
+/* Text align helpers */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* Scrollable table wrapper */
+.table-wrapper { overflow-x: auto; }
+
+/* Question text in tables */
+.question-text { font-size: 0.9rem; }
+

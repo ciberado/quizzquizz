@@ -81,6 +81,9 @@ describe('Analytics API — 403 for wrong-user host access', () => {
 
     // Create a hostedSession record owned by `owner`
     const prisma = getPrisma();
+    await prisma.quizSession.create({
+      data: { id: 'session-abc', pin: '100001', hostToken: randomUUID(), questionBankId: 'b', status: 'finished', currentQuestionIndex: 0 },
+    });
     await prisma.hostedSession.create({
       data: {
         id: randomUUID(),
@@ -105,6 +108,9 @@ describe('Analytics API — 403 for wrong-user host access', () => {
     const stranger = await signUp('stranger2@test.com', 'stranger2', 'StrangerPass123!');
 
     const prisma = getPrisma();
+    await prisma.quizSession.create({
+      data: { id: 'session-def', pin: '100002', hostToken: randomUUID(), questionBankId: 'bank-for-health', status: 'finished', currentQuestionIndex: 0 },
+    });
     await prisma.hostedSession.create({
       data: {
         id: randomUUID(),
@@ -129,6 +135,12 @@ describe('Analytics API — 403 for wrong-user host access', () => {
     const stranger = await signUp('stranger3@test.com', 'stranger3', 'StrangerPass123!');
 
     const prisma = getPrisma();
+    await prisma.quizSession.createMany({
+      data: [
+        { id: 'session-g11', pin: '100003', hostToken: randomUUID(), questionBankId: 'bank-compare', status: 'finished', currentQuestionIndex: 0 },
+        { id: 'session-g22', pin: '100004', hostToken: randomUUID(), questionBankId: 'bank-compare', status: 'finished', currentQuestionIndex: 0 },
+      ],
+    });
     await prisma.hostedSession.createMany({
       data: [
         {
@@ -208,3 +220,277 @@ describe('Analytics API — player endpoints return own data only', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ─── Player: Session History (/me/sessions) ───────────────────────────────────
+
+describe('Analytics API — GET /me/sessions', () => {
+  it('401 for unauthenticated request', async () => {
+    const res = await app.request('/api/analytics/me/sessions');
+    expect(res.status).toBe(401);
+  });
+
+  it('200 with empty sessions list when user has no history', async () => {
+    const user = await signUp('hist-empty@test.com', 'histempty', 'TestPass123!');
+
+    const res = await app.request('/api/analytics/me/sessions', {
+      headers: authHeaders(user.token!),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { sessions: unknown[] };
+    expect(body).toHaveProperty('sessions');
+    expect(Array.isArray(body.sessions)).toBe(true);
+    expect(body.sessions).toHaveLength(0);
+  });
+
+  it('200 returns sessions belonging to the authenticated user only', async () => {
+    const userA = await signUp('hist-a@test.com', 'histusera', 'TestPass123!');
+    const userB = await signUp('hist-b@test.com', 'histuserb', 'TestPass123!');
+    const prisma = getPrisma();
+
+    // Create a QuizSession so PlayerStat can reference it
+    await prisma.quizSession.create({
+      data: {
+        id: 'qs-hist-1',
+        pin: '777001',
+        hostToken: randomUUID(),
+        questionBankId: 'bank-hist',
+        status: 'finished',
+        currentQuestionIndex: 2,
+      },
+    });
+
+    // PlayerStat for userA only
+    await prisma.playerStat.create({
+      data: {
+        id: randomUUID(),
+        userId: userA.userId,
+        sessionId: 'qs-hist-1',
+        nickname: 'Alice',
+        finalScore: 800,
+        finalRank: 1,
+        correctAnswers: 3,
+        totalQuestions: 5,
+        averageTime: 4000,
+        playedAt: new Date('2026-03-01T12:00:00Z'),
+      },
+    });
+
+    // userA sees their session
+    const resA = await app.request('/api/analytics/me/sessions', {
+      headers: authHeaders(userA.token!),
+    });
+    expect(resA.status).toBe(200);
+    const bodyA = await resA.json() as { sessions: { sessionId: string; nickname: string; finalScore: number; accuracy: number }[] };
+    expect(bodyA.sessions).toHaveLength(1);
+    expect(bodyA.sessions[0]!.sessionId).toBe('qs-hist-1');
+    expect(bodyA.sessions[0]!.nickname).toBe('Alice');
+    expect(bodyA.sessions[0]!.finalScore).toBe(800);
+    expect(bodyA.sessions[0]!.accuracy).toBeCloseTo(0.6);
+
+    // userB sees nothing
+    const resB = await app.request('/api/analytics/me/sessions', {
+      headers: authHeaders(userB.token!),
+    });
+    expect(resB.status).toBe(200);
+    const bodyB = await resB.json() as { sessions: unknown[] };
+    expect(bodyB.sessions).toHaveLength(0);
+  });
+
+  it('200 enriches sessions with quiz bank name from HostedSession', async () => {
+    const user = await signUp('hist-bank@test.com', 'histbankuser', 'TestPass123!');
+    const hostUser = await signUp('hist-host@test.com', 'histhostuser', 'TestPass123!');
+    const prisma = getPrisma();
+
+    await prisma.quizSession.create({
+      data: {
+        id: 'qs-hist-2',
+        pin: '777002',
+        hostToken: randomUUID(),
+        questionBankId: 'bank-gen',
+        status: 'finished',
+        currentQuestionIndex: 2,
+      },
+    });
+
+    await prisma.hostedSession.create({
+      data: {
+        id: randomUUID(),
+        userId: hostUser.userId,
+        sessionId: 'qs-hist-2',
+        questionBankId: 'bank-gen',
+        questionBankName: 'General Knowledge',
+        totalPlayers: 3,
+        totalQuestions: 5,
+        completedAt: new Date('2026-03-01T12:00:00Z'),
+      },
+    });
+
+    await prisma.playerStat.create({
+      data: {
+        id: randomUUID(),
+        userId: user.userId,
+        sessionId: 'qs-hist-2',
+        nickname: 'Bob',
+        finalScore: 600,
+        finalRank: 2,
+        correctAnswers: 3,
+        totalQuestions: 5,
+        averageTime: 5000,
+        playedAt: new Date('2026-03-01T12:00:00Z'),
+      },
+    });
+
+    const res = await app.request('/api/analytics/me/sessions', {
+      headers: authHeaders(user.token!),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { sessions: { questionBankName: string | null }[] };
+    expect(body.sessions[0]!.questionBankName).toBe('General Knowledge');
+  });
+
+  it('200 multiple sessions are ordered most-recent first', async () => {
+    const user = await signUp('hist-order@test.com', 'historderuser', 'TestPass123!');
+    const prisma = getPrisma();
+
+    for (const [idx, iso] of [['qs-hist-3', '2026-01-01'], ['qs-hist-4', '2026-03-10']] as [string, string][]) {
+      await prisma.quizSession.create({
+        data: { id: idx, pin: `77800${idx.slice(-1)}`, hostToken: randomUUID(), questionBankId: 'b', status: 'finished', currentQuestionIndex: 0 },
+      });
+      await prisma.playerStat.create({
+        data: { id: randomUUID(), userId: user.userId, sessionId: idx, nickname: 'X', finalScore: 100, finalRank: 1, correctAnswers: 1, totalQuestions: 1, averageTime: 1000, playedAt: new Date(iso) },
+      });
+    }
+
+    const res = await app.request('/api/analytics/me/sessions', {
+      headers: authHeaders(user.token!),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { sessions: { sessionId: string }[] };
+    expect(body.sessions).toHaveLength(2);
+    // Most recent first: qs-hist-4 (2026-03-10) before qs-hist-3 (2026-01-01)
+    expect(body.sessions[0]!.sessionId).toBe('qs-hist-4');
+    expect(body.sessions[1]!.sessionId).toBe('qs-hist-3');
+  });
+});
+
+// ─── Player: Session Detail (/me/sessions/:id) ────────────────────────────────
+
+describe('Analytics API — GET /me/sessions/:id', () => {
+  it('401 for unauthenticated request', async () => {
+    const res = await app.request('/api/analytics/me/sessions/some-id');
+    expect(res.status).toBe(401);
+  });
+
+  it('404 when session does not belong to the requesting user', async () => {
+    const userA = await signUp('det-a@test.com', 'detusera', 'TestPass123!');
+    const userB = await signUp('det-b@test.com', 'detuserb', 'TestPass123!');
+    const prisma = getPrisma();
+
+    await prisma.quizSession.create({
+      data: { id: 'qs-det-1', pin: '888001', hostToken: randomUUID(), questionBankId: 'b', status: 'finished', currentQuestionIndex: 0 },
+    });
+    await prisma.playerStat.create({
+      data: { id: randomUUID(), userId: userA.userId, sessionId: 'qs-det-1', nickname: 'A', finalScore: 100, finalRank: 1, correctAnswers: 1, totalQuestions: 1, averageTime: 1000, playedAt: new Date() },
+    });
+
+    // userB tries to access userA's session
+    const res = await app.request('/api/analytics/me/sessions/qs-det-1', {
+      headers: authHeaders(userB.token!),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('404 for completely unknown session id', async () => {
+    const user = await signUp('det-notfound@test.com', 'detnotfound', 'TestPass123!');
+    const res = await app.request('/api/analytics/me/sessions/non-existent-session-id', {
+      headers: authHeaders(user.token!),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('200 returns correct summary stats', async () => {
+    const user = await signUp('det-ok@test.com', 'detokuser', 'TestPass123!');
+    const prisma = getPrisma();
+
+    await prisma.quizSession.create({
+      data: { id: 'qs-det-2', pin: '888002', hostToken: randomUUID(), questionBankId: 'b', status: 'finished', currentQuestionIndex: 0 },
+    });
+    await prisma.playerStat.create({
+      data: {
+        id: randomUUID(),
+        userId: user.userId,
+        sessionId: 'qs-det-2',
+        nickname: 'Charlie',
+        finalScore: 1200,
+        finalRank: 1,
+        correctAnswers: 4,
+        totalQuestions: 5,
+        averageTime: 3500,
+        playedAt: new Date('2026-03-10T10:00:00Z'),
+      },
+    });
+
+    const res = await app.request('/api/analytics/me/sessions/qs-det-2', {
+      headers: authHeaders(user.token!),
+    });
+    expect(res.status).toBe(200);
+
+    type Detail = {
+      sessionId: string;
+      nickname: string;
+      finalScore: number;
+      finalRank: number;
+      correctAnswers: number;
+      totalQuestions: number;
+      accuracy: number;
+      averageTime: number;
+      questions: null;
+      topicsInSession: unknown[];
+    };
+    const body = await res.json() as Detail;
+    expect(body.sessionId).toBe('qs-det-2');
+    expect(body.nickname).toBe('Charlie');
+    expect(body.finalScore).toBe(1200);
+    expect(body.finalRank).toBe(1);
+    expect(body.correctAnswers).toBe(4);
+    expect(body.totalQuestions).toBe(5);
+    expect(body.accuracy).toBeCloseTo(0.8);
+    expect(body.averageTime).toBe(3500);
+    // No Player record → questions is null, topicsInSession is empty
+    expect(body.questions).toBeNull();
+    expect(body.topicsInSession).toHaveLength(0);
+  });
+
+  it('200 includes questionBankName from HostedSession', async () => {
+    const user = await signUp('det-bank@test.com', 'detbankuser', 'TestPass123!');
+    const host = await signUp('det-host@test.com', 'dethostuser', 'TestPass123!');
+    const prisma = getPrisma();
+
+    await prisma.quizSession.create({
+      data: { id: 'qs-det-3', pin: '888003', hostToken: randomUUID(), questionBankId: 'bank-sci', status: 'finished', currentQuestionIndex: 0 },
+    });
+    await prisma.hostedSession.create({
+      data: {
+        id: randomUUID(),
+        userId: host.userId,
+        sessionId: 'qs-det-3',
+        questionBankId: 'bank-sci',
+        questionBankName: 'Science Quiz',
+        totalPlayers: 2,
+        totalQuestions: 5,
+        completedAt: new Date(),
+      },
+    });
+    await prisma.playerStat.create({
+      data: { id: randomUUID(), userId: user.userId, sessionId: 'qs-det-3', nickname: 'Dana', finalScore: 500, finalRank: 2, correctAnswers: 2, totalQuestions: 5, averageTime: 7000, playedAt: new Date() },
+    });
+
+    const res = await app.request('/api/analytics/me/sessions/qs-det-3', {
+      headers: authHeaders(user.token!),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { questionBankName: string | null };
+    expect(body.questionBankName).toBe('Science Quiz');
+  });
+});
+
