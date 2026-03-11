@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-03-11
+
+### Added
+- **[docs/analytics] User documentation with Playwright screenshots**
+  - `docs/analytics/README.md`: general overview and navigation table for both player and host roles
+  - `docs/analytics/player.md`: full guide for all 8 player analytics views (Dashboard, Session History, Session Detail, Topics Overview, Accuracy Trend, Response Profile, Practice, Global Comparison)
+  - `docs/analytics/host.md`: full guide for all 4 host analytics views (Session Report, Bank Health, Engagement, Compare Sessions)
+  - `docs/analytics/screenshots/`: 13 PNG screenshots (8 player, 5 host) captured at 1280×800 with Playwright
+
 ## [0.2.2] — 2026-03-11
 
 ### Added
