@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-03-11
+
+### Changed
+- Bumped all packages to version 0.3.0 (minor release: analytics player/host views + documentation)
+
 ## [0.2.3] — 2026-03-11
 
 ### Added
