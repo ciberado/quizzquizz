@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file, organized b
 
 ### Fixed
 - **[fix/quiz-upload]** Equalised "Copy Claude Prompt" and "Pick File" button heights in upload modal — switched from `height:32px` (overridden by browser UA defaults on `<button>`) to padding-based sizing with `box-sizing:border-box`; container uses `align-items:stretch`
+- **[fix/quiz-upload]** Upload Quiz button click did nothing when clicked before banks finished loading — race condition where `checkAuth()` made the button visible before `loadTree()` had run `render()` → `bindEvents()`; fixed by moving the `open-upload-modal` listener into `onMount()` so it is registered immediately on element connection
 
 ## [Phase 13] — 2026-03-12
 
