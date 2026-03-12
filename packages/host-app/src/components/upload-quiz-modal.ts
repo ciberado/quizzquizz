@@ -107,19 +107,21 @@ export class UploadQuizModal extends BaseComponent {
           <div style="margin-bottom:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <label style="font-weight:600;">Quiz content <span style="color:#888;font-weight:400;">(Markdown)</span></label>
-              <div style="display:flex; gap:8px; align-items:center;">
+              <div style="display:flex; gap:8px; align-items:stretch;">
                 <button class="copy-prompt-btn" style="
-                  background: #7c3aed; color:white; border:none;
-                  height:32px; padding:0 12px; border-radius:6px;
+                  background: #7c3aed; color:white;
+                  border:none; margin:0; outline:none;
+                  padding:6px 12px; border-radius:6px;
                   cursor:pointer; font-size:0.85rem; white-space:nowrap;
-                  display:inline-flex; align-items:center;
+                  font-family:inherit; line-height:1.4; box-sizing:border-box;
                 ">📋 Copy Claude Prompt</button>
                 <label class="file-pick-label" style="
                   background: var(--color-secondary, #2a2a3e); color:inherit;
                   border:1px solid var(--color-border,#444);
-                  height:32px; padding:0 12px; border-radius:6px;
+                  padding:6px 12px; border-radius:6px;
                   cursor:pointer; font-size:0.85rem; white-space:nowrap;
-                  display:inline-flex; align-items:center;
+                  font-family:inherit; line-height:1.4; box-sizing:border-box;
+                  display:flex; align-items:center;
                 ">📂 Pick File
                   <input class="file-pick-input" type="file" accept=".md,text/plain,text/markdown"
                     style="display:none;" />
