@@ -15,6 +15,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
   - [PHASE-7-8-features-deployment.md](phases/PHASE-7-8-features-deployment.md) - Features & deployment
   - [PHASE-9-15-future.md](phases/PHASE-9-15-future.md) - Future vision (post-MVP)
   - [PHASE-12-analytics.md](phases/PHASE-12-analytics.md) - Analytics package (detailed sub-phases)
+  - [PHASE-13-quiz-upload.md](phases/PHASE-13-quiz-upload.md) - User quiz upload
 
 ## Progress Summary
 
@@ -48,7 +49,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
   - `/api/analytics/*` routes: `requireAuth` + ownership 403 checks, 30s LRU cache — **17 authorization tests**
   - host-app + player-app: "Analytics" nav links
   - Caddyfile, Dockerfile, entrypoint: analytics packages fully integrated in Docker setup
-- 🎯 **Next: Phase 7F — Question Bank Folder Navigation** (then Phase 10)
+- 🎯 **Next: Phase 13 — User Quiz Upload** (or Phase 7F — Question Bank Folder Navigation)
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -71,7 +72,10 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - 🎯 Phase 10: Additional Question Types (4-6 hrs)
 - Phase 11: Team Mode (4-5 hrs)
 - 🟡 Phase 12: Analytics (17-24 hrs) - PARTIAL: Host question analytics complete; [detailed plan](phases/PHASE-12-analytics.md)
-- Phase 13: Question Marketplace (6-8 hrs)
+- ⏳ **Phase 13**: User Quiz Upload (4-6 hrs) — [detailed plan](phases/PHASE-13-quiz-upload.md)
+  - 13A: Backend API — upload endpoint, validation, in-process reload with mutex
+  - 13B: Host App UI — upload modal in bank-browser, file picker + textarea, Claude prompt button
+- Phase 13M: Question Marketplace (6-8 hrs)
 - Phase 14: Native Mobile Apps (20+ hrs)
 - Phase 15: Enterprise Features (4-5 hrs)
 

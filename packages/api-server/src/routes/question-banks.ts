@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { questionBanks, getBankTree, setBankTree } from '../state.js';
-import { loadQuestionBankTree } from '@quizzquizz/question-bank';
+import { questionBanks, getBankTree } from '../state.js';
 import { getPrisma } from '../db/index.js';
+import { reloadQuestionBanks } from '../reload-banks.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -167,25 +167,15 @@ questionBankRoutes.get('/stats', async (c) => {
  */
 questionBankRoutes.post('/reload', (c) => {
   try {
-    questionBanks.clear();
-    const questionBanksPath = process.env.QUESTION_BANKS_PATH ||
+    const questionBanksPath =
+      process.env.QUESTION_BANKS_PATH ||
       join(__dirname, '../../../../question-banks');
     console.log(`🔄 Reloading question banks from: ${questionBanksPath}`);
-    const { tree, banks } = loadQuestionBankTree(questionBanksPath);
-    setBankTree(tree);
-    for (const [id, bank] of banks) {
-      questionBanks.set(id, bank);
-      console.log(`   ✓ Reloaded: ${bank.metadata.name} [${id}] (${bank.questions.length} questions)`);
-    }
-    console.log(`✅ Reloaded ${banks.size} question bank(s)`);
+    const result = reloadQuestionBanks(questionBanksPath);
     return c.json({
       success: true,
-      message: `Reloaded ${banks.size} question bank(s)`,
-      banks: Array.from(banks.values()).map((b) => ({
-        id: b.id,
-        name: b.metadata.name,
-        questionCount: b.questions.length,
-      })),
+      message: `Reloaded ${result.count} question bank(s)`,
+      banks: result.banks,
     });
   } catch (error) {
     console.error('❌ Error reloading question banks:', error);

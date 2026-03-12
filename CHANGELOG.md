@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [Phase 13] — 2026-03-12
+
+### Added
+- **[feat/quizz-upload] User quiz bank upload (Phase 13)**
+  - `packages/api-server/src/reload-banks.ts`: shared `reloadQuestionBanks()` helper extracted from inline reload handler
+  - `packages/api-server/src/upload-mutex.ts`: async promise-chain mutex (`withUploadMutex`) preventing race conditions between concurrent uploads
+  - `packages/api-server/src/routes/user-banks.ts`: `POST /api/user-banks/upload` (auth required — validates size ≤500KB, sanitizes folder/filename names, guards path traversal, parses and validates Markdown via `parseQuestionBank`, serializes write+reload via mutex, returns 201 with bank metadata); `GET /api/user-banks/mine` (auth required — returns the user's uploaded bank subtree)
+  - `packages/api-server/src/routes/user-banks.test.ts`: 18 Vitest integration tests covering happy path, disk write, in-memory reload, duplicate (409), invalid Markdown (422), zero questions (422), path traversal (400), slash in folder name (400), leading dot (400), oversized file (413), hyphens/underscores (201), user isolation
+  - `packages/host-app/src/components/upload-quiz-modal.ts`: `<qz-upload-quiz-modal>` Web Component — textarea paste + file picker, inline Claude prompt copy button, per-error validation display, close-on-success + `quiz-uploaded` event dispatch
+  - `e2e/quiz-upload.spec.ts`: 14 Playwright E2E tests (6 API-level, 8 UI-level) — all passing
+- **[gitignore]** Added `question-banks/user-quizzes/` to `.gitignore` (runtime uploaded files)
+
+### Changed
+- `packages/api-server/src/routes/question-banks.ts`: `/reload` route now delegates to shared `reloadQuestionBanks()` helper
+- `packages/api-server/src/index.ts`: registers `/api/user-banks` routes
+- `packages/host-app/src/api-client.ts`: added `uploadQuizBank()` and `getMyBanks()` methods
+- `packages/host-app/src/components/bank-browser.ts`: checks auth on mount, shows "⬆ Upload Quiz" button when logged in, wires modal open/close and `quiz-uploaded` refresh
+- `packages/host-app/src/main.ts`: imports `upload-quiz-modal` Web Component
+- `playwright.config.ts`: registered `quiz-upload-tests` project
+
 ## [0.3.0] — 2026-03-11
 
 ### Changed

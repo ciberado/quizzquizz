@@ -8,6 +8,7 @@ import { ErrorBoundary } from './error-boundary';
 import './components/auth-header';
 import './components/login-screen';
 import './components/bank-browser';
+import './components/upload-quiz-modal';
 import './components/create-session-screen';
 import './components/question-preview-screen';
 import './components/lobby-screen';

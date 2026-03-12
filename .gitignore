@@ -57,3 +57,6 @@ Thumbs.db
 # Debug
 .vscode-test/
 test-results/
+
+# User-uploaded quiz banks (runtime data)
+question-banks/user-quizzes/

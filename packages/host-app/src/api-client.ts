@@ -367,6 +367,34 @@ export const api = {
     });
   },
 
+  /**
+   * Upload a new quiz bank (Markdown content or file).
+   * Requires the user to be authenticated.
+   */
+  async uploadQuizBank(payload: {
+    folder: string;
+    filename: string;
+    content: string;
+  }): Promise<{
+    success: boolean;
+    bank: { id: string; name: string; questionCount: number; path: string };
+  }> {
+    return apiRequest('/api/user-banks/upload', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+  },
+
+  /**
+   * Get the bank folder subtree owned by the currently authenticated user.
+   */
+  async getMyBanks(): Promise<{
+    userId: string;
+    folder: QuestionBankFolder;
+  }> {
+    return apiRequest('/api/user-banks/mine');
+  },
+
   // ===== Authentication Methods =====
 
   /**

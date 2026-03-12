@@ -12,6 +12,7 @@ import questionBankRoutes from './routes/question-banks.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import analyticsRoutes from './routes/analytics.js';
+import userBankRoutes from './routes/user-banks.js';
 import { startCleanupJob } from './session-cleanup.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -62,6 +63,7 @@ app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
 app.route('/api/question-banks', questionBankRoutes);
 app.route('/api/analytics', analyticsRoutes);
+app.route('/api/user-banks', userBankRoutes);
 
 // In production, static files are served by Caddy reverse proxy
 // This simplifies the Node.js server - no need for static file serving

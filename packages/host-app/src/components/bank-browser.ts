@@ -2,6 +2,7 @@ import { BaseComponent } from './base-component';
 import { api, QuestionBankFolder, QuestionBankSummary } from '../api-client';
 import { handleApiError } from '../error-handler';
 import { router } from '../router';
+import type { UploadQuizModal } from './upload-quiz-modal';
 
 // Module-level cache so folder drill-down (which re-mounts the component via
 // hash navigation) never triggers a redundant API fetch.
@@ -26,9 +27,27 @@ export class BankBrowser extends BaseComponent {
   private currentPath: string[] = [];
   /** The full tree fetched from the API */
   private rootTree: QuestionBankFolder | null = null;
+  /** Authenticated user (null = anonymous) */
+  private authUser: { id: string; email: string } | null = null;
+
+  constructor() {
+    super();
+    // Re-render when auth state changes (login / logout)
+    window.addEventListener('auth-changed', () => this.checkAuth());
+  }
 
   protected async onMount(): Promise<void> {
-    await this.loadTree();
+    await Promise.all([this.checkAuth(), this.loadTree()]);
+  }
+
+  private async checkAuth(): Promise<void> {
+    try {
+      const session = await api.getAuthSession();
+      this.authUser = session?.user ?? null;
+    } catch {
+      this.authUser = null;
+    }
+    if (this.rootTree) this.render();
   }
 
   // ─── Data loading ──────────────────────────────────────────────────────────
@@ -133,10 +152,19 @@ export class BankBrowser extends BaseComponent {
     }
 
     const hasFolders = this.rootTree.folders.length > 0;
+    const uploadBtn = this.authUser
+      ? `<button class="upload-quiz-btn" style="
+          background: #7c3aed; color: white; border: none;
+          padding: 8px 16px; border-radius: 6px; cursor: pointer;
+          font-size: 0.9rem; white-space: nowrap;
+        ">⬆ Upload Quiz</button>`
+      : '';
 
     this.setContent(`
       ${hasFolders ? this.renderBreadcrumb() : ''}
+      ${uploadBtn}
       ${this.renderFolder(folder, hasFolders)}
+      <qz-upload-quiz-modal></qz-upload-quiz-modal>
     `);
 
     this.bindEvents();
@@ -222,6 +250,18 @@ export class BankBrowser extends BaseComponent {
         const id = card.dataset['bankId'];
         if (id) this.selectBank(id);
       });
+    });
+
+    // Upload button → open modal
+    this.qs('.upload-quiz-btn')?.addEventListener('click', () => {
+      const modal = this.qs<UploadQuizModal>('qz-upload-quiz-modal');
+      modal?.open();
+    });
+
+    // After successful upload → refresh tree
+    this.qs('qz-upload-quiz-modal')?.addEventListener('quiz-uploaded', async () => {
+      clearBankTreeCache();
+      await this.loadTree(true);
     });
   }
 }
