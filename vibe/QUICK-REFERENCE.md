@@ -140,11 +140,14 @@ packages/
 │   ├── src/
 │   │   ├── index.ts          # Hono server setup
 │   │   ├── db/index.ts       # Database schema and queries
+│   │   ├── reload-banks.ts   # Shared reload helper
+│   │   ├── upload-mutex.ts   # Async mutex for upload serialization
 │   │   ├── routes/
 │   │   │   ├── sessions.ts   # Session endpoints
 │   │   │   ├── players.ts    # Player endpoints
 │   │   │   ├── game.ts       # Game state/answer endpoints
-│   │   │   └── question-banks.ts  # Question bank endpoints
+│   │   │   ├── question-banks.ts  # Question bank endpoints
+│   │   │   └── user-banks.ts # User quiz upload endpoints
 │   │   └── session-cleanup.ts  # Background cleanup job
 │   └── test.http             # REST client test file
 │
@@ -156,6 +159,8 @@ packages/
 │   │   ├── api-client.ts     # API client with host endpoints
 │   │   ├── components/
 │   │   │   ├── base-component.ts
+│   │   │   ├── bank-browser.ts       # Bank browser + upload button
+│   │   │   ├── upload-quiz-modal.ts  # Quiz upload modal (paste/file/Claude)
 │   │   │   ├── create-session-screen.ts
 │   │   │   ├── lobby-screen.ts
 │   │   │   ├── question-display-screen.ts
@@ -187,7 +192,10 @@ packages/
 │
 question-banks/
 ├── sample-general-knowledge.md
-└── [other .md question banks]
+├── [other .md question banks]
+└── user-quizzes/            # User-uploaded banks (git-ignored, runtime data)
+    └── <userId>/
+        └── <folder>/<file>.md
 
 vibe/
 ├── PROJECT.md                # Architecture & design decisions
@@ -200,12 +208,15 @@ vibe/
     ├── PHASE-6-polish.md
     ├── PHASE-7-8-features-deployment.md
     ├── PHASE-9-15-future.md
+    ├── PHASE-12-analytics.md
+    ├── PHASE-13-quiz-upload.md
     └── QUICK-REFERENCE.md   # This file
 
 e2e/
 ├── api.spec.ts              # API tests
 ├── player-ui.spec.ts        # Player UI tests
 ├── host-analytics.spec.ts   # Host analytics tests
+├── quiz-upload.spec.ts      # Quiz upload tests
 └── [other E2E tests]
 ```
 
@@ -433,8 +444,7 @@ docker push your-registry/quizzquizz:latest
 3. **Player ID**: Can be extracted from state, not a security measure
 4. **CORS**: Restrict to known origins in production
 5. **Database**: SQLite appropriate for single-instance, consider PostgreSQL for scaling
-6. **HTTPS**: Use reverse proxy (Caddy, nginx) with SSL certificates
-
+6. **HTTPS**: Use reverse proxy (Caddy, nginx) with SSL certificates7. **Upload security**: Folder/filename inputs are sanitized (alphanumeric, `-`, `_`, `.`, space only); path traversal is blocked via `path.resolve` prefix check; files are limited to `MAX_UPLOAD_KB`
 ---
 
 ## Deployment Checklist

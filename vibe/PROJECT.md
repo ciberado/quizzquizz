@@ -82,6 +82,7 @@ quizzquizz/
 - Web Components-based SPA
 - Session creation and configuration
 - Question bank browser
+- **Quiz bank upload**: logged-in hosts can upload Markdown banks via paste or file picker; validated before saving, immediate availability
 - Live game control (next question, show results)
 - Leaderboard display
 - Post-game question analytics (accuracy, answer breakdown, sorting)

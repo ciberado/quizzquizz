@@ -44,6 +44,11 @@ QuizzQuizz uses a modern, simplified architecture:
   - Save quiz history and performance stats
   - Track your progress over time
   - Anonymous play still fully supported
+- ✅ **Quiz bank upload** - Logged-in hosts can upload their own Markdown quiz banks directly from the browser
+  - Paste Markdown or pick a `.md` file
+  - One-click Claude AI prompt to help generate correctly-formatted banks
+  - Validated on upload — bad format is rejected with clear error messages
+  - Uploaded banks appear immediately in the bank browser under your personal folder
 
 ## Development
 
@@ -136,12 +141,27 @@ Environment variables (in `docker-compose.yml`):
 - `QUESTION_BANKS_PATH`: Path to question bank files
 - `SESSION_EXPIRY_HOURS`: Session expiration time (default: 24)
 - `LOG_LEVEL`: Logging level (`error`, `warn`, `info`, `debug`)
+- `MAX_UPLOAD_KB`: Maximum quiz bank upload size in KB (default: 500)
 
 ## Question Banks
 
 Questions are stored as Markdown files in `question-banks/`. See existing samples for format.
 
-### Editing Questions
+### Uploading Questions (Browser)
+
+Logged-in hosts can upload quiz banks directly from the Host UI:
+
+1. Open the host app and sign in
+2. Go to **Create Quiz** (the bank browser)
+3. Click **"⬆ Upload Quiz"** in the top right
+4. Paste Markdown or pick a `.md` file
+5. Click **Upload Quiz** — the bank appears immediately
+
+Use the **"📋 Copy Claude Prompt"** button inside the upload modal to get a ready-made prompt that produces correctly-formatted quiz banks via Claude AI.
+
+Uploaded banks are stored under `question-banks/user-quizzes/<userId>/` and are git-ignored.
+
+### Editing Questions (Filesystem)
 
 When running with Docker Compose, question bank files are mounted as a volume:
 
