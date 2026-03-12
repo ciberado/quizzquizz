@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[fix/quiz-upload]** Equalised "Copy Claude Prompt" and "Pick File" button heights in upload modal — switched from `height:32px` (overridden by browser UA defaults on `<button>`) to padding-based sizing with `box-sizing:border-box`; container uses `align-items:stretch`
+
 ## [Phase 13] — 2026-03-12
 
 ### Added
