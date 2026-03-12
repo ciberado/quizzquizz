@@ -59,7 +59,7 @@ function sanitizeSegment(raw: string): string {
 // ─── Request schema ───────────────────────────────────────────────────────────
 
 const UploadSchema = z.object({
-  folder: z.string().min(1).max(80),
+  folder: z.string().max(80).optional(),   // empty / absent → upload to user root
   filename: z.string().min(1).max(80),
   content: z.string().min(1),
 });
@@ -94,11 +94,12 @@ userBankRoutes.post(
     }
 
     // ── Sanitise names ──────────────────────────────────────────────────────
-    const safeFolder = sanitizeSegment(folder);
+    const rawFolder = (folder ?? '').trim();
+    const safeFolder = rawFolder ? sanitizeSegment(rawFolder) : '';
     const safeFilename = sanitizeSegment(filename);
 
-    if (!safeFolder) {
-      return c.json({ error: 'Invalid folder name. Use letters, numbers, hyphens, underscores, or dots.' }, 400);
+    if (rawFolder && !safeFolder) {
+      return c.json({ error: 'Invalid group name. Use letters, numbers, hyphens, underscores, or dots.' }, 400);
     }
     if (!safeFilename) {
       return c.json({ error: 'Invalid filename. Use letters, numbers, hyphens, underscores, or dots.' }, 400);
@@ -107,7 +108,8 @@ userBankRoutes.post(
     // ── Build paths ─────────────────────────────────────────────────────────
     const qbPath = getQuestionBanksPath();
     const userDir = join(qbPath, 'user-quizzes', user.id);
-    const targetDir = join(userDir, safeFolder);
+    // If no group supplied the file goes directly under the user root dir
+    const targetDir = safeFolder ? join(userDir, safeFolder) : userDir;
     const targetFile = join(targetDir, `${safeFilename}.md`);
 
     // ── Path traversal guard ────────────────────────────────────────────────
@@ -118,7 +120,9 @@ userBankRoutes.post(
     }
 
     // ── Validate Markdown ───────────────────────────────────────────────────
-    const virtualId = `user-quizzes/${user.id}/${safeFolder}/${safeFilename}`;
+    const virtualId = safeFolder
+      ? `user-quizzes/${user.id}/${safeFolder}/${safeFilename}`
+      : `user-quizzes/${user.id}/${safeFilename}`;
     let bank;
     try {
       bank = parseQuestionBank(content, virtualId);
@@ -175,7 +179,9 @@ userBankRoutes.post(
             id: bank.id,
             name: bank.metadata.name,
             questionCount: bank.questions.length,
-            path: `user-quizzes/${user.id}/${safeFolder}/${safeFilename}.md`,
+            path: safeFolder
+              ? `user-quizzes/${user.id}/${safeFolder}/${safeFilename}.md`
+              : `user-quizzes/${user.id}/${safeFilename}.md`,
           },
         },
         201,

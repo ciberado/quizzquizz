@@ -91,7 +91,7 @@ export class UploadQuizModal extends BaseComponent {
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="display:block; margin-bottom:6px; font-weight:600;">Folder name <span style="color:#888;font-weight:400;">(groups related quizzes)</span></label>
+            <label style="display:block; margin-bottom:6px; font-weight:600;">Group name <span style="color:#888;font-weight:400;">(optional — leave blank to upload to your root)</span></label>
             <input class="upload-folder-input" type="text" placeholder="e.g. chemistry"
               style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--color-border,#444);
               background:var(--color-bg,#0d0d1a); color:inherit; font-size:1rem; box-sizing:border-box;" />
@@ -109,13 +109,17 @@ export class UploadQuizModal extends BaseComponent {
               <label style="font-weight:600;">Quiz content <span style="color:#888;font-weight:400;">(Markdown)</span></label>
               <div style="display:flex; gap:8px; align-items:center;">
                 <button class="copy-prompt-btn" style="
-                  background: #7c3aed; color:white; border:none; padding:6px 12px;
-                  border-radius:6px; cursor:pointer; font-size:0.85rem; white-space:nowrap;
+                  background: #7c3aed; color:white; border:none;
+                  height:32px; padding:0 12px; border-radius:6px;
+                  cursor:pointer; font-size:0.85rem; white-space:nowrap;
+                  display:inline-flex; align-items:center;
                 ">📋 Copy Claude Prompt</button>
                 <label class="file-pick-label" style="
                   background: var(--color-secondary, #2a2a3e); color:inherit;
-                  border:1px solid var(--color-border,#444); padding:6px 12px;
-                  border-radius:6px; cursor:pointer; font-size:0.85rem; white-space:nowrap;
+                  border:1px solid var(--color-border,#444);
+                  height:32px; padding:0 12px; border-radius:6px;
+                  cursor:pointer; font-size:0.85rem; white-space:nowrap;
+                  display:inline-flex; align-items:center;
                 ">📂 Pick File
                   <input class="file-pick-input" type="file" accept=".md,text/plain,text/markdown"
                     style="display:none;" />
@@ -202,7 +206,6 @@ export class UploadQuizModal extends BaseComponent {
     const content = (this.qs<HTMLTextAreaElement>('.upload-content-textarea')?.value ?? '').trim();
 
     // Client-side validation
-    if (!folder) { this.showErrors([{ message: 'Folder name is required.' }]); return; }
     if (!filename) { this.showErrors([{ message: 'File name is required.' }]); return; }
     if (!content) { this.showErrors([{ message: 'Quiz content cannot be empty.' }]); return; }
 
