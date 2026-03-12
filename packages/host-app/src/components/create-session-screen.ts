@@ -11,9 +11,18 @@ import { clearBankTreeCache } from './bank-browser';
  */
 export class CreateSessionScreen extends BaseComponent {
   private isReloading = false;
+  private isLoggedIn = false;
 
   protected onMount(): void {
     this.render();
+    this.addEventListener('auth-state', (e: Event) => {
+      const loggedIn = (e as CustomEvent<{ loggedIn: boolean }>).detail.loggedIn;
+      if (loggedIn !== this.isLoggedIn) {
+        this.isLoggedIn = loggedIn;
+        const btn = this.qs<HTMLButtonElement>('.upload-quiz-btn');
+        if (btn) btn.style.display = loggedIn ? '' : 'none';
+      }
+    });
   }
 
   private browser(): BankBrowser | null {
@@ -56,9 +65,14 @@ export class CreateSessionScreen extends BaseComponent {
           <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
               <h1 style="margin: 0;">Create Quiz</h1>
-              <button class="reload-btn btn-secondary" style="padding: var(--spacing-sm) var(--spacing-md);">
-                🔄 Refresh Banks
-              </button>
+              <div style="display: flex; gap: var(--spacing-sm);">
+                <button class="reload-btn btn-secondary" style="padding: var(--spacing-sm) var(--spacing-md);">
+                  🔄 Refresh Banks
+                </button>
+                <button class="upload-quiz-btn btn-secondary" style="padding: var(--spacing-sm) var(--spacing-md); display: none;">
+                  ⬆ Upload Quiz
+                </button>
+              </div>
             </div>
             <p class="text-center" style="font-size: var(--font-size-large); margin-bottom: var(--spacing-xl);">
               Select a question bank to start
@@ -70,6 +84,9 @@ export class CreateSessionScreen extends BaseComponent {
     `);
 
     this.qs('.reload-btn')?.addEventListener('click', () => this.reloadQuestionBanks());
+    this.qs('.upload-quiz-btn')?.addEventListener('click', () => {
+      this.browser()?.dispatchEvent(new CustomEvent('open-upload-modal', { bubbles: false }));
+    });
 
     this.addEventListener('bank-selected', (e: Event) => {
       const { bankId } = (e as CustomEvent<{ bankId: string }>).detail;

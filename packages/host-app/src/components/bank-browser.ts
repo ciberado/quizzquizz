@@ -47,6 +47,12 @@ export class BankBrowser extends BaseComponent {
     } catch {
       this.authUser = null;
     }
+    // Notify parent screen so it can show/hide the upload button in the header.
+    this.dispatchEvent(new CustomEvent('auth-state', {
+      detail: { loggedIn: !!this.authUser },
+      bubbles: true,
+      composed: true,
+    }));
     if (this.rootTree) this.render();
   }
 
@@ -152,17 +158,9 @@ export class BankBrowser extends BaseComponent {
     }
 
     const hasFolders = this.rootTree.folders.length > 0;
-    const uploadBtn = this.authUser
-      ? `<button class="upload-quiz-btn" style="
-          background: #7c3aed; color: white; border: none;
-          padding: 8px 16px; border-radius: 6px; cursor: pointer;
-          font-size: 0.9rem; white-space: nowrap;
-        ">⬆ Upload Quiz</button>`
-      : '';
 
     this.setContent(`
       ${hasFolders ? this.renderBreadcrumb() : ''}
-      ${uploadBtn}
       ${this.renderFolder(folder, hasFolders)}
       <qz-upload-quiz-modal></qz-upload-quiz-modal>
     `);
@@ -253,9 +251,10 @@ export class BankBrowser extends BaseComponent {
     });
 
     // Upload button → open modal
-    this.qs('.upload-quiz-btn')?.addEventListener('click', () => {
-      const modal = this.qs<UploadQuizModal>('qz-upload-quiz-modal');
-      modal?.open();
+    // Upload button lives in create-session-screen header; it dispatches
+    // 'open-upload-modal' directly on this element.
+    this.addEventListener('open-upload-modal', () => {
+      this.qs<UploadQuizModal>('qz-upload-quiz-modal')?.open();
     });
 
     // After successful upload → refresh tree
