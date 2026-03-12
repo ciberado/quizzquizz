@@ -37,6 +37,11 @@ export class BankBrowser extends BaseComponent {
   }
 
   protected async onMount(): Promise<void> {
+    // Register the modal listener immediately — before the tree loads — so
+    // clicking "Upload Quiz" works even if auth resolves before loadTree().
+    this.addEventListener('open-upload-modal', () => {
+      this.qs<UploadQuizModal>('qz-upload-quiz-modal')?.open();
+    });
     await Promise.all([this.checkAuth(), this.loadTree()]);
   }
 
@@ -248,13 +253,6 @@ export class BankBrowser extends BaseComponent {
         const id = card.dataset['bankId'];
         if (id) this.selectBank(id);
       });
-    });
-
-    // Upload button → open modal
-    // Upload button lives in create-session-screen header; it dispatches
-    // 'open-upload-modal' directly on this element.
-    this.addEventListener('open-upload-modal', () => {
-      this.qs<UploadQuizModal>('qz-upload-quiz-modal')?.open();
     });
 
     // After successful upload → refresh tree
