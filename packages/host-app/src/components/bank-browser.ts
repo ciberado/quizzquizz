@@ -28,7 +28,7 @@ export class BankBrowser extends BaseComponent {
   /** The full tree fetched from the API */
   private rootTree: QuestionBankFolder | null = null;
   /** Authenticated user (null = anonymous) */
-  private authUser: { id: string; email: string } | null = null;
+  private authUser: { id: string; email: string; username: string } | null = null;
 
   constructor() {
     super();
@@ -179,9 +179,12 @@ export class BankBrowser extends BaseComponent {
       <nav class="bank-browser-breadcrumb" aria-label="Question bank navigation">
         ${segments.map((seg, i) => {
           const isLast = i === segments.length - 1;
+          const display = (this.authUser && seg === this.authUser.id)
+            ? this.authUser.username
+            : seg;
           return isLast
-            ? `<span class="breadcrumb-current">${this.escapeHtml(seg)}</span>`
-            : `<button class="breadcrumb-link" data-depth="${i}">${this.escapeHtml(seg)}</button>
+            ? `<span class="breadcrumb-current">${this.escapeHtml(display)}</span>`
+            : `<button class="breadcrumb-link" data-depth="${i}">${this.escapeHtml(display)}</button>
                <span class="breadcrumb-sep">›</span>`;
         }).join('')}
       </nav>
@@ -195,7 +198,16 @@ export class BankBrowser extends BaseComponent {
     }
 
     const folderCards = showFolderCards
-      ? folder.folders.map((f) => this.renderFolderCard(f)).join('')
+      ? [...folder.folders]
+          .sort((a, b) => {
+            // Current user's own folder always appears first
+            if (this.authUser) {
+              if (a.name === this.authUser.id) return -1;
+              if (b.name === this.authUser.id) return 1;
+            }
+            return 0;
+          })
+          .map((f) => this.renderFolderCard(f)).join('')
       : '';
 
     const bankCards = folder.banks.map((b) => this.renderBankCard(b)).join('');
@@ -204,11 +216,19 @@ export class BankBrowser extends BaseComponent {
   }
 
   private renderFolderCard(folder: QuestionBankFolder): string {
+    const isMyFolder = !!this.authUser && folder.name === this.authUser.id;
+    const displayName = isMyFolder ? this.authUser!.username : folder.name;
     const count = this.countBanks(folder);
+    const extraStyle = isMyFolder
+      ? 'background: rgba(0,212,255,0.07); border-color: var(--color-primary, #00d4ff);'
+      : '';
+    const badge = isMyFolder
+      ? ' <span style="font-size:0.7rem; font-weight:600; color:var(--color-primary,#00d4ff); background:rgba(0,212,255,0.15); padding:2px 6px; border-radius:4px; vertical-align:middle; margin-left:4px;">you</span>'
+      : '';
     return `
-      <div class="question-bank-card bank-browser-folder-card" data-folder-name="${this.escapeHtml(folder.name)}" style="cursor: pointer;">
-        <div style="font-size: 2rem; margin-bottom: var(--spacing-sm);">📁</div>
-        <h3>${this.escapeHtml(folder.name)}</h3>
+      <div class="question-bank-card bank-browser-folder-card" data-folder-name="${this.escapeHtml(folder.name)}" style="cursor: pointer; ${extraStyle}">
+        <div style="font-size: 2rem; margin-bottom: var(--spacing-sm);">${isMyFolder ? '👤' : '📁'}</div>
+        <h3>${this.escapeHtml(displayName)}${badge}</h3>
         <div class="bank-meta">
           <span>${count} ${count === 1 ? 'bank' : 'banks'}</span>
         </div>
