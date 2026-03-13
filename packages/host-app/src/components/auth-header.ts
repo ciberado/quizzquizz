@@ -10,10 +10,18 @@ export class AuthHeader extends BaseComponent {
 
   constructor() {
     super();
-    this.checkAuth();
-    
-    // Listen for auth changes
+    // Listen for auth changes (e.g. after sign-in/sign-out elsewhere)
     window.addEventListener('auth-changed', () => this.checkAuth());
+    // Re-check whenever bank-browser resolves auth — avoids showing stale
+    // "Login / Sign Up" label caused by request-deduplication cancelling the
+    // auth-header's in-flight getAuthSession call.
+    window.addEventListener('auth-state', () => this.checkAuth());
+  }
+
+  protected onMount(): void {
+    // Defer the initial auth check until the element is in the DOM so the
+    // subsequent render() call updates visible content properly.
+    this.checkAuth();
   }
 
   async checkAuth() {
@@ -26,6 +34,10 @@ export class AuthHeader extends BaseComponent {
       }
       this.render();
     } catch (error) {
+      // AbortError means a concurrent call cancelled this one (request
+      // deduplication) — the result is still incoming, so don't reset the
+      // displayed user state.
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       this.user = null;
       this.render();
     }
