@@ -28,7 +28,28 @@ import {
   buildGlobalComparison,
 } from '@quizzquizz/analytics';
 import type { AnalyticsPrismaClient } from '@quizzquizz/analytics';
-import { LRUCache } from 'lru-cache';
+
+// Simple TTL cache using a Map — no external deps (avoids npm hoisting issues
+// where lru-cache 11.x can't be hoisted because lru-cache 10.x occupies the
+// root node_modules slot for a transitive dependency).
+class TtlCache<K, V> {
+  private map = new Map<K, { value: V; expires: number }>();
+  constructor(private maxEntries: number, private ttlMs: number) {}
+  get(key: K): V | undefined {
+    const entry = this.map.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expires) { this.map.delete(key); return undefined; }
+    return entry.value;
+  }
+  set(key: K, value: V): void {
+    // Evict oldest entries when at capacity
+    if (this.map.size >= this.maxEntries) {
+      const first = this.map.keys().next().value!;
+      this.map.delete(first);
+    }
+    this.map.set(key, { value, expires: Date.now() + this.ttlMs });
+  }
+}
 
 type Variables = {
   user: {
@@ -46,10 +67,7 @@ analyticsRoutes.use('*', authMiddleware);
 
 // ─── In-memory LRU cache (30-second TTL) ─────────────────────────────────────
 
-const cache = new LRUCache<string, object>({
-  max: 200,
-  ttl: 30 * 1000, // 30 seconds
-});
+const cache = new TtlCache<string, object>(200, 30 * 1000);
 
 function cacheKey(endpoint: string, userId: string, params: Record<string, string>): string {
   return `${endpoint}:${userId}:${JSON.stringify(params)}`;

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.4.5] — 2026-03-13
+
+### Fixed
+- **[fix/docker]** Replaced `lru-cache` import in `api-server/src/routes/analytics.ts` with a zero-dependency `TtlCache` implementation. Root cause: `@asamuzakjp/css-color` (a transitive dependency) pins `lru-cache@^10.x` at the root `node_modules/` level; npm therefore cannot hoist `lru-cache@11.x` (needed by analytics and api-server) to the root and instead places it in per-workspace `node_modules/`. When the server's docker-compose.yml mounts a named volume over `/app/packages`, those per-workspace `node_modules` directories are clobbered. By removing the external dependency entirely, api-server now has **zero** non-hoisted packages, making it resilient to any Docker volume layout.
+
 ## [0.4.4] — 2026-03-13
 
 ### Fixed
