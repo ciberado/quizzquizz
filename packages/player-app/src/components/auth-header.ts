@@ -51,7 +51,9 @@ export class AuthHeader extends BaseComponent {
     this.innerHTML = `
       <div style="background: #1a1a1a; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; font-size: 16px;">
         <div style="display: flex; align-items: center; gap: 16px;">
-          <h2 style="margin: 0; font-size: 24px; line-height: 1; color: #00d4ff;">QuizzQuizz</h2>
+          <h2 style="margin: 0; font-size: 24px; line-height: 1;">
+            <a href="#/" style="color: #00d4ff; text-decoration: none;">QuizzQuizz</a>
+          </h2>
           <span style="color: #666; font-size: 16px;">Player</span>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
