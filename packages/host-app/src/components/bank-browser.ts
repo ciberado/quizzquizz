@@ -42,7 +42,10 @@ export class BankBrowser extends BaseComponent {
     this.addEventListener('open-upload-modal', () => {
       this.qs<UploadQuizModal>('qz-upload-quiz-modal')?.open();
     });
-    await Promise.all([this.checkAuth(), this.loadTree()]);
+    // Auth must complete before loadTree so the first render already has
+    // authUser set — prevents the raw user-ID flash.
+    await this.checkAuth();
+    await this.loadTree();
   }
 
   private async checkAuth(): Promise<void> {
