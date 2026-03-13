@@ -44,7 +44,13 @@ const INVALID_MD = `This is not a valid quiz bank.`;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function signUp(email: string, password = 'Password123') {
+/** Sign up a new user; returns just the session token (for existing tests). */
+async function signUp(email: string, password = 'Password123'): Promise<string> {
+  return (await signUpFull(email, password)).token;
+}
+
+/** Sign up a new user; returns token + username (for tests that need both). */
+async function signUpFull(email: string, password = 'Password123'): Promise<{ token: string; username: string }> {
   // Use a unique username derived from the email to avoid username-uniqueness conflicts
   const username = `u_${email.replace(/[^a-z0-9]/gi, '').slice(0, 20)}_${Date.now()}`;
   const ctx = await apiRequest.newContext({ baseURL: API });
@@ -58,7 +64,7 @@ async function signUp(email: string, password = 'Password123') {
     const body = await res.json().catch(() => ({}));
     throw new Error(`signUp failed for ${email}: ${JSON.stringify(body)}`);
   }
-  return decodeURIComponent(match[1]);
+  return { token: decodeURIComponent(match[1]), username };
 }
 
 
@@ -136,7 +142,7 @@ test.describe('API — POST /api/user-banks/upload', () => {
 test.describe('Host UI — Quiz Upload', () => {
   test('Upload Quiz button is NOT visible when logged out', async ({ page }) => {
     await page.goto(`${HOST}/#/create`);
-    await expect(page.locator('.question-banks-grid, .upload-quiz-btn')).toBeVisible({ timeout: 10000 });
+    await page.waitForSelector('.question-banks-grid', { timeout: 10000 });
     // The upload button should be absent when anonymous
     await expect(page.locator('.upload-quiz-btn')).not.toBeVisible();
   });
@@ -307,5 +313,107 @@ test.describe('Host UI — Quiz Upload', () => {
     await expect(page.locator('.upload-content-textarea')).toHaveValue(VALID_BANK_MD, { timeout: 3000 });
     // Filename should be auto-filled from the file stem
     await expect(page.locator('.upload-filename-input')).toHaveValue('my-quiz');
+  });
+});
+
+// ─── User folder display tests ────────────────────────────────────────────────
+
+test.describe('Bank Browser — user folder display', () => {
+  /** Upload a bank via API and return the user's ID from the session. */
+  async function uploadAndGetUserId(token: string): Promise<string> {
+    const ctx = await apiRequest.newContext({ baseURL: API });
+    const cookieHeader = { Cookie: `better-auth.session_token=${encodeURIComponent(token)}` };
+
+    // Upload a bank so the user directory is created on disk
+    const uploadRes = await ctx.post('/api/user-banks/upload', {
+      headers: cookieHeader,
+      data: { folder: '', filename: `display-test-${Date.now()}`, content: VALID_BANK_MD },
+    });
+    expect(uploadRes.status()).toBe(201);
+
+    // Fetch userId from session
+    const sessionRes = await ctx.get('/api/auth/get-session', { headers: cookieHeader });
+    const sessionData = await sessionRes.json();
+    await ctx.dispose();
+    return sessionData.user.id as string;
+  }
+
+  async function navigateToUserQuizzes(page: import('@playwright/test').Page, token: string): Promise<void> {
+    await page.context().addCookies([{
+      name: 'better-auth.session_token',
+      value: token,
+      domain: 'localhost',
+      path: '/',
+    }]);
+    await page.goto(`${HOST}/#/create?folder=user-quizzes`);
+    await page.waitForSelector('.question-banks-grid', { timeout: 10000 });
+    await page.waitForTimeout(800);
+  }
+
+  test('own folder card shows username instead of user ID', async ({ page }) => {
+    const { token, username } = await signUpFull(`disp-name-${Date.now()}@e2e.test`);
+    await uploadAndGetUserId(token);
+
+    await navigateToUserQuizzes(page, token);
+
+    // The first card heading should contain username, not the raw ID
+    const firstCard = page.locator('.bank-browser-folder-card').first();
+    const h3Text = await firstCard.locator('h3').textContent();
+    expect(h3Text).toContain(username);
+  });
+
+  test('own folder card appears first in the list', async ({ page }) => {
+    const { token, username } = await signUpFull(`disp-first-${Date.now()}@e2e.test`);
+    await uploadAndGetUserId(token);
+
+    await navigateToUserQuizzes(page, token);
+
+    // First folder card heading must contain our username
+    const firstH3 = page.locator('.bank-browser-folder-card').first().locator('h3');
+    await expect(firstH3).toContainText(username, { timeout: 5000 });
+  });
+
+  test('own folder card shows "you" badge', async ({ page }) => {
+    const { token } = await signUpFull(`disp-badge-${Date.now()}@e2e.test`);
+    await uploadAndGetUserId(token);
+
+    await navigateToUserQuizzes(page, token);
+
+    const firstCard = page.locator('.bank-browser-folder-card').first();
+    await expect(firstCard.locator('text=you')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('own folder card has distinct background styling', async ({ page }) => {
+    const { token } = await signUpFull(`disp-bg-${Date.now()}@e2e.test`);
+    await uploadAndGetUserId(token);
+
+    await navigateToUserQuizzes(page, token);
+
+    // The own-user card has an inline background style; verify it differs from the default
+    const firstCard = page.locator('.bank-browser-folder-card').first();
+    const bg = await firstCard.evaluate((el) => (el as HTMLElement).style.background);
+    expect(bg).toBeTruthy(); // non-empty → custom background applied
+  });
+
+  test('breadcrumb shows username when navigating into own folder', async ({ page }) => {
+    const { token, username } = await signUpFull(`disp-crumb-${Date.now()}@e2e.test`);
+    const userId = await uploadAndGetUserId(token);
+
+    await page.context().addCookies([{
+      name: 'better-auth.session_token',
+      value: token,
+      domain: 'localhost',
+      path: '/',
+    }]);
+
+    // Navigate directly into the user's directory via its real ID in the URL
+    await page.goto(`${HOST}/#/create?folder=user-quizzes/${userId}`);
+    await page.waitForSelector('.bank-browser-breadcrumb', { timeout: 10000 });
+    await page.waitForTimeout(800);
+
+    const breadcrumb = page.locator('.bank-browser-breadcrumb');
+    // Breadcrumb should display the username, not the raw userId
+    await expect(breadcrumb).toContainText(username, { timeout: 5000 });
+    await expect(breadcrumb).not.toContainText(userId);
   });
 });
