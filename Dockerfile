@@ -73,9 +73,12 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./pa
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./packages/question-bank/
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./packages/api-server/prisma
 
-# Copy ALL dist artifacts to a safe BUILD location (NOT /app/packages which is volume-mounted).
-# The entrypoint script syncs everything from here to the shared volume on every startup,
-# ensuring upgrades always reflect the current image even when the volume already has old content.
+# Copy ALL dist artifacts to dist-build/ (safe staging area outside any volume mount).
+# The entrypoint syncs these to their final destinations on every startup:
+#   - backend (api-server, common, question-bank, analytics) → /app/packages/<pkg>/dist
+#   - frontend (host-app, player-app, analytics-ui)          → /app/static/<pkg>
+# /app/packages is NOT volume-mounted, so node_modules there are never clobbered.
+# /app/static IS volume-mounted (app-static) and shared read-only with Caddy.
 COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./dist-build/host-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./dist-build/player-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics-ui/dist ./dist-build/analytics-ui/dist
@@ -85,16 +88,6 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dis
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./dist-build/api-server/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./dist-build/api-server/prisma
 
-# Also store each package's package.json in dist-build so the entrypoint can refresh it
-# on the volume-mounted /app/packages even when upgrading from an old named volume.
-COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./dist-build/common/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./dist-build/question-bank/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/package.json ./dist-build/api-server/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/package.json ./dist-build/analytics/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics-ui/package.json ./dist-build/analytics-ui/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/package.json ./dist-build/host-app/
-COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/package.json ./dist-build/player-app/
-
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
 RUN cd packages/api-server && npx prisma generate
@@ -102,17 +95,18 @@ RUN cd packages/api-server && npx prisma generate
 # Create directory for runtime data and set ownership
 RUN mkdir -p /data && chown nodejs:nodejs /data
 
-# Create directory for shared volume mount point (all packages that will be synced on startup)
+# Create target directories for backend dist sync (entrypoint fills these from dist-build)
 RUN mkdir -p \
       /app/packages/api-server/dist \
       /app/packages/api-server/prisma \
       /app/packages/common/dist \
       /app/packages/question-bank/dist \
-      /app/packages/analytics/dist \
-      /app/packages/host-app/dist \
-      /app/packages/player-app/dist \
-      /app/packages/analytics-ui/dist && \
+      /app/packages/analytics/dist && \
     chown -R nodejs:nodejs /app/packages
+
+# Create target directory for frontend static files (shared with Caddy via app-static volume)
+RUN mkdir -p /app/static/host-app /app/static/player-app /app/static/analytics-ui && \
+    chown -R nodejs:nodejs /app/static
 
 # Copy default question banks (can be overridden with volume mount)
 COPY --chown=nodejs:nodejs question-banks/ ./question-banks/

@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/api-server",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "REST API backend for QuizzQuizz",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,9 +17,9 @@
     "@hono/node-server": "^1.19.9",
     "@hono/zod-validator": "^0.2.1",
     "@prisma/client": "^6.19.2",
-    "@quizzquizz/analytics": "0.4.2",
-    "@quizzquizz/common": "0.4.2",
-    "@quizzquizz/question-bank": "0.4.2",
+    "@quizzquizz/analytics": "0.4.3",
+    "@quizzquizz/common": "0.4.3",
+    "@quizzquizz/question-bank": "0.4.3",
     "better-auth": "^1.4.18",
     "hono": "^4.12.5",
     "prisma": "^6.19.2"

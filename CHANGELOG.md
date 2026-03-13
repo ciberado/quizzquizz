@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.4.3] — 2026-03-13
+
+### Fixed
+- **[fix/docker]** `ERR_MODULE_NOT_FOUND: Cannot find package 'lru-cache'` (and any other non-hoisted workspace dependency) when starting a new container against an existing named volume. Root cause: npm did not hoist `lru-cache` (a dep of `@quizzquizz/analytics`) to `/app/node_modules`; it was placed in `/app/packages/analytics/node_modules/`. Because `app-dist` was mounted over all of `/app/packages`, the old volume content silently replaced that directory and evicted the package-specific `node_modules`. Fixed with a proper architectural separation: `app-dist` volume is renamed `app-static` and is now mounted only at `/app/static` (frontend bundles for Caddy), leaving `/app/packages` — including all workspace `node_modules` — entirely inside the image container and untouched by any volume mount. `Caddyfile` updated to serve from `/app/static/<pkg>` instead of `/app/packages/<pkg>/dist`; `docker-entrypoint.sh` updated to sync frontend dists to `/app/static/<pkg>` and backend dists to `/app/packages/<pkg>/dist` (in-container, non-volume).
+
 ## [0.4.2] — 2026-03-13
 
 ### Fixed

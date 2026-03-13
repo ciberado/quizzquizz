@@ -26,7 +26,7 @@
 
     # Host app - serve static files directly from filesystem
     handle /host* {
-        root * /app/packages/host-app/dist
+        root * /app/static/host-app
         uri strip_prefix /host
         try_files {path} /index.html
         file_server
@@ -34,7 +34,7 @@
 
     # Analytics UI - serve static files directly from filesystem
     handle /analytics* {
-        root * /app/packages/analytics-ui/dist
+        root * /app/static/analytics-ui
         uri strip_prefix /analytics
         try_files {path} /index.html
         file_server
@@ -42,7 +42,7 @@
 
     # Player app - serve static files directly from filesystem (root and all other routes)
     handle /* {
-        root * /app/packages/player-app/dist
+        root * /app/static/player-app
         try_files {path} /index.html
         file_server
     }
