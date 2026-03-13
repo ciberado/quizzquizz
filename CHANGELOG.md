@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-03-13
+
+### Fixed
+- **[fix/docker]** `ERR_MODULE_NOT_FOUND` for `@quizzquizz/analytics` (and potentially other workspace packages) when upgrading from an old named volume. The `app-dist` Docker Compose volume is mounted over `/app/packages`, so old volume content silently replaced image-level `package.json` files — causing Node.js module resolution to fail (missing `main`/`exports`). Fixed by: (1) copying every workspace `package.json` into `dist-build/<pkg>/` in the Dockerfile and (2) refreshing those files in the entrypoint before starting the server, so the current image's metadata is always authoritative regardless of volume age.
+
 ## [0.4.1] — 2026-03-13
 
 ### Changed

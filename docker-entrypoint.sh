@@ -10,6 +10,16 @@ echo "🔄 Syncing build artifacts to shared volume..."
 # This runs on every startup so upgrades always reflect the current image,
 # even when the named volume already contains an older build.
 for pkg in common question-bank api-server analytics host-app player-app analytics-ui; do
+  # Refresh package.json so Node.js module resolution always uses current main/exports fields.
+  # This is critical when the named volume was created by an older image that lacked a package
+  # or had a different package.json (e.g. missing the analytics package in pre-0.4 volumes).
+  src_pkg="/app/dist-build/${pkg}/package.json"
+  dst_pkg="/app/packages/${pkg}/package.json"
+  if [ -f "$src_pkg" ]; then
+    mkdir -p "/app/packages/${pkg}"
+    cp -f "$src_pkg" "$dst_pkg"
+  fi
+
   src="/app/dist-build/${pkg}/dist"
   dst="/app/packages/${pkg}/dist"
   if [ -d "$src" ]; then

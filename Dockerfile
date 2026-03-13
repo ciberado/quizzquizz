@@ -85,6 +85,16 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dis
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./dist-build/api-server/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./dist-build/api-server/prisma
 
+# Also store each package's package.json in dist-build so the entrypoint can refresh it
+# on the volume-mounted /app/packages even when upgrading from an old named volume.
+COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./dist-build/common/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./dist-build/question-bank/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/package.json ./dist-build/api-server/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/package.json ./dist-build/analytics/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics-ui/package.json ./dist-build/analytics-ui/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/package.json ./dist-build/host-app/
+COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/package.json ./dist-build/player-app/
+
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
 RUN cd packages/api-server && npx prisma generate
