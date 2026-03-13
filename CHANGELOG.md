@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[feat/bank-browser]** User directories in `user-quizzes/` now display the username instead of the raw user ID; the current user's own folder is sorted first, rendered with a 👤 icon, a "you" badge, and a blue-tinted background; breadcrumb also shows username for the user's own path segment
+
 ### Fixed
 - **[fix/quiz-upload]** Equalised "Copy Claude Prompt" and "Pick File" button heights in upload modal — switched from `height:32px` (overridden by browser UA defaults on `<button>`) to padding-based sizing with `box-sizing:border-box`; container uses `align-items:stretch`
 - **[fix/quiz-upload]** Upload Quiz button click did nothing when clicked before banks finished loading — race condition where `checkAuth()` made the button visible before `loadTree()` had run `render()` → `bindEvents()`; fixed by moving the `open-upload-modal` listener into `onMount()` so it is registered immediately on element connection
