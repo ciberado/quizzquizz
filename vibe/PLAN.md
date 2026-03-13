@@ -19,7 +19,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 12 (Analytics) Complete (Mar 9, 2026)
+**Current Status**: Phase 13 (User Quiz Upload) Complete (Mar 13, 2026)
 
 **Completed Phases** (55-65 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
@@ -41,15 +41,18 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 9 (9A–9E)**: Authentication & User Accounts - COMPLETE!
 - ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording - COMPLETE!
 - ✅ **Phase 12**: Advanced Analytics - COMPLETE! (Mar 9, 2026)
+- ✅ **Phase 13**: User Quiz Upload - COMPLETE! (Mar 13, 2026)
 
 **Current Phase**:
-- ✅ **Phase 12**: Analytics package + UI — COMPLETE (Mar 9, 2026)
-  - `@quizzquizz/analytics` backend library: shared stats (rolling avg, percentiles, slope, stddev, histogram, streaks, quality score), host modules (session report, bank health, engagement, comparative), player modules (dashboard, accuracy trend, weak topics, response profile, practice, global comparison) — **47 unit tests**
-  - `@quizzquizz/analytics-ui` standalone Vite frontend (base `/analytics/`, port 3003): hash router, Web Component screens for all 10 analytics views, LRU-cached API client
-  - `/api/analytics/*` routes: `requireAuth` + ownership 403 checks, 30s LRU cache — **17 authorization tests**
-  - host-app + player-app: "Analytics" nav links
-  - Caddyfile, Dockerfile, entrypoint: analytics packages fully integrated in Docker setup
-- 🎯 **Next: Phase 13 — User Quiz Upload** (or Phase 7F — Question Bank Folder Navigation)
+- ✅ **Phase 13**: User Quiz Upload — COMPLETE (Mar 13, 2026)
+  - `packages/api-server/src/reload-banks.ts`: shared `reloadQuestionBanks()` helper; `upload-mutex.ts`: async promise-chain mutex (`withUploadMutex`)
+  - `POST /api/user-banks/upload` (auth required — 500KB limit, path-traversal guard, Markdown validation, mutex-serialised write+reload); `GET /api/user-banks/mine`
+  - `packages/host-app/src/components/upload-quiz-modal.ts`: `<qz-upload-quiz-modal>` Web Component — textarea + file picker, inline Claude prompt copy button, per-error validation
+  - Bank-browser shows username instead of raw user ID; own folder sorted first with 👤 icon + "you" badge
+  - Auth-header login state fix: AbortError no longer clears user; `onMount()` + `auth-state` event listener
+  - "QuizzQuizz" heading is now a `#/` home link in both apps
+  - **18 new Vitest integration tests** + **19 Playwright E2E tests** (quiz-upload + username display)
+- 🎯 **Next: Phase 10 — Additional Question Types** (or Phase 7F — Question Bank Folder Navigation)
 
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
@@ -72,22 +75,23 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - 🎯 Phase 10: Additional Question Types (4-6 hrs)
 - Phase 11: Team Mode (4-5 hrs)
 - 🟡 Phase 12: Analytics (17-24 hrs) - PARTIAL: Host question analytics complete; [detailed plan](phases/PHASE-12-analytics.md)
-- ⏳ **Phase 13**: User Quiz Upload (4-6 hrs) — [detailed plan](phases/PHASE-13-quiz-upload.md)
-  - 13A: Backend API — upload endpoint, validation, in-process reload with mutex
-  - 13B: Host App UI — upload modal in bank-browser, file picker + textarea, Claude prompt button
+- ✅ **Phase 13**: User Quiz Upload (4-6 hrs) — COMPLETE! — [detailed plan](phases/PHASE-13-quiz-upload.md)
+  - 13A: Backend API — upload endpoint, validation, in-process reload with mutex ✅
+  - 13B: Host App UI — upload modal in bank-browser, file picker + textarea, Claude prompt button ✅
 - Phase 13M: Question Marketplace (6-8 hrs)
 - Phase 14: Native Mobile Apps (20+ hrs)
 - Phase 15: Enterprise Features (4-5 hrs)
 
 **Test Coverage Summary**: 
-- **195 tests total** (unit + integration) — **193 pass, 2 skip, 100% pass rate**
+- **~218 tests total** (unit + integration) — **~216 pass, 2 skip, 100% pass rate**
 - Common utilities: 25 tests (PIN generation, scoring, validation) - ✅ 100%
 - Question bank parser: 16 tests (markdown parsing, filtering) - ✅ 100%
-- API server: 195 unit + integration tests across 11 test files - ✅ 100%
+- API server: 213 unit + integration tests across 12 test files (incl. 18 upload tests) - ✅ 100%
 - Player app: 12 unit tests (components, state management, router) - ✅ 100%
-- E2E: 19 comprehensive scenarios (complete flows, edge cases, isolation) - ✅ 95% (18/19)
+- E2E: 43+ comprehensive scenarios (complete flows, edge cases, isolation) - ✅ 95%+
   - API tests: 4 scenarios ✅
   - Player UI tests: 4 scenarios ✅
+  - Quiz-upload: 19 scenarios (6 API-level, 8 UI-level, 5 username-display) ✅
   - Host analytics tests: 1 scenario ✅
   - Question preview tests: 15 scenarios ✅ 100% pass rate
 - Database: Migrated from Drizzle+better-sqlite3 to Prisma v6; output path fixed for `moduleResolution: bundler`
