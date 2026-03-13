@@ -1,51 +1,6 @@
 import { BaseComponent } from './base-component';
 import { api, ApiError } from '../api-client';
-
-// ─── Claude prompt ────────────────────────────────────────────────────────────
-
-const CLAUDE_PROMPT = `You are a quiz content creator. Your task is to convert the text I will provide into a QuizzQuizz Markdown quiz bank.
-
-OUTPUT FORMAT (follow exactly):
-
-# Question Bank: <Descriptive Title>
-
-## Metadata
-- **Topics**: <topic1>, <topic2>
-- **Default Time Limit**: 20s
-- **Description**: <one sentence>
-
----
-
-## Questions
-
-### Q001
-**Difficulty**: medium
-**Topics**: <topic>
-**Tags**: <tag1>, <tag2>
-
-<Question text ending in "?">
-
-- [ ] Wrong answer A
-- [x] Correct answer
-- [ ] Wrong answer B
-- [ ] Wrong answer C
-
----
-
-### Q002
-... (continue pattern)
-
-RULES:
-- Use [x] for correct answers, [ ] for incorrect ones
-- Each question needs 3–6 answer options, at least one marked [x]
-- Difficulties: easy | medium | hard
-- Question IDs must be unique and sequential (Q001, Q002, …)
-- Aim for at least 8 questions
-- Do NOT include any text outside the format above
-
-Now convert this text:
-
-[PASTE YOUR TEXT HERE]`;
+import CLAUDE_PROMPT from './claude-prompt.md?raw';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

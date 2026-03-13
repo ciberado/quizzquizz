@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-03-13
+
+### Changed
+- **[feat/quiz-upload]** Replaced inline Claude prompt in upload modal with an improved expert prompt loaded from `claude-prompt.md`; new prompt targets technical exam-preparation quizzes, sets 30s default time limit, encourages scenario-based questions, demands 10–20 questions per bank, and embeds the full QuizzQuizz Markdown format spec for accurate output
+
 ## [0.4.0] — 2026-03-13
 
 ### Added
