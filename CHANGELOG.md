@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.4.4] — 2026-03-13
+
+### Fixed
+- **[fix/docker]** Bump to clean tag after `0.4.3` was published twice (first without the `lru-cache` dep fix, then overwritten with the fix). Remotes that pulled the first `0.4.3` digest would still crash. `0.4.4` is a single, unambiguous build that includes the `lru-cache` direct-dependency declaration on `api-server` and the `app-static` volume decoupling from `0.4.3`.
+
 ## [0.4.3] — 2026-03-13
 
 ### Fixed
