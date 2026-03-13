@@ -15,6 +15,9 @@ All notable changes to this project will be documented in this file, organized b
 - **[fix/quiz-upload]** Upload Quiz button click did nothing when clicked before banks finished loading — race condition where `checkAuth()` made the button visible before `loadTree()` had run `render()` → `bindEvents()`; fixed by moving the `open-upload-modal` listener into `onMount()` so it is registered immediately on element connection
 - **[fix/auth-header]** Header showed "Login / Sign Up" even when already logged in — AbortError from request-deduplication no longer clears user state; initial auth check moved to `onMount()`; header re-checks state on `auth-state` events dispatched by bank-browser
 
+### Changed
+- Bumped all packages to version 0.4.0; corrected internal cross-package dependency references (`api-server` → `analytics`/`common`/`question-bank`; `question-bank` → `common`) and regenerated `package-lock.json`
+
 ## [Phase 13] — 2026-03-12
 
 ### Added
