@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.4.6] — 2026-03-16
+
+### Changed
+- **[fix/heuristics]** Tuned `calculateAutoQuestionTime` in `@quizzquizz/common`: base time 10s → 15s, per-word rate 1s/5w → 1s/4w, per-answer bonus +1s → +2s, difficulty multipliers easy 0.8× → 0.7×, hard 1.2× → 1.4× — results in more breathing room across all difficulties
+
 ## [0.4.5] — 2026-03-13
 
 ### Fixed

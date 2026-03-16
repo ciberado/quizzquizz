@@ -179,10 +179,10 @@ function countWords(text: string): number {
  * - Difficulty level (easy = 0.8x, medium = 1.0x, hard = 1.2x)
  * 
  * Formula:
- * - Base time: 10 seconds
- * - +1 second per 5 words in question
+ * - Base time: 15 seconds
+ * - +1 second per 4 words in question
  * - +0.5 seconds per 10 words across all answers
- * - +1 second per answer option
+ * - +2 seconds per answer option
  * - Apply difficulty multiplier
  * - Cap between 10 and 90 seconds
  * 
@@ -197,24 +197,24 @@ export function calculateAutoQuestionTime(
   difficulty: 'easy' | 'medium' | 'hard'
 ): number {
   // Base time
-  let time = 10;
+  let time = 15;
   
   // Add time based on question length
   const questionWords = countWords(questionText);
-  time += Math.floor(questionWords / 5);
+  time += Math.floor(questionWords / 4);
   
   // Add time based on answer length
   const totalAnswerWords = answers.reduce((sum, answer) => sum + countWords(answer.text), 0);
   time += Math.floor(totalAnswerWords / 10) * 0.5;
   
   // Add time based on number of answers
-  time += answers.length;
+  time += answers.length * 2;
   
   // Apply difficulty multiplier
   const difficultyMultiplier = {
-    easy: 0.8,
+    easy: 0.7,
     medium: 1.0,
-    hard: 1.2,
+    hard: 1.4,
   };
   time *= difficultyMultiplier[difficulty];
   
