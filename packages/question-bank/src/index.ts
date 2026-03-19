@@ -403,9 +403,9 @@ export function loadQuestionBankTree(rootDir: string): LoadQuestionBankTreeResul
       }
     }
 
-    // Sort: folders first (alphabetical), then banks (alphabetical by display name)
+    // Sort: folders first (alphabetical by dir name), then banks (alphabetical by file id)
     folder.folders.sort((a, b) => a.name.localeCompare(b.name));
-    folder.banks.sort((a, b) => a.name.localeCompare(b.name));
+    folder.banks.sort((a, b) => a.id.localeCompare(b.id));
     return folder;
   }
 

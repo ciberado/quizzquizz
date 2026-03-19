@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## [0.4.8] — 2026-03-19
+
+### Changed
+- **[question-bank]** Question banks are now sorted by file ID (filename stem / relative path) instead of metadata display name, matching `ls` alphabetical order. Nested directory names continue to sort alphabetically.
+
+### Tests
+- Updated `loadQuestionBankTree` sort test: now asserts id-ordering wins over display-name ordering.
+
 ## [0.4.7] — 2026-03-19
 
 ### Added

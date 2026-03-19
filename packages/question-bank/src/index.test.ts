@@ -425,17 +425,22 @@ describe('loadQuestionBankTree', () => {
     expect(tree.folders[0]!.folders).toHaveLength(0);
   });
 
-  it('folders are sorted alphabetically, banks are sorted by display name', () => {
+  it('folders are sorted alphabetically by dir name, banks by file id (not display name)', () => {
     const dir = makeTmpDir(); tmps.push(dir);
     mkdirSync(join(dir, 'z-folder'));
     mkdirSync(join(dir, 'a-folder'));
-    writeFileSync(join(dir, 'z-bank.md'), minimalBankMd('Zebra'));
-    writeFileSync(join(dir, 'a-bank.md'), minimalBankMd('Aardvark'));
+    // z-bank.md has display name 'Aardvark', a-bank.md has 'Zebra' — file order wins
+    writeFileSync(join(dir, 'z-bank.md'), minimalBankMd('Aardvark'));
+    writeFileSync(join(dir, 'a-bank.md'), minimalBankMd('Zebra'));
     const { tree } = loadQuestionBankTree(dir);
     expect(tree.folders[0]!.name).toBe('a-folder');
     expect(tree.folders[1]!.name).toBe('z-folder');
-    expect(tree.banks[0]!.name).toBe('Aardvark');
-    expect(tree.banks[1]!.name).toBe('Zebra');
+    // sorted by id (file stem): 'a-bank' < 'z-bank'
+    expect(tree.banks[0]!.id).toBe('a-bank');
+    expect(tree.banks[1]!.id).toBe('z-bank');
+    // display names are intentionally in reverse to prove id-ordering was used
+    expect(tree.banks[0]!.name).toBe('Zebra');
+    expect(tree.banks[1]!.name).toBe('Aardvark');
   });
 
   it('ignores hidden files and directories (names starting with ".")', () => {
