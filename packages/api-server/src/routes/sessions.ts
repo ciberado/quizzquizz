@@ -31,11 +31,23 @@ const CreateSessionSchema = z.object({
   shuffleAnswers: z.boolean().optional().default(true),
   automaticPace: z.boolean().optional(),
   autoQuestionTime: z.boolean().optional(),
+  pace: z.enum(['normal', 'calm', 'manual']).optional().default('normal'),
 });
+
+/** Read the global question-time multiplier from env (default 1.5 = 50% more than original). */
+function getAutoTimeMuliplier(): number {
+  const raw = process.env.AUTO_QUESTION_TIME_MULTIPLIER;
+  if (!raw) return 1.5;
+  const val = parseFloat(raw);
+  return isNaN(val) || val <= 0 ? 1.5 : val;
+}
 
 // Create a new session
 sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
-  const { questionBankId, questionIds, randomOrder, shuffleAnswers, automaticPace, autoQuestionTime } = c.req.valid('json');
+  const { questionBankId, questionIds, randomOrder, shuffleAnswers, automaticPace, autoQuestionTime, pace } = c.req.valid('json');
+  
+  // Derive automaticPace from pace: 'normal' means auto-advance, others don't
+  const effectiveAutomaticPace = automaticPace !== undefined ? automaticPace : (pace === 'normal');
   
   // Get authenticated user if present (optional auth)
   const user = c.get('user');
@@ -60,8 +72,9 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         questionIds: questionIds ? JSON.stringify(questionIds) : null,
         randomOrder: randomOrder || false,
         shuffleAnswers: shuffleAnswers ?? true, // Default to true if not specified
-        automaticPace: automaticPace || false,
+        automaticPace: effectiveAutomaticPace,
         autoQuestionTime: autoQuestionTime || false,
+        pace: pace || 'normal',
         status: 'lobby',
         currentQuestionIndex: -1,
         // createdAt uses @default(now()) in schema
@@ -124,8 +137,11 @@ sessionRoutes.get('/:id', async (c) => {
           currentQuestionTimeLimit = calculateAutoQuestionTime(
             currentQ.text,
             currentQ.answers,
-            currentQ.difficulty
+            currentQ.difficulty,
+            getAutoTimeMuliplier()
           );
+        } else if (session.pace === 'manual') {
+          currentQuestionTimeLimit = null; // No timer in manual mode
         } else {
           currentQuestionTimeLimit = currentQ.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
         }

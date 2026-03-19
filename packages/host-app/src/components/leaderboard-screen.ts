@@ -61,7 +61,7 @@ export class LeaderboardScreen extends HTMLElement {
       const newSessionStatus = session.status;
       const newCurrentQuestionIndex = session.currentQuestionIndex;
       const newTotalQuestions = session.questions.length;
-      const newAutomaticPace = session.automaticPace || false;
+      const newAutomaticPace = session.pace === 'normal' ? true : (session.automaticPace || false);
 
       // Get leaderboard data
       const data = await api.getLeaderboard(sessionId);

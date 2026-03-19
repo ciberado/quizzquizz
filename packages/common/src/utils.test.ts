@@ -291,7 +291,7 @@ describe('calculateAutoQuestionTime', () => {
     expect(medium).toBeLessThan(hard);
   });
 
-  it('should cap time at maximum (90s)', () => {
+  it('should cap time at maximum (120s)', () => {
     // Create a very long question with many long answers
     const longQuestion = 'This is an extremely long question '.repeat(50);
     const longAnswers = Array.from({ length: 10 }, (_, i) => ({
@@ -299,14 +299,16 @@ describe('calculateAutoQuestionTime', () => {
     }));
     
     const time = calculateAutoQuestionTime(longQuestion, longAnswers, 'hard');
-    expect(time).toBeLessThanOrEqual(90);
+    expect(time).toBeLessThanOrEqual(120);
   });
 
   it('should increase time for longer answer text', () => {
+    // Use multiplier=1 to test the core algorithm independent of the global default
     const shortAnswers = calculateAutoQuestionTime(
       'Question?',
       [{ text: 'A' }, { text: 'B' }],
-      'medium'
+      'medium',
+      1
     );
     
     const longAnswers = calculateAutoQuestionTime(
@@ -315,7 +317,8 @@ describe('calculateAutoQuestionTime', () => {
         { text: 'This is a much longer answer with many words' },
         { text: 'This is another long answer option with lots of text' }
       ],
-      'medium'
+      'medium',
+      1
     );
     
     expect(longAnswers).toBeGreaterThan(shortAnswers);
@@ -329,5 +332,54 @@ describe('calculateAutoQuestionTime', () => {
     );
     
     expect(Number.isInteger(time)).toBe(true);
+  });
+
+  describe('multiplier parameter', () => {
+    const question = 'What is the capital of France?';
+    const answers = [{ text: 'Paris' }, { text: 'London' }, { text: 'Berlin' }, { text: 'Madrid' }];
+
+    it('defaults to 1.5 (50% more than multiplier=1)', () => {
+      const base = calculateAutoQuestionTime(question, answers, 'medium', 1);
+      const defaulted = calculateAutoQuestionTime(question, answers, 'medium');
+      expect(defaulted).toBe(Math.max(10, Math.min(120, Math.round(base * 1.5))));
+    });
+
+    it('multiplier=1 gives the same result as the original algorithm', () => {
+      const base = calculateAutoQuestionTime(question, answers, 'medium', 1);
+      expect(base).toBeGreaterThanOrEqual(10);
+      expect(base).toBeLessThanOrEqual(120);
+    });
+
+    it('multiplier=2 gives double the time compared to multiplier=1 (within bounds)', () => {
+      const base = calculateAutoQuestionTime(question, answers, 'medium', 1);
+      const doubled = calculateAutoQuestionTime(question, answers, 'medium', 2);
+      const expected = Math.max(10, Math.min(120, Math.round(base * 2)));
+      expect(doubled).toBe(expected);
+    });
+
+    it('multiplier proportionally scales time across difficulties', () => {
+      const easyX1 = calculateAutoQuestionTime(question, answers, 'easy', 1);
+      const easyX3 = calculateAutoQuestionTime(question, answers, 'easy', 3);
+      const hardX1 = calculateAutoQuestionTime(question, answers, 'hard', 1);
+      const hardX3 = calculateAutoQuestionTime(question, answers, 'hard', 3);
+      // Scaled values must be >= base values
+      expect(easyX3).toBeGreaterThanOrEqual(easyX1);
+      expect(hardX3).toBeGreaterThanOrEqual(hardX1);
+    });
+
+    it('result is always an integer', () => {
+      const time = calculateAutoQuestionTime(question, answers, 'hard', 1.7);
+      expect(Number.isInteger(time)).toBe(true);
+    });
+
+    it('result is always capped at 120s regardless of large multiplier', () => {
+      const time = calculateAutoQuestionTime(question, answers, 'hard', 100);
+      expect(time).toBeLessThanOrEqual(120);
+    });
+
+    it('result is never below minimum 10s with tiny multiplier', () => {
+      const time = calculateAutoQuestionTime('Q?', [{ text: 'A' }], 'easy', 0.001);
+      expect(time).toBeGreaterThanOrEqual(10);
+    });
   });
 });

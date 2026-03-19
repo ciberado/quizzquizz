@@ -37,6 +37,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private answeredCount: number = 0;
   private autoNavigateTimeout: number | null = null;
   private automaticPace: boolean = false; // Auto-advance enabled
+  private pace: 'normal' | 'calm' | 'manual' = 'normal'; // Session pacing mode
   private serverTime: number = 0; // Server's current time for clock synchronization
   private isNavigating: boolean = false; // Prevent concurrent API calls
   private earlyStop: boolean = false; // Set when all players answered early (prevents timer restart in polls)
@@ -77,8 +78,9 @@ export class QuestionDisplayScreen extends HTMLElement {
       const session = await api.getSession(sessionId, hostToken);
       const players = await api.getPlayers(sessionId);
       
-      // Store automatic pace setting
-      this.automaticPace = session.automaticPace || false;
+      // Store automatic pace and pacing mode from session
+      this.pace = (session.pace as 'normal' | 'calm' | 'manual') || 'normal';
+      this.automaticPace = this.pace === 'normal' ? (session.automaticPace || true) : false;
       
       // Build game state from session data
       const currentQ = session.currentQuestionIndex >= 0 && session.questions.length > 0
@@ -104,28 +106,38 @@ export class QuestionDisplayScreen extends HTMLElement {
       
       // Calculate time remaining
       if (newGameState.currentQuestion && session.questionStartedAt) {
-        // Use computed timeLimit from API (matches question bank default) instead of hardcoded fallback
+        const isManualPace = this.pace === 'manual';
+        // Use computed timeLimit from API (null means manual pace — no timer)
         const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
-        this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
         this.serverTime = session.serverTime; // Store server time for synchronized timer
 
-        if (!this.earlyStop) {
-          // Only recalculate from server when not in early-stop mode (all players answered)
-          // Without this guard, the next poll after stopTimer() restarts the timer because
-          // timerInterval===null but timeRemaining>0.
-          const elapsed = Math.floor((this.serverTime - Number(session.questionStartedAt)) / 1000);
-          this.timeRemaining = Math.max(0, timeLimit - elapsed);
-          newGameState.timeRemaining = this.timeRemaining;
-
-          if (this.timeRemaining > 0 && !this.timerInterval) {
-            this.startTimer();
-          } else if (this.timeRemaining <= 0) {
-            // Timer already expired from server - just stop timer and show correct answers
-            this.stopTimer();
-          }
-        } else {
-          // Early-stop mode: keep timeRemaining at 0 so answers stay revealed
+        if (isManualPace) {
+          // Manual pace: no timer countdown — host always sees the "Show Leaderboard" button
+          this.stopTimer();
+          this.currentTimeLimit = 0;
+          this.timeRemaining = 0;
           newGameState.timeRemaining = 0;
+        } else {
+          this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
+
+          if (!this.earlyStop) {
+            // Only recalculate from server when not in early-stop mode (all players answered)
+            // Without this guard, the next poll after stopTimer() restarts the timer because
+            // timerInterval===null but timeRemaining>0.
+            const elapsed = Math.floor((this.serverTime - Number(session.questionStartedAt)) / 1000);
+            this.timeRemaining = Math.max(0, timeLimit - elapsed);
+            newGameState.timeRemaining = this.timeRemaining;
+
+            if (this.timeRemaining > 0 && !this.timerInterval) {
+              this.startTimer();
+            } else if (this.timeRemaining <= 0) {
+              // Timer already expired from server - just stop timer and show correct answers
+              this.stopTimer();
+            }
+          } else {
+            // Early-stop mode: keep timeRemaining at 0 so answers stay revealed
+            newGameState.timeRemaining = 0;
+          }
         }
       }
 
@@ -366,17 +378,23 @@ export class QuestionDisplayScreen extends HTMLElement {
         <div class="answers-grid">
           ${question.answers.map((answer, index) => {
             const isCorrect = question.correctAnswerIds.includes(answer.id);
+            const revealCorrect = !isTimerActive && isCorrect;
             return `
-              <div class="answer-card ${!isTimerActive && isCorrect ? 'correct' : ''}">
+              <div class="answer-card ${revealCorrect ? 'correct' : ''}">
                 <div class="answer-label">${this.getAnswerLabel(index)}</div>
                 <div class="answer-text">${this.escapeHtml(answer.text)}</div>
-                ${!isTimerActive && isCorrect ? '<div class="correct-indicator">✓</div>' : ''}
+                ${revealCorrect ? '<div class="correct-indicator">✓</div>' : ''}
               </div>
             `;
           }).join('')}
         </div>
 
         <div class="timer-controls-row">
+          ${this.pace === 'manual' ? `
+          <div class="timer-section manual-pace">
+            <div class="timer-value">⏸ Manual pace</div>
+          </div>
+          ` : `
           <div class="timer-section ${!isTimerActive ? 'expired' : ''}">
             <div class="timer-bar">
               <div class="timer-progress" style="width: ${isTimerActive ? (this.timeRemaining / this.currentTimeLimit) * 100 : 0}%"></div>
@@ -387,17 +405,20 @@ export class QuestionDisplayScreen extends HTMLElement {
                 : (this.earlyStop ? '✅ All players answered!' : 'Time\'s up!')}
             </div>
           </div>
+          `}
 
           <div class="controls">
-            ${!isTimerActive
-              ? (this.automaticPace
-                ? `<div class="autopace-status">
-                     <div class="autopace-spinner"></div>
-                     <span>${this.earlyStop ? 'Showing leaderboard in a moment…' : 'Loading leaderboard…'}</span>
-                   </div>`
-                : `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`
-                )
-              : ''}
+            ${this.pace === 'manual'
+              ? `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`
+              : (!isTimerActive
+                ? (this.automaticPace
+                  ? `<div class="autopace-status">
+                       <div class="autopace-spinner"></div>
+                       <span>${this.earlyStop ? 'Showing leaderboard in a moment…' : 'Loading leaderboard…'}</span>
+                     </div>`
+                  : `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`)
+                : '')
+            }
             <button class="btn-secondary btn-action" id="end-button">End Quiz</button>
           </div>
         </div>

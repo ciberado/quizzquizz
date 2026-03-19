@@ -184,17 +184,20 @@ function countWords(text: string): number {
  * - +0.5 seconds per 10 words across all answers
  * - +2 seconds per answer option
  * - Apply difficulty multiplier
- * - Cap between 10 and 90 seconds
+ * - Apply global multiplier (default 1.5, override via AUTO_QUESTION_TIME_MULTIPLIER env var)
+ * - Cap between 10 and 120 seconds
  * 
  * @param questionText - The question text
  * @param answers - Array of answer objects with text
  * @param difficulty - Question difficulty ('easy' | 'medium' | 'hard')
+ * @param multiplier - Optional global time multiplier (defaults to 1.5)
  * @returns Time limit in seconds
  */
 export function calculateAutoQuestionTime(
   questionText: string,
   answers: Array<{ text: string }>,
-  difficulty: 'easy' | 'medium' | 'hard'
+  difficulty: 'easy' | 'medium' | 'hard',
+  multiplier: number = 1.5
 ): number {
   // Base time
   let time = 15;
@@ -217,7 +220,10 @@ export function calculateAutoQuestionTime(
     hard: 1.4,
   };
   time *= difficultyMultiplier[difficulty];
+
+  // Apply global multiplier (env-configurable, default 1.5 — 50% more than original)
+  time *= multiplier;
   
-  // Round and cap between 10 and 90 seconds
-  return Math.max(10, Math.min(90, Math.round(time)));
+  // Round and cap between 10 and 120 seconds
+  return Math.max(10, Math.min(120, Math.round(time)));
 }

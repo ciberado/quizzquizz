@@ -42,7 +42,7 @@ export class QuestionPreviewScreen extends BaseComponent {
   private selectAllMode = true; // By default, select all questions
   private randomOrder = false;
   private shuffleAnswers = true; // Default to true - shuffle answers within questions
-  private automaticPace = false;
+  private pace: 'normal' | 'calm' | 'manual' = 'normal'; // Pacing mode
   private autoQuestionTime = false; // Automatically calculate question time based on complexity
   private expandedQuestions = new Set<string>(); // Track which questions have expanded answers
   private maxQuestions: number | null = null; // Limit number of questions (null = no limit)
@@ -258,14 +258,27 @@ export class QuestionPreviewScreen extends BaseComponent {
                     />
                     <span>Shuffle answers</span>
                   </label>
-                  <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <input 
-                      type="checkbox" 
-                      data-action="toggle-automatic"
-                      ${this.automaticPace ? 'checked' : ''}
-                    />
-                    <span>Automatic pace</span>
-                  </label>
+                  <div style="margin-top: var(--spacing-xs);">
+                    <span style="font-weight: 600; font-size: var(--font-size-small); display: block; margin-bottom: var(--spacing-xs);">Pace</span>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                      ${(['normal', 'calm', 'manual'] as const).map(p => `
+                        <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
+                          <input
+                            type="radio"
+                            name="pace"
+                            value="${p}"
+                            ${this.pace === p ? 'checked' : ''}
+                          />
+                          <span style="text-transform: capitalize;">${p}</span>
+                        </label>
+                      `).join('')}
+                    </div>
+                    <p style="color: var(--color-text-muted); margin: var(--spacing-xs) 0 0 0; font-size: var(--font-size-small);">
+                      ${ this.pace === 'normal' ? 'Auto-advance after timer expires' :
+                         this.pace === 'calm'   ? 'Host advances manually after timer expires' :
+                         'No timer — host advances whenever ready' }
+                    </p>
+                  </div>
                   <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
                     <input 
                       type="checkbox" 
@@ -504,13 +517,16 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
-    // Toggle automatic pace
-    const automaticCheckbox = this.qs('[data-action="toggle-automatic"]') as HTMLInputElement;
-    if (automaticCheckbox) {
-      automaticCheckbox.addEventListener('change', () => {
-        this.automaticPace = automaticCheckbox.checked;
+    // Pace radio buttons
+    this.qsa('input[name="pace"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        if (target.checked) {
+          this.pace = target.value as 'normal' | 'calm' | 'manual';
+          this.render(); // Re-render to update description text
+        }
       });
-    }
+    });
 
     // Toggle automatic question time
     const autoTimeCheckbox = this.qs('[data-action="toggle-auto-time"]') as HTMLInputElement;
@@ -659,7 +675,7 @@ export class QuestionPreviewScreen extends BaseComponent {
         questionIds,
         randomOrder: this.randomOrder,
         shuffleAnswers: this.shuffleAnswers,
-        automaticPace: this.automaticPace,
+        pace: this.pace,
         autoQuestionTime: this.autoQuestionTime,
       });
 

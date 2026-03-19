@@ -37,9 +37,9 @@ export interface QuestionBankFolder {
 
 // API base URL (configurable via environment)
 function getApiBaseUrl(): string {
-  // In development, API runs on port 3000
+  // In development with Vite proxy, use relative URL so /api is proxied to localhost:3000
   if (import.meta.env?.DEV) {
-    return 'http://localhost:3000';
+    return '';
   }
   
   // In production, API is served from same origin
@@ -233,6 +233,7 @@ export const api = {
       shuffleAnswers?: boolean;
       automaticPace?: boolean;
       autoQuestionTime?: boolean;
+      pace?: 'normal' | 'calm' | 'manual';
     }
   ): Promise<{
     id: string;
@@ -248,6 +249,7 @@ export const api = {
         ...(options?.shuffleAnswers !== undefined && { shuffleAnswers: options.shuffleAnswers }),
         ...(options?.automaticPace !== undefined && { automaticPace: options.automaticPace }),
         ...(options?.autoQuestionTime !== undefined && { autoQuestionTime: options.autoQuestionTime }),
+        ...(options?.pace !== undefined && { pace: options.pace }),
       }),
     });
   },

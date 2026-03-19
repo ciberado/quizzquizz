@@ -62,6 +62,7 @@ export const SessionSchema = z.object({
   questionStartedAt: z.number().nullable(),
   automaticPace: z.boolean().optional(),
   shuffleAnswers: z.boolean().optional(),
+  pace: z.enum(['normal', 'calm', 'manual']).optional(),
   createdAt: z.number(),
 });
 

@@ -158,6 +158,69 @@ describe('Session Routes', () => {
     });
   });
 
+  describe('POST /api/sessions — pace field', () => {
+    it('defaults pace to normal and sets automaticPace=true', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank' }),
+      });
+      expect(res.status).toBe(201);
+      const { id }: any = await res.json();
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
+      expect(session?.pace).toBe('normal');
+      expect(session?.automaticPace).toBe(true);
+    });
+
+    it('creates session with pace=calm and automaticPace=false', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank', pace: 'calm' }),
+      });
+      expect(res.status).toBe(201);
+      const { id }: any = await res.json();
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
+      expect(session?.pace).toBe('calm');
+      expect(session?.automaticPace).toBe(false);
+    });
+
+    it('creates session with pace=manual and automaticPace=false', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank', pace: 'manual' }),
+      });
+      expect(res.status).toBe(201);
+      const { id }: any = await res.json();
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
+      expect(session?.pace).toBe('manual');
+      expect(session?.automaticPace).toBe(false);
+    });
+
+    it('rejects unknown pace value', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank', pace: 'turbo' }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('explicit automaticPace overrides pace derivation', async () => {
+      const res = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank', pace: 'calm', automaticPace: true }),
+      });
+      expect(res.status).toBe(201);
+      const { id }: any = await res.json();
+      const session = await getPrisma().quizSession.findUnique({ where: { id } });
+      expect(session?.pace).toBe('calm');
+      expect(session?.automaticPace).toBe(true);
+    });
+  });
+
   describe('GET /api/sessions/:id', () => {
     it('should return session with valid host token', async () => {
       const createRes = await request('/api/sessions', {

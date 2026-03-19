@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## [0.4.7] — 2026-03-19
+
+### Added
+- **[feat/pace]** New `pace` session option (`normal` | `calm` | `manual`) replaces the separate "Automatic pace" checkbox on the quiz creation screen.
+  - `normal`: auto-advance to leaderboard after timer expires (previous `automaticPace=true` behaviour)
+  - `calm`: timer runs out, then host manually clicks "Show Leaderboard"
+  - `manual`: no countdown timer — host advances whenever ready, "Show Leaderboard" button is always visible; `timeLimit` is `null` in the game-state API; players receive full points
+
+### Changed
+- **[feat/auto-time-multiplier]** `calculateAutoQuestionTime` in `@quizzquizz/common` now accepts an optional `multiplier` argument (default `1.5`). The default increases all auto-calculated question times by 50% compared to previous values. Cap raised from 90 s to 120 s. Override with `AUTO_QUESTION_TIME_MULTIPLIER` env var (positive float) on the API server.
+
+### Fixed
+- **[test]** Vite dev proxy added (`/api` → `localhost:3000`) so host-app works in development without CORS errors; `getApiBaseUrl()` uses relative URLs in DEV mode.
+
+### Tests
+- New `multiplier parameter` test suite in `@quizzquizz/common` (7 tests covering scaling, bounds, integer output).
+- New `pace field` test suite in `sessions.test.ts` (5 tests: default, calm, manual, invalid value, explicit override).
+- New `pace=manual` and `AUTO_QUESTION_TIME_MULTIPLIER` test suites in `game.test.ts` (3 tests).
+
 ## [Unreleased]
 
 ## [0.4.6] — 2026-03-16

@@ -406,4 +406,126 @@ describe('Game Routes', () => {
       expect(data.error).toBe('Session is not currently playing');
     });
   });
+
+  describe('pace=manual — timeLimit is null', () => {
+    it('returns timeLimit=null from game state when pace is manual', async () => {
+      const sessionId = 'manual-pace-state-1';
+      const playerId = 'player-manual-1';
+      const now = Date.now();
+
+      await getPrisma().quizSession.create({ data: {
+        id: sessionId,
+        pin: '777771',
+        hostToken: 'host-manual-1',
+        questionBankId: 'test-bank',
+        status: 'playing',
+        currentQuestionIndex: 0,
+        questionStartedAt: new Date(now),
+        createdAt: new Date(now),
+        expiresAt: new Date(now + 3600000),
+        pace: 'manual',
+      } });
+
+      await getPrisma().player.create({ data: {
+        id: playerId,
+        sessionId,
+        nickname: 'ManualPlayer',
+        score: 0,
+        joinedAt: new Date(now),
+      } });
+
+      const res = await request(`/api/sessions/${sessionId}/state`, {
+        headers: { 'X-Player-Id': playerId },
+      });
+
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(data.status).toBe('playing');
+      expect(data.timeLimit).toBeNull();
+      expect(data.currentQuestion).toBeDefined();
+    });
+
+    it('awards full points for manual-pace answers (no time pressure)', async () => {
+      const sessionId = 'manual-pace-answer-1';
+      const playerId = 'player-manual-ans-1';
+      const now = Date.now();
+
+      await getPrisma().quizSession.create({ data: {
+        id: sessionId,
+        pin: '777772',
+        hostToken: 'host-manual-ans-1',
+        questionBankId: 'test-bank',
+        status: 'playing',
+        currentQuestionIndex: 0,
+        // questionStartedAt well in the past — should still get full points in manual mode
+        questionStartedAt: new Date(now - 999999),
+        createdAt: new Date(now),
+        expiresAt: new Date(now + 3600000),
+        pace: 'manual',
+      } });
+
+      await getPrisma().player.create({ data: {
+        id: playerId,
+        sessionId,
+        nickname: 'ManualAnsPlayer',
+        score: 0,
+        joinedAt: new Date(now),
+      } });
+
+      const res = await request(`/api/sessions/${sessionId}/answer`, {
+        method: 'POST',
+        headers: { 'X-Player-Id': playerId, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: 'q1', selectedAnswerIds: ['a2'] }),
+      });
+
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(data.correct).toBe(true);
+      // In manual mode, score should be > 0 (not penalized for elapsed time beyond the fallback limit)
+      expect(data.score).toBeGreaterThan(0);
+    });
+  });
+
+  describe('AUTO_QUESTION_TIME_MULTIPLIER env var', () => {
+    it('applies multiplier when autoQuestionTime=true', async () => {
+      const sessionId = 'multiplier-test-1';
+      const playerId = 'player-mult-1';
+      const now = Date.now();
+
+      // Set a large multiplier so the calculated timeLimit should be noticeably bigger
+      process.env.AUTO_QUESTION_TIME_MULTIPLIER = '3';
+
+      await getPrisma().quizSession.create({ data: {
+        id: sessionId,
+        pin: '888881',
+        hostToken: 'host-mult-1',
+        questionBankId: 'test-bank',
+        status: 'playing',
+        currentQuestionIndex: 0,
+        questionStartedAt: new Date(now),
+        createdAt: new Date(now),
+        expiresAt: new Date(now + 3600000),
+        autoQuestionTime: true,
+      } });
+
+      await getPrisma().player.create({ data: {
+        id: playerId,
+        sessionId,
+        nickname: 'MultPlayer',
+        score: 0,
+        joinedAt: new Date(now),
+      } });
+
+      const res = await request(`/api/sessions/${sessionId}/state`, {
+        headers: { 'X-Player-Id': playerId },
+      });
+
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      // With multiplier=3, timeLimit should be well above the question's stated 10s
+      expect(data.timeLimit).toBeGreaterThan(10);
+
+      delete process.env.AUTO_QUESTION_TIME_MULTIPLIER;
+    });
+  });
 });

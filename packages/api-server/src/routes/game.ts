@@ -11,6 +11,14 @@ import {
 import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
 
+/** Read the global question-time multiplier from env (default 1.5 = 50% more than original). */
+function getAutoTimeMuliplier(): number {
+  const raw = process.env.AUTO_QUESTION_TIME_MULTIPLIER;
+  if (!raw) return 1.5;
+  const val = parseFloat(raw);
+  return isNaN(val) || val <= 0 ? 1.5 : val;
+}
+
 const gameRoutes = new Hono();
 
 // Get current game state (for players to poll)
@@ -62,12 +70,16 @@ gameRoutes.get('/:sessionId/state', async (c) => {
         const questionBank = questionBanks.get(session.questionBankId);
         
         // Calculate time limit based on session configuration
-        if (session.autoQuestionTime) {
-          // Use automatic calculation
+        if (session.pace === 'manual') {
+          // Manual pace: no automatic timer — host advances manually
+          timeLimit = null;
+        } else if (session.autoQuestionTime) {
+          // Use automatic calculation with env-configurable multiplier
           timeLimit = calculateAutoQuestionTime(
             currentQuestion.text,
             currentQuestion.answers,
-            currentQuestion.difficulty
+            currentQuestion.difficulty,
+            getAutoTimeMuliplier()
           );
         } else {
           // Use question's custom time or bank default
@@ -177,11 +189,15 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
     
     // Determine time limit based on session configuration
     let timeLimit: number;
-    if (session.autoQuestionTime) {
+    if (session.pace === 'manual') {
+      // Manual pace: use a generous fixed time so scoring still works (full points)
+      timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit || 60;
+    } else if (session.autoQuestionTime) {
       timeLimit = calculateAutoQuestionTime(
         currentQuestion.text,
         currentQuestion.answers,
-        currentQuestion.difficulty
+        currentQuestion.difficulty,
+        getAutoTimeMuliplier()
       );
     } else {
       timeLimit = currentQuestion.timeLimit || questionBank.metadata.defaultTimeLimit;

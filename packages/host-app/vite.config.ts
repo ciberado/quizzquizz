@@ -6,5 +6,8 @@ export default defineConfig({
     port: 3001,
     host: '0.0.0.0',
     allowedHosts: ['quizzquizz', 'quizzquizz.mininube.com'],
+    proxy: {
+      '/api': 'http://localhost:3000',
+    },
   },
 });

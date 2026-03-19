@@ -98,6 +98,7 @@ model QuizSession {
   shuffleAnswers       Boolean   @default(true) @map("shuffle_answers") // Whether to shuffle answer order within each question
   automaticPace        Boolean   @default(false) @map("automatic_pace") // Auto-advance through questions and leaderboards
   autoQuestionTime     Boolean   @default(false) @map("auto_question_time") // Calculate time limits automatically based on question complexity
+  pace                 String    @default("normal") // 'normal' | 'calm' | 'manual' — controls question timing pace
   status               String    @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
   currentQuestionIndex Int       @default(-1) @map("current_question_index")
   questionStartedAt    DateTime? @map("question_started_at") // timestamp
