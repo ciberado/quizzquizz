@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## [0.4.9] — 2026-03-19
+
+### Changed
+- **[host-app]** Pace control moved out of the right column and into its own full-width row (with a divider) at the bottom of the Session Options card — much easier to find. Description text updated with icons (⏱/⏸/🔕).
+- **[api-server]** Version number printed in an ASCII banner as the very first log line on startup.
+
 ## [0.4.8] — 2026-03-19
 
 ### Changed

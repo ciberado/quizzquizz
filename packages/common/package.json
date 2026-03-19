@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/common",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Shared types, utilities, and validation schemas",
   "type": "module",
   "main": "./dist/index.js",

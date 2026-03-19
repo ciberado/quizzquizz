@@ -21,6 +21,11 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+import { readFileSync } from 'fs';
+const { version: APP_VERSION } = JSON.parse(
+  readFileSync(join(__dirname, '../../package.json'), 'utf8')
+) as { version: string };
+
 const app = new Hono();
 
 // Middleware
@@ -75,6 +80,17 @@ if (process.env.NODE_ENV === 'production') {
 
 // Initialize on startup
 async function initialize() {
+  console.log([
+    '',
+    '  ╔═══════════════════════════════════════════════╗',
+    '  ║   ___  _   _ ___ _________ ___  _   _ ___ ___ ║',
+    '  ║  / _ \| | | |_ )__|_  /_  )_  )| | | |_ )_  )║',
+    '  ║ | (_) | |_| |/ /  / /  / / / / | |_| |/ / / / ║',
+    '  ║  \__\_\\___/|_/  /_/  /_/ |_|   \___/|_/ |_|  ║',
+    `  ║            🎯  Real-time quiz  v${APP_VERSION.padEnd(11)}║`,
+    '  ╚═══════════════════════════════════════════════╝',
+    '',
+  ].join('\n'));
   console.log('🎯 Initializing QuizzQuizz API Server...');
   
   // Initialize database (await to ensure tables exist before cleanup job starts)

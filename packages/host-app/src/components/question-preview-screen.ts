@@ -258,27 +258,6 @@ export class QuestionPreviewScreen extends BaseComponent {
                     />
                     <span>Shuffle answers</span>
                   </label>
-                  <div style="margin-top: var(--spacing-xs);">
-                    <span style="font-weight: 600; font-size: var(--font-size-small); display: block; margin-bottom: var(--spacing-xs);">Pace</span>
-                    <div style="display: flex; gap: var(--spacing-sm);">
-                      ${(['normal', 'calm', 'manual'] as const).map(p => `
-                        <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
-                          <input
-                            type="radio"
-                            name="pace"
-                            value="${p}"
-                            ${this.pace === p ? 'checked' : ''}
-                          />
-                          <span style="text-transform: capitalize;">${p}</span>
-                        </label>
-                      `).join('')}
-                    </div>
-                    <p style="color: var(--color-text-muted); margin: var(--spacing-xs) 0 0 0; font-size: var(--font-size-small);">
-                      ${ this.pace === 'normal' ? 'Auto-advance after timer expires' :
-                         this.pace === 'calm'   ? 'Host advances manually after timer expires' :
-                         'No timer — host advances whenever ready' }
-                    </p>
-                  </div>
                   <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
                     <input 
                       type="checkbox" 
@@ -288,6 +267,29 @@ export class QuestionPreviewScreen extends BaseComponent {
                     <span>Automatic question time</span>
                   </label>
                 </div>
+              </div>
+
+              <!-- Pace Selection (full-width row) -->
+              <div style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-md); margin-top: var(--spacing-xs);">
+                <span style="font-weight: 600; font-size: var(--font-size-small); display: block; margin-bottom: var(--spacing-sm);">Pace</span>
+                <div style="display: flex; gap: var(--spacing-lg); flex-wrap: wrap;">
+                  ${(['normal', 'calm', 'manual'] as const).map(p => `
+                    <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
+                      <input
+                        type="radio"
+                        name="pace"
+                        value="${p}"
+                        ${this.pace === p ? 'checked' : ''}
+                      />
+                      <span style="text-transform: capitalize; font-weight: ${this.pace === p ? '600' : '400'}">${p}</span>
+                    </label>
+                  `).join('')}
+                </div>
+                <p style="color: var(--color-text-muted); margin: var(--spacing-xs) 0 0 0; font-size: var(--font-size-small);">
+                  ${ this.pace === 'normal' ? '⏱ Auto-advance to leaderboard when the timer runs out' :
+                     this.pace === 'calm'   ? '⏸ Timer runs, but host clicks "Show Leaderboard" manually' :
+                     '🔕 No timer — host advances to leaderboard whenever ready' }
+                </p>
               </div>
             </div>
 
