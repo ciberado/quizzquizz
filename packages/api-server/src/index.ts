@@ -23,7 +23,7 @@ const __dirname = dirname(__filename);
 
 import { readFileSync } from 'fs';
 const { version: APP_VERSION } = JSON.parse(
-  readFileSync(join(__dirname, '../../package.json'), 'utf8')
+  readFileSync(join(__dirname, '../package.json'), 'utf8')
 ) as { version: string };
 
 const app = new Hono();
