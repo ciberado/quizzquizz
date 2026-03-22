@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-03-22
+
+### Added
+- **[host-app]** Quiz session options (random order, shuffle answers, pace, auto question time) are now persisted in `localStorage` — the host's last-used settings are automatically restored on the next visit.
+
+### Fixed
+- **[host-app]** Bug: `automaticPace: false` was silently ignored when determining whether to auto-advance questions (`||` evaluated to `true`; fixed with `??`).
+- **[host-app]** 14 pre-existing unit-test failures resolved: API-client tests updated for relative-URL and credential/signal fetch options; `automaticPace` defaulting bug covered.
+
 ### Changed
+- **[host-app]** `autoQuestionTime` now defaults to `true` (previously `false`).
 - **[host-app]** Topic filters on the question preview screen now show actual question topics (derived from questions) instead of bank metadata, with a counter displaying how many additional questions each topic would add to the selection.
 
 ## [0.5.0] — 2026-03-22
