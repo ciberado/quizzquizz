@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.3] — 2026-03-22
+
+### Fixed
+- **[docker]** `docker-compose.ts.yml`: shared volume was mounted at `/app/packages` but Caddy reads from `/app/static/` — frontend static files were never visible to Caddy. Replaced `app-dist-ts:/app/packages` with `app-static-ts:/app/static` so the entrypoint’s freshly synced frontend builds are served correctly.
+
 ## [0.6.2] — 2026-03-22
 
 ### Fixed

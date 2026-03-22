@@ -29,7 +29,7 @@ services:
       # Persist SQLite database
       - quiz-data-ts:/data
       # Share built frontend files with Caddy
-      - app-dist-ts:/app/packages
+      - app-static-ts:/app/static
       # Mount custom question banks (optional - uncomment and modify path)
       # - ./question-banks:/app/question-banks:ro
     restart: unless-stopped
@@ -51,8 +51,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data-ts:/data
       - caddy-config-ts:/config
-      # Access frontend dist files from quizzquizz container (read-only)
-      - app-dist-ts:/app/packages:ro
+      # Access frontend static files from quizzquizz container (read-only)
+      - app-static-ts:/app/static:ro
     restart: unless-stopped
     depends_on:
       quizzquizz-ts:
@@ -87,7 +87,7 @@ volumes:
     driver: local
   caddy-config-ts:
     driver: local
-  app-dist-ts:
+  app-static-ts:
     driver: local
   tailscale-data-quizzquizz:
     driver: local
