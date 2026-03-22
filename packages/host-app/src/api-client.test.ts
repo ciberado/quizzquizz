@@ -5,6 +5,29 @@ import { api, ApiError } from './api-client';
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
+/**
+ * Helper: assert that fetch was called with a URL ending in `path` and
+ * options that are a superset of `opts`. The API client normalises the
+ * base URL (empty string in dev/test) and adds `credentials`, `signal`,
+ * and a default `Content-Type` header to every request, so tests should
+ * match on the subset of fields they care about.
+ */
+function expectFetchCalledWith(path: string, opts: Record<string, unknown> = {}) {
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+  const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+  expect(url).toBe(path);
+  for (const [key, value] of Object.entries(opts)) {
+    if (key === 'headers') {
+      // Check that each expected header exists (the call may have more)
+      for (const [h, v] of Object.entries(value as Record<string, string>)) {
+        expect((init.headers as Record<string, string>)[h]).toBe(v);
+      }
+    } else {
+      expect((init as Record<string, unknown>)[key]).toEqual(value);
+    }
+  }
+}
+
 describe('API Client', () => {
   beforeEach(() => {
     mockFetch.mockClear();
@@ -84,14 +107,9 @@ describe('API Client', () => {
 
       const result = await api.getQuestionBankTree();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/question-banks',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/question-banks', {
+        headers: { 'Content-Type': 'application/json' },
+      });
       expect(result).toEqual(mockTree);
       expect(result.banks).toHaveLength(2);
     });
@@ -110,12 +128,9 @@ describe('API Client', () => {
 
       const result = await api.getQuestionBankDetails('bank-1');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/question-banks/bank?id=bank-1',
-        expect.objectContaining({
-          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-        })
-      );
+      expectFetchCalledWith('/api/question-banks/bank?id=bank-1', {
+        headers: { 'Content-Type': 'application/json' },
+      });
       expect(result.metadata.name).toBe('General Knowledge');
     });
 
@@ -127,10 +142,7 @@ describe('API Client', () => {
 
       await api.getQuestionBankDetails('science/physics/electromagnetism');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/question-banks/bank?id=science%2Fphysics%2Felectromagnetism',
-        expect.any(Object)
-      );
+      expectFetchCalledWith('/api/question-banks/bank?id=science%2Fphysics%2Felectromagnetism');
     });
 
     it('should reload question banks', async () => {
@@ -150,15 +162,10 @@ describe('API Client', () => {
 
       const result = await api.reloadQuestionBanks();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/question-banks/reload',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/question-banks/reload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
       expect(result).toEqual(mockReloadResponse);
       expect(result.success).toBe(true);
       expect(result.banks).toHaveLength(2);
@@ -180,13 +187,10 @@ describe('API Client', () => {
 
       const result = await api.createSession('bank-1');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ questionBankId: 'bank-1' }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ questionBankId: 'bank-1' }),
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -204,14 +208,9 @@ describe('API Client', () => {
 
       const result = await api.getSession('session-123', 'token-abc');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'X-Host-Token': 'token-abc',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions/session-123', {
+        headers: { 'X-Host-Token': 'token-abc' },
+      });
       expect(result).toEqual(mockSession);
     });
 
@@ -223,15 +222,10 @@ describe('API Client', () => {
 
       await api.deleteSession('session-123', 'token-abc');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123',
-        expect.objectContaining({
-          method: 'DELETE',
-          headers: expect.objectContaining({
-            'X-Host-Token': 'token-abc',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions/session-123', {
+        method: 'DELETE',
+        headers: { 'X-Host-Token': 'token-abc' },
+      });
     });
   });
 
@@ -244,15 +238,10 @@ describe('API Client', () => {
 
       await api.startQuiz('session-123', 'token-abc');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123/start',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'X-Host-Token': 'token-abc',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions/session-123/start', {
+        method: 'POST',
+        headers: { 'X-Host-Token': 'token-abc' },
+      });
     });
 
     it('should advance to next question', async () => {
@@ -263,15 +252,10 @@ describe('API Client', () => {
 
       await api.nextQuestion('session-123', 'token-abc');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123/next',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'X-Host-Token': 'token-abc',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions/session-123/next', {
+        method: 'POST',
+        headers: { 'X-Host-Token': 'token-abc' },
+      });
     });
 
     it('should end quiz', async () => {
@@ -282,15 +266,10 @@ describe('API Client', () => {
 
       await api.endQuiz('session-123', 'token-abc');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123/end',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'X-Host-Token': 'token-abc',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions/session-123/end', {
+        method: 'POST',
+        headers: { 'X-Host-Token': 'token-abc' },
+      });
     });
   });
 
@@ -308,10 +287,7 @@ describe('API Client', () => {
 
       const result = await api.getPlayers('session-123');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123/players',
-        expect.any(Object)
-      );
+      expectFetchCalledWith('/api/sessions/session-123/players');
       expect(result).toEqual(mockPlayers);
     });
 
@@ -330,10 +306,7 @@ describe('API Client', () => {
 
       const result = await api.getLeaderboard('session-123');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123/leaderboard',
-        expect.any(Object)
-      );
+      expectFetchCalledWith('/api/sessions/session-123/leaderboard');
       expect(result).toEqual(mockLeaderboard);
     });
   });
@@ -357,14 +330,9 @@ describe('API Client', () => {
 
       const result = await api.getGameState('session-123', 'token-abc');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/sessions/session-123/state',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'X-Host-Token': 'token-abc',
-          }),
-        })
-      );
+      expectFetchCalledWith('/api/sessions/session-123/state', {
+        headers: { 'X-Host-Token': 'token-abc' },
+      });
       expect(result).toEqual(mockState);
     });
   });

@@ -80,7 +80,7 @@ export class QuestionDisplayScreen extends HTMLElement {
       
       // Store automatic pace and pacing mode from session
       this.pace = (session.pace as 'normal' | 'calm' | 'manual') || 'normal';
-      this.automaticPace = this.pace === 'normal' ? (session.automaticPace || true) : false;
+      this.automaticPace = this.pace === 'normal' ? (session.automaticPace ?? true) : false;
       
       // Build game state from session data
       const currentQ = session.currentQuestionIndex >= 0 && session.questions.length > 0
