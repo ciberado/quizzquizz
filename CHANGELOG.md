@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.4] — 2026-03-22
+
+### Changed
+- **[host-app]** Topic filter counts now always show totals (difficulty-aware) instead of excluding manually-selected questions.
+- **[host-app]** Topics with fewer than 2 questions are grouped into an "Others" bucket to reduce clutter.
+- **[host-app]** Selecting a topic or difficulty filter now correctly updates the displayed question list and count.
+
 ## [0.6.3] — 2026-03-22
 
 ### Fixed

@@ -114,7 +114,17 @@ export class QuestionPreviewScreen extends BaseComponent {
         qParams.difficulty = Array.from(this.selectedDifficulties).join(',');
       }
       if (this.selectedTopics.size > 0) {
-        qParams.topic = Array.from(this.selectedTopics).join(',');
+        // Expand the "Others" pseudo-topic into its underlying real topics
+        const realTopics: string[] = [];
+        const othersTopics = this.getOthersTopics();
+        for (const t of this.selectedTopics) {
+          if (t === 'Others') {
+            realTopics.push(...othersTopics);
+          } else {
+            realTopics.push(t);
+          }
+        }
+        qParams.topic = realTopics.join(',');
       }
 
       this.preview = await api.getQuestionBankQuestions(this.bankId, qParams) as QuestionPreviewResponse;
@@ -139,27 +149,59 @@ export class QuestionPreviewScreen extends BaseComponent {
 
   /**
    * Compute topic counts from the actual questions in the bank.
-   * Counts only questions NOT already selected, so the number shows
-   * how many *new* questions would be added by enabling that topic filter.
-   * Difficulty filters are respected so only difficulty-matching questions count.
+   * Shows how many questions each topic contains, respecting the active
+   * difficulty filter.  Topics with fewer than 2 questions are merged
+   * into an "Others" bucket.
    */
   private computeTopicCounts(): Map<string, number> {
-    const counts = new Map<string, number>();
+    const raw = new Map<string, number>();
     for (const q of this.allBankQuestions) {
       // Respect active difficulty filter
       if (this.selectedDifficulties.size > 0 && !this.selectedDifficulties.has(q.difficulty)) {
         continue;
       }
-      // In manual selection mode, skip already-selected questions
-      // so the count reflects how many *new* questions a topic would add.
-      // In selectAllMode all questions are logically selected, so show totals.
-      if (!this.selectAllMode && this.selectedQuestionIds.has(q.id)) continue;
-
       for (const topic of q.topics) {
-        counts.set(topic, (counts.get(topic) ?? 0) + 1);
+        raw.set(topic, (raw.get(topic) ?? 0) + 1);
       }
     }
-    return counts;
+
+    // Group topics with fewer than 2 questions into "Others"
+    const grouped = new Map<string, number>();
+    let othersCount = 0;
+    for (const [topic, count] of raw) {
+      if (count < 2) {
+        othersCount += count;
+      } else {
+        grouped.set(topic, count);
+      }
+    }
+    if (othersCount > 0) {
+      grouped.set('Others', othersCount);
+    }
+    return grouped;
+  }
+
+  /**
+   * Return the set of original (raw) topic values that were merged into
+   * the "Others" bucket so we can map the UI checkbox back to real topics.
+   */
+  private getOthersTopics(): Set<string> {
+    const others = new Set<string>();
+    const raw = new Map<string, number>();
+    for (const q of this.allBankQuestions) {
+      if (this.selectedDifficulties.size > 0 && !this.selectedDifficulties.has(q.difficulty)) {
+        continue;
+      }
+      for (const topic of q.topics) {
+        raw.set(topic, (raw.get(topic) ?? 0) + 1);
+      }
+    }
+    for (const [topic, count] of raw) {
+      if (count < 2) {
+        others.add(topic);
+      }
+    }
+    return others;
   }
 
   protected render(): void {
@@ -222,12 +264,26 @@ export class QuestionPreviewScreen extends BaseComponent {
                   <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
                     ${(() => {
                       const topicCounts = this.computeTopicCounts();
-                      // Merge: all topics with a count + any currently-selected topics (count may be 0)
-                      const allTopics = new Set([...topicCounts.keys(), ...this.selectedTopics]);
-                      if (allTopics.size === 0) {
+                      // Merge: all topics with a count + any currently-selected display topics (count may be 0)
+                      const othersTopics = this.getOthersTopics();
+                      // Build display set: grouped topics + any selected that aren't visible yet
+                      const displayTopics = new Set([...topicCounts.keys()]);
+                      // If user had selected individual topics that are now under "Others", keep "Others" visible
+                      for (const t of this.selectedTopics) {
+                        if (!displayTopics.has(t) && !othersTopics.has(t)) {
+                          displayTopics.add(t);
+                        }
+                      }
+                      if (this.selectedTopics.has('Others')) displayTopics.add('Others');
+
+                      if (displayTopics.size === 0) {
                         return '<span style="color: var(--color-text-muted);">No topics available</span>';
                       }
-                      return Array.from(allTopics).sort().map(topic => {
+                      return Array.from(displayTopics).sort((a, b) => {
+                        if (a === 'Others') return 1;
+                        if (b === 'Others') return -1;
+                        return a.localeCompare(b);
+                      }).map(topic => {
                         const count = topicCounts.get(topic) ?? 0;
                         const isChecked = this.selectedTopics.has(topic);
                         return `

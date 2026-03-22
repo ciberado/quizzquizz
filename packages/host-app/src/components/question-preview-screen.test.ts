@@ -1,13 +1,14 @@
 /**
  * Tests for QuestionPreviewScreen – topic filter counts
  *
- * The topic filter panel now derives topics from actual questions in the
- * bank (allBankQuestions) rather than from bank metadata.  Each topic
- * checkbox shows a count of how many additional questions it covers.
+ * The topic filter panel derives topics from actual questions in the bank
+ * (allBankQuestions) rather than from bank metadata.  Each topic checkbox
+ * shows a count of how many questions it covers.
  *
- * - In selectAllMode the count reflects totals (all matching questions).
- * - In manual-selection mode the count excludes already-selected questions.
+ * - Counts always reflect totals (difficulty-filtered), regardless of
+ *   select-all vs manual selection mode.
  * - Difficulty filters narrow the counted population.
+ * - Topics with fewer than 2 questions are merged into an "Others" bucket.
  * - Selected topics whose count drops to 0 remain visible (dimmed).
  */
 
@@ -72,6 +73,7 @@ const QUESTIONS: Question[] = [
   makeQuestion({ id: 'q4', difficulty: 'medium', topics: ['Compute'] }),
   makeQuestion({ id: 'q5', difficulty: 'hard', topics: ['Networking', 'Compute'] }),
   makeQuestion({ id: 'q6', difficulty: 'hard', topics: ['Security'] }),
+  makeQuestion({ id: 'q7', difficulty: 'medium', topics: ['IAM'] }),
 ];
 
 function makeBankDetailsResponse(questions: Question[] = QUESTIONS) {
@@ -227,13 +229,13 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(byName['Networking']?.count).toBe(3);
       // Security: q1, q3, q6 => 3
       expect(byName['Security']?.count).toBe(3);
-      // IAM: q3 => 1
-      expect(byName['IAM']?.count).toBe(1);
+      // IAM: q3, q7 => 2
+      expect(byName['IAM']?.count).toBe(2);
       // Compute: q4, q5 => 2
       expect(byName['Compute']?.count).toBe(2);
     });
 
-    it('excludes selected questions in manual selection mode', async () => {
+    it('shows same totals in manual selection mode (no exclusion)', async () => {
       const el = await mountPreview();
       hydrate(el, {
         selectAllMode: false,
@@ -243,13 +245,10 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       const topics = readTopicCheckboxes(el);
       const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
 
-      // Networking: only q5 left (q1, q2 selected) => 1
-      expect(byName['Networking']?.count).toBe(1);
-      // Security: q1 selected, q3, q6 remain => 2
-      expect(byName['Security']?.count).toBe(2);
-      // IAM: q3 still unselected => 1
-      expect(byName['IAM']?.count).toBe(1);
-      // Compute: q4, q5 still unselected => 2
+      // Counts are totals, not excluding selected questions
+      expect(byName['Networking']?.count).toBe(3);
+      expect(byName['Security']?.count).toBe(3);
+      expect(byName['IAM']?.count).toBe(2);
       expect(byName['Compute']?.count).toBe(2);
     });
 
@@ -265,34 +264,10 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
       // Only easy questions: q1 (Networking, Security), q2 (Networking)
       expect(byName['Networking']?.count).toBe(2);
-      expect(byName['Security']?.count).toBe(1);
-
-      // IAM and Compute have no easy questions, they should be absent or have count 0
-      // They may not appear at all since no allTopics set includes them
-      const iamEntry = byName['IAM'];
-      const computeEntry = byName['Compute'];
-      if (iamEntry) expect(iamEntry.count).toBe(0);
-      if (computeEntry) expect(computeEntry.count).toBe(0);
-    });
-
-    it('combines difficulty filter with manual selection exclusion', async () => {
-      const el = await mountPreview();
-      hydrate(el, {
-        selectAllMode: false,
-        selectedDifficulties: ['medium'],
-        selectedQuestionIds: ['q3'], // medium, Security+IAM
-      });
-
-      const topics = readTopicCheckboxes(el);
-      const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
-
-      // Medium questions: q3 (selected, skip), q4 (Compute) remain
-      // Only q4 survives → Compute: 1
-      expect(byName['Compute']?.count).toBe(1);
-      // Security: q3 was medium+selected → 0 from filtered set
-      // (q1 is easy, q6 is hard → excluded by difficulty filter)
-      const secEntry = byName['Security'];
-      if (secEntry) expect(secEntry.count).toBe(0);
+      // Security has only 1 easy question (q1) → grouped into Others
+      expect(byName['Security']).toBeUndefined();
+      // Others should include Security(1)
+      expect(byName['Others']?.count).toBe(1);
     });
 
     it('returns empty map when allBankQuestions is empty', async () => {
@@ -301,7 +276,6 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
       const topics = readTopicCheckboxes(el);
       expect(topics).toHaveLength(0);
-      // Should show "No topics available" fallback
       expect(el.textContent).toContain('No topics available');
     });
 
@@ -320,7 +294,9 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(byName['A']?.count).toBe(2); // x1, x3
       expect(byName['B']?.count).toBe(2); // x1, x2
       expect(byName['C']?.count).toBe(2); // x1, x2
-      expect(byName['D']?.count).toBe(1); // x2
+      // D has only 1 question → grouped into Others
+      expect(byName['D']).toBeUndefined();
+      expect(byName['Others']?.count).toBe(1);
     });
 
     it('handles questions with no topics', async () => {
@@ -340,22 +316,30 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
   // ── Topic filter rendering ────────────────────────────────────────────────
 
   describe('Topic filter rendering', () => {
-    it('renders a checkbox for each topic', async () => {
+    it('renders a checkbox for each grouped topic', async () => {
       const el = await mountPreview();
       hydrate(el);
 
       const checkboxes = el.querySelectorAll('input[data-filter="topic"]');
-      // 4 unique topics: Networking, Security, IAM, Compute
+      // 4 unique topics: Networking(3), Security(3), IAM(2), Compute(2) — all ≥2
       expect(checkboxes).toHaveLength(4);
     });
 
-    it('renders topics in sorted alphabetical order', async () => {
+    it('renders topics in sorted alphabetical order with Others last', async () => {
       const el = await mountPreview();
-      hydrate(el);
+      // Force an Others bucket by having a 1-question topic
+      const qs = [
+        makeQuestion({ id: 'a1', topics: ['Zeta'] }),
+        makeQuestion({ id: 'a2', topics: ['Zeta'] }),
+        makeQuestion({ id: 'a3', topics: ['Alpha'] }),
+        makeQuestion({ id: 'a4', topics: ['Alpha'] }),
+        makeQuestion({ id: 'a5', topics: ['Rare'] }), // < 2 → Others
+      ];
+      hydrate(el, { questions: qs });
 
       const topics = readTopicCheckboxes(el);
       const names = topics.map(t => t.topic);
-      expect(names).toEqual([...names].sort());
+      expect(names).toEqual(['Alpha', 'Zeta', 'Others']);
     });
 
     it('preserves checked state for selected topics', async () => {
@@ -373,7 +357,8 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
     it('keeps selected topics visible even when count is 0', async () => {
       const el = await mountPreview();
-      // Only easy questions, but "IAM" is selected (no easy IAM questions)
+      // Only easy questions, but "IAM" is selected (no easy IAM questions → count 0)
+      // IAM normally has 2 questions, but with easy filter it has 0
       hydrate(el, {
         selectAllMode: true,
         selectedDifficulties: ['easy'],
@@ -388,50 +373,17 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(iam!.checked).toBe(true);
     });
 
-    it('dims topics with 0 count that are not checked', async () => {
-      const el = await mountPreview();
-      // Only easy questions; Compute has 0 easy questions and is NOT selected
-      hydrate(el, {
-        selectAllMode: true,
-        selectedDifficulties: ['easy'],
-        selectedTopics: [], // nothing selected
-      });
-
-      const topics = readTopicCheckboxes(el);
-      const compute = topics.find(t => t.topic === 'Compute');
-      const iam = topics.find(t => t.topic === 'IAM');
-
-      // These have 0 count and are not checked → they should be dimmed
-      // Note: they may not appear at all since allTopics = topicCounts.keys + selectedTopics,
-      // and if selectedTopics is empty and count is 0 the topic doesn't appear.
-      // Actually, with difficulty filter 'easy', Compute/IAM have 0 count so
-      // they won't appear in topicCounts.keys(). Since they aren't in selectedTopics either,
-      // they shouldn't be rendered at all — which is correct UX.
-      if (compute) {
-        expect(compute.dimmed).toBe(true);
-      }
-      if (iam) {
-        expect(iam.dimmed).toBe(true);
-      }
-
-      // Topics with non-zero count should NOT be dimmed
-      const networking = topics.find(t => t.topic === 'Networking');
-      expect(networking).toBeDefined();
-      expect(networking!.dimmed).toBe(false);
-    });
-
     it('escapes HTML in topic names to prevent XSS', async () => {
       const el = await mountPreview();
       const xssQuestions = [
         makeQuestion({ id: 'xss1', topics: ['<script>alert("xss")</script>'] }),
+        makeQuestion({ id: 'xss2', topics: ['<script>alert("xss")</script>'] }),
       ];
       hydrate(el, { questions: xssQuestions, selectAllMode: true });
 
-      // The topic should be rendered as text, not as an executable script element
       const scripts = el.querySelectorAll('script');
       expect(scripts).toHaveLength(0);
 
-      // The checkbox value attribute should contain the raw topic name
       const checkbox = el.querySelector('input[data-filter="topic"]') as HTMLInputElement;
       expect(checkbox).not.toBeNull();
       expect(checkbox.value).toContain('script');
@@ -443,6 +395,7 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
         makeQuestion({ id: 'c1', topics: ['architecture:ha:multi-region'] }),
         makeQuestion({ id: 'c2', topics: ['architecture:ha:multi-region'] }),
         makeQuestion({ id: 'c3', topics: ['architecture:serverless'] }),
+        makeQuestion({ id: 'c4', topics: ['architecture:serverless'] }),
       ];
       hydrate(el, { questions: colonQuestions, selectAllMode: true });
 
@@ -450,44 +403,41 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
 
       expect(byName['architecture:ha:multi-region']?.count).toBe(2);
-      expect(byName['architecture:serverless']?.count).toBe(1);
+      expect(byName['architecture:serverless']?.count).toBe(2);
     });
   });
 
   // ── Counts update with state changes ──────────────────────────────────────
 
   describe('Count reactivity', () => {
-    it('counts update when a question is selected in manual mode', async () => {
+    it('counts stay the same when questions are selected in manual mode', async () => {
       const el = await mountPreview();
       hydrate(el, { selectAllMode: false, selectedQuestionIds: [] });
 
-      // Before selection: q1 contributes to Networking, Security
       let topics = readTopicCheckboxes(el);
       let net = topics.find(t => t.topic === 'Networking');
       expect(net?.count).toBe(3); // q1, q2, q5
 
-      // Select q1 and q2 → re-render
+      // Select q1 and q2 → re-render — counts are totals, unchanged
       hydrate(el, { selectAllMode: false, selectedQuestionIds: ['q1', 'q2'] });
 
       topics = readTopicCheckboxes(el);
       net = topics.find(t => t.topic === 'Networking');
-      expect(net?.count).toBe(1); // only q5 remaining
+      expect(net?.count).toBe(3); // still totals
     });
 
-    it('counts reset when switching back to selectAllMode', async () => {
+    it('counts are identical in selectAllMode and manual mode', async () => {
       const el = await mountPreview();
 
-      // Manual mode with some selections
       hydrate(el, { selectAllMode: false, selectedQuestionIds: ['q1', 'q2', 'q3'] });
-      let topics = readTopicCheckboxes(el);
-      let net = topics.find(t => t.topic === 'Networking');
-      expect(net?.count).toBe(1); // only q5
+      const manualTopics = readTopicCheckboxes(el);
+      const manualNet = manualTopics.find(t => t.topic === 'Networking');
 
-      // Switch back to selectAllMode
       hydrate(el, { selectAllMode: true, selectedQuestionIds: ['q1', 'q2', 'q3'] });
-      topics = readTopicCheckboxes(el);
-      net = topics.find(t => t.topic === 'Networking');
-      expect(net?.count).toBe(3); // full counts again
+      const allTopics = readTopicCheckboxes(el);
+      const allNet = allTopics.find(t => t.topic === 'Networking');
+
+      expect(manualNet?.count).toBe(allNet?.count);
     });
 
     it('counts update when difficulty filter changes', async () => {
@@ -498,28 +448,15 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       let net = topics.find(t => t.topic === 'Networking');
       expect(net?.count).toBe(3); // all difficulties
 
-      // Restrict to hard
+      // Restrict to hard — Networking: only q5
       hydrate(el, { selectAllMode: true, selectedDifficulties: ['hard'] });
       topics = readTopicCheckboxes(el);
+      // Networking(1), Security(1), Compute(1) → all < 2, all go to Others
+      const others = topics.find(t => t.topic === 'Others');
+      expect(others).toBeDefined();
+      expect(others!.count).toBe(3); // Net(1) + Sec(1) + Compute(1)
       net = topics.find(t => t.topic === 'Networking');
-      expect(net?.count).toBe(1); // only q5 is hard+Networking
-    });
-
-    it('all selected questions become unselected → shows full counts', async () => {
-      const el = await mountPreview();
-      hydrate(el, { selectAllMode: false, selectedQuestionIds: ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'] });
-
-      let topics = readTopicCheckboxes(el);
-      // All selected → all counts should be 0
-      for (const t of topics) {
-        expect(t.count).toBe(0);
-      }
-
-      // Deselect all
-      hydrate(el, { selectAllMode: false, selectedQuestionIds: [] });
-      topics = readTopicCheckboxes(el);
-      const net = topics.find(t => t.topic === 'Networking');
-      expect(net?.count).toBe(3);
+      expect(net).toBeUndefined(); // merged into Others
     });
   });
 
@@ -561,6 +498,7 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
       const topics = readTopicCheckboxes(el);
       const names = topics.map(t => t.topic).sort();
+      // All 4 topics have ≥2 questions: Networking(3), Security(3), IAM(2), Compute(2)
       expect(names).toEqual(['Compute', 'IAM', 'Networking', 'Security']);
 
       // Metadata topic should not appear
@@ -571,18 +509,19 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
   // ── Edge cases ────────────────────────────────────────────────────────────
 
   describe('Edge cases', () => {
-    it('single question bank renders correctly', async () => {
+    it('single question bank groups its topic into Others', async () => {
       const el = await mountPreview();
       const singleQ = [makeQuestion({ id: 'solo', topics: ['Only-Topic'], difficulty: 'easy' })];
       hydrate(el, { questions: singleQ, selectAllMode: true });
 
       const topics = readTopicCheckboxes(el);
+      // Only-Topic has 1 question → merged into Others
       expect(topics).toHaveLength(1);
-      expect(topics[0]!.topic).toBe('Only-Topic');
+      expect(topics[0]!.topic).toBe('Others');
       expect(topics[0]!.count).toBe(1);
     });
 
-    it('large question set renders unique topics', async () => {
+    it('large question set renders unique grouped topics', async () => {
       const el = await mountPreview();
       const manyQs = Array.from({ length: 100 }, (_, i) =>
         makeQuestion({
@@ -594,23 +533,24 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       hydrate(el, { questions: manyQs, selectAllMode: true });
 
       const topics = readTopicCheckboxes(el);
-      expect(topics).toHaveLength(5); // 5 unique topics
+      // Each of the 5 topics has 20 questions (≥2), so all are shown individually
+      expect(topics).toHaveLength(5);
       const total = topics.reduce((sum, t) => sum + t.count, 0);
-      expect(total).toBe(100); // each question counted once per its topic
+      expect(total).toBe(100);
     });
 
     it('duplicate topics within a single question are counted once per question', async () => {
       const el = await mountPreview();
-      // A question with the same topic twice (edge case in data)
       const dupTopicQ = [
         makeQuestion({ id: 'dup1', topics: ['Same', 'Same'] }),
+        makeQuestion({ id: 'dup2', topics: ['Same', 'Same'] }),
       ];
       hydrate(el, { questions: dupTopicQ, selectAllMode: true });
 
       const topics = readTopicCheckboxes(el);
       const same = topics.find(t => t.topic === 'Same');
-      // The count reflects the data verbatim (2 entries), matching the raw iteration
-      expect(same?.count).toBe(2);
+      // 2 questions × 2 topic entries each = 4 (verbatim iteration), but ≥2 so kept
+      expect(same?.count).toBe(4);
     });
 
     it('works with multiple difficulty filters active', async () => {
@@ -626,7 +566,38 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       // easy: q1(Net,Sec), q2(Net) | hard: q5(Net,Compute), q6(Sec)
       expect(byName['Networking']?.count).toBe(3); // q1, q2, q5
       expect(byName['Security']?.count).toBe(2);   // q1, q6
-      expect(byName['Compute']?.count).toBe(1);    // q5
+      // Compute: q5 only → 1 → grouped into Others
+      expect(byName['Compute']).toBeUndefined();
+      expect(byName['Others']?.count).toBe(1);
+    });
+
+    it('Others bucket aggregates multiple small topics', async () => {
+      const el = await mountPreview();
+      const qs = [
+        makeQuestion({ id: 'a1', topics: ['Big'] }),
+        makeQuestion({ id: 'a2', topics: ['Big'] }),
+        makeQuestion({ id: 'a3', topics: ['Tiny1'] }),
+        makeQuestion({ id: 'a4', topics: ['Tiny2'] }),
+      ];
+      hydrate(el, { questions: qs, selectAllMode: true });
+
+      const topics = readTopicCheckboxes(el);
+      const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
+
+      expect(byName['Big']?.count).toBe(2);
+      expect(byName['Tiny1']).toBeUndefined();
+      expect(byName['Tiny2']).toBeUndefined();
+      // Others = Tiny1(1) + Tiny2(1)
+      expect(byName['Others']?.count).toBe(2);
+    });
+
+    it('no Others bucket when all topics have ≥2 questions', async () => {
+      const el = await mountPreview();
+      hydrate(el); // default QUESTIONS — all 4 topics have ≥2 questions
+
+      const topics = readTopicCheckboxes(el);
+      const others = topics.find(t => t.topic === 'Others');
+      expect(others).toBeUndefined();
     });
   });
 });
