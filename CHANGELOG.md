@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file, organized by date.
 
+## [Unreleased]
+
+### Added
+- **[docs]** Workspace instructions (`copilot-instructions.md`) rewritten to be concise and link-first, replacing the stale bootstrap content.
+- **[docs]** Three scoped instruction files: `frontend-web-components`, `api-contracts`, and `e2e-playwright` — auto-attach to matching package globs.
+- **[docs]** `add-quiz-feature` prompt: a six-step guided workflow for implementing end-to-end features across packages.
+- **[docs]** `quiz-bank-change` skill: an eight-step workflow for question-bank format, parser, and validation changes with bundled format and package-map references.
+
 ## [0.4.9] — 2026-03-19
 
 ### Changed

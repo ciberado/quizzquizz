@@ -1,199 +1,63 @@
-# QuizzQuizz - AI Agent Instructions
+# QuizzQuizz Workspace Instructions
 
-## Project Overview
+## Read First
 
-QuizzQuizz is a **Kahoot-inspired real-time quiz platform** using a **simplicity-first** approach: REST APIs with polling (no WebSockets), vanilla TypeScript with Web Components (no React/Vue), and SQLite for persistence.
+- Start with [`vibe/PROJECT.md`](../vibe/PROJECT.md) for architecture and core product decisions.
+- Use [`vibe/PLAN.md`](../vibe/PLAN.md) for roadmap and feature-phase context.
+- Use [`vibe/QUICK-REFERENCE.md`](../vibe/QUICK-REFERENCE.md) for commands, ports, and troubleshooting shortcuts.
+- Link to detailed docs instead of repeating them. Important references include [`vibe/QUESTION-BANK-FORMAT.md`](../vibe/QUESTION-BANK-FORMAT.md), [`vibe/ANALYTICS-PACKAGE.md`](../vibe/ANALYTICS-PACKAGE.md), [`docs/analytics/README.md`](../docs/analytics/README.md), [`EC2_PROXY_SETUP.md`](../EC2_PROXY_SETUP.md), and [`EC2_TROUBLESHOOTING.md`](../EC2_TROUBLESHOOTING.md).
 
-**Read the vibe docs first**: [`vibe/PROJECT.md`](../vibe/PROJECT.md) for architecture, [`vibe/PLAN.md`](../vibe/PLAN.md) for implementation phases.
+## Project Shape
 
-## Architecture: Monorepo Structure
+QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 
-```
-quizzquizz/
-├── packages/
-│   ├── common/           # Shared types, Zod schemas, utilities (scoring, PIN generation)
-│   ├── question-bank/    # Markdown parser for question files
-│   ├── api-server/       # REST API (Hono/Express + SQLite + Drizzle ORM)
-│   ├── host-app/         # Host UI (Web Components + Vite)
-│   └── player-app/       # Player UI (Web Components + Vite)
-├── question-banks/       # Sample .md files with quiz questions
-└── vibe/                 # Project documentation
-```
+- `packages/common`: shared Zod schemas, types, and utilities
+- `packages/question-bank`: Markdown question-bank parsing and loading
+- `packages/api-server`: Hono API, Prisma, SQLite, auth, game/session logic
+- `packages/host-app`: host UI built with Web Components and Vite
+- `packages/player-app`: player UI built with Web Components and Vite
+- `packages/analytics`: analytics calculation and aggregation logic
+- `packages/analytics-ui`: analytics dashboard UI
+- `question-banks/`: built-in and user-uploaded quiz banks
 
-**Package manager**: npm with workspaces  
-**TypeScript**: Project references enabled (build dependencies matter!)
+## Core Conventions
 
-## TypeScript Conventions
+- Keep the architecture simple: REST plus polling, not WebSockets.
+- Preserve the frontend stack: vanilla TypeScript with Web Components, not React or other frameworks.
+- Keep TypeScript strict. Avoid implicit `any` and prefer explicit types.
+- Use named exports, not default exports.
+- Follow a Zod-first pattern for shared contracts: define the schema, then infer the TypeScript type.
+- Keep frontend packages separate. Do not introduce shared UI code between host and player apps unless the repo already establishes that pattern.
+- Use server time for answer validation and scoring decisions.
 
-- **Strict mode**: Always enabled (`strict: true` in tsconfig)
-- **No implicit any**: Explicit typing required
-- **Prefer interfaces** for public API contracts, types for internal structures
-- **Named exports**: No default exports (easier refactoring)
-- **Async/await**: Use over raw promises
-- **Zod-first validation**: Define Zod schema, infer TypeScript type from it
-  ```typescript
-  // Good: Single source of truth
-  const SessionSchema = z.object({ id: z.string().uuid(), pin: z.string() });
-  type Session = z.infer<typeof SessionSchema>;
-  ```
+## Build, Test, And Run
 
-## Git & Commit Conventions
+- Install dependencies from the repo root with `npm install`.
+- Build all packages from the repo root with `npm run build`.
+- Run all dev services with `npm run dev`.
+- Run one package with `npm run dev -w @quizzquizz/<package-name>`.
+- Run unit and package tests with `npm test -- --run` when you need a one-shot run.
+- Run Playwright coverage with `npm run test:e2e`.
+- Run Docker workflows with the root `docker:*` scripts or `docker compose`.
 
-**MANDATORY**: Use [Conventional Commits](https://www.conventionalcommits.org/) format:
-```
-<type>(<scope>): <description>
+## Implementation Guidance
 
-[optional body]
+- Respect TypeScript project references. If a package build fails, check whether its dependencies need to be built first.
+- Do not edit generated Prisma client files under `packages/api-server/src/generated/prisma`.
+- Question banks are Markdown files. Keep new parsing or validation behavior aligned with the documented format instead of inventing new syntax.
+- User-uploaded banks live under `question-banks/user-quizzes/` and should remain treated as user data.
+- When changing API contracts, update shared types and validate both API and consuming apps.
+- Keep tests close to the code they validate, matching the existing Vitest and Playwright patterns.
 
-[optional footer]
-```
+## Commit Expectations
 
-**Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-**REQUIRED**: Update `CHANGELOG.md` with **every commit**:
-- Add entry under `## [Unreleased]` section
-- Use appropriate subsection: `### Added`, `### Changed`, `### Fixed`, `### Removed`
-- Include brief description matching commit message
-
-Example workflow:
-```bash
-# Make changes
-# Update CHANGELOG.md
-git add .
-git commit -m "feat(common): add PIN generation utility"
-```
-
-## Critical Design Decisions
-
-### 1. Polling Over WebSockets
-- Players poll `GET /api/sessions/:id/state` every 1-2s for game state
-- Use ETags or version numbers to minimize data transfer
-- **Why**: Simpler deployment, no connection management, easier debugging
-
-### 2. Web Components Without Frameworks
-- Use vanilla TypeScript with custom elements (`class extends HTMLElement`)
-- Simple pub/sub or signals for state management
-- Hash-based routing
-- **Why**: No build complexity, no framework lock-in, educational value
-
-### 3. Question Banks in Markdown
-- Questions stored as `.md` files in `question-banks/`
-- Format: Question ID, text, answers (checkbox `[x]` = correct), difficulty, topics, tags
-- **Example**: See `vibe/PROJECT.md` "Question Bank Markdown Format" section
-- Parsed by `@quizzquizz/question-bank` package
-
-## Development Workflows
-
-### Initial Setup (Phase 0)
-```bash
-# Initialize npm workspace
-npm init
-# Create packages with TypeScript + references
-# Configure shared tsconfig.base.json, ESLint, Prettier
-```
-
-### Working with Monorepo
-```bash
-# Install dependencies for all packages
-npm install
-
-# Run from workspace root
-npm run dev --workspace=@quizzquizz/api-server
-npm run dev --workspace=@quizzquizz/player-app
-
-# Build with TypeScript project references
-npm run build --workspaces
-```
-
-### Testing Strategy (Required)
-
-**Unit Tests**: Required for all utility functions and business logic
-- **Framework**: Vitest (fast, TypeScript-native)
-- **Coverage**: Aim for 80%+ on utils, parsers, scoring
-- **Location**: `*.test.ts` files alongside source
-- **Run**: `npm test -- --run` in each package (use `--run` flag to avoid interactive watch mode)
-
-**Critical test areas**:
-- `@quizzquizz/common`: Scoring calculations, PIN generation, validation
-- `@quizzquizz/question-bank`: Markdown parsing, question validation
-- `@quizzquizz/api-server`: Session management, game state transitions
-
-**Integration Testing**:
-- **API**: Use REST client (curl, Postman, VS Code REST Client extension)
-- **Frontend**: Multiple browser windows simulating host + players
-- **Manual testing**: Open host UI + 2-3 player UIs in different tabs/windows
-
-**Test-Driven Development**: Write tests before implementation for complex logic
-
-## Code Conventions
-
-### Scoring Formula (Kahoot-style)
-```typescript
-// Located in @quizzquizz/common/utils
-score = basePoints * (1 - (timeTaken / timeLimit) * 0.5)
-// Faster answers = more points
-// Multiple correct answers: full points only if all selected correctly
-```
-
-### PIN Generation
-- 6 digits, no ambiguous characters (avoid 0/O, 1/I)
-- Must be unique for active sessions
-- Function in `@quizzquizz/common/utils`
-
-### Security Pattern
-- **Host token**: Secret token (UUID) for host operations - separate from PIN
-- **PIN**: Only for players to join - public
-- All host endpoints require host token validation
-
-### Game State Machine
-```
-Session states: 'lobby' → 'playing' → 'finished'
-- lobby: Players joining, host hasn't started
-- playing: Quiz in progress, questions advancing
-- finished: Quiz complete, final leaderboard shown
-```
-
-## Key Integration Points
-
-### API ↔ Question Bank
-- API server loads question banks on startup from `question-banks/`
-- `@quizzquizz/question-bank` package exports parser functions
-- Server validates loaded questions before making them available
-
-### Frontend ↔ API
-- **No shared code** between frontend packages (host-app, player-app)
-- Both consume same API contract from `@quizzquizz/common` types
-- Polling implemented in each app independently
-
-### Type Safety
-- Zod schemas in `@quizzquizz/common` for runtime validation
-- TypeScript interfaces for compile-time safety
-- API request/response types must match between client and server
+- If asked to commit, use Conventional Commits.
+- Update [`CHANGELOG.md`](../CHANGELOG.md) under `## [Unreleased]` for every commit.
 
 ## Common Pitfalls
 
-1. **Don't use WebSockets** - This is intentional. Use polling with ETags.
-2. **Don't add a framework** - Web Components are part of the design philosophy.
-3. **TypeScript project references** - Build order matters in monorepo. Run `npm run build --workspaces` from root.
-4. **Session cleanup** - Expire old sessions (Phase 6 task). Database will grow otherwise.
-5. **Server-side timing** - Use server timestamps for answer validation, not client time.
-
-## Phase-Based Development
-
-Follow `vibe/PLAN.md` phases sequentially. Each phase is designed to be completable in one focused session with a working deliverable.
-
-**Current status**: Repository initialized (Phase 0 in progress)
-
-When implementing:
-- Complete one phase fully before moving to next
-- Test each deliverable before proceeding
-- Make small, focused commits per task
-- Reference `vibe/PROJECT.md` for design decisions
-
-## Questions & Ambiguity
-
-If something is unclear:
-1. Check `vibe/PROJECT.md` (architecture/design) or `vibe/PLAN.md` (implementation steps)
-2. Follow the **simplicity principle** - choose simpler over clever
-3. Prefer working code over perfect code (refactor when patterns emerge)
-4. For missing details: make reasonable assumptions aligned with "Kahoot-like experience"
+- Do not replace polling with sockets unless the user explicitly requests an architectural change.
+- Do not add a UI framework where Web Components are the established pattern.
+- Do not assume old phase docs reflect current status without checking the code and package scripts.
+- Prisma generation is part of the API server workflow; generated output may need regeneration before builds in fresh environments.
+- E2E tests can be sensitive to text and selector drift. Check the current UI before changing tests.
