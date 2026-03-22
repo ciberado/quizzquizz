@@ -2,6 +2,7 @@ import { BaseComponent } from './base-component';
 import { api } from '../api-client';
 import { router } from '../router';
 import { state } from '../state';
+import { preferences } from '../preferences';
 import { handleApiError, getErrorMessage } from '../error-handler';
 import type { Question, Difficulty } from '@quizzquizz/common';
 
@@ -41,10 +42,10 @@ export class QuestionPreviewScreen extends BaseComponent {
   private allBankQuestions: Question[] = []; // All questions for client-side topic counting
   private selectedQuestionIds = new Set<string>();
   private selectAllMode = true; // By default, select all questions
-  private randomOrder = false;
-  private shuffleAnswers = true; // Default to true - shuffle answers within questions
-  private pace: 'normal' | 'calm' | 'manual' = 'normal'; // Pacing mode
-  private autoQuestionTime = false; // Automatically calculate question time based on complexity
+  private randomOrder = preferences.DEFAULTS.randomOrder;
+  private shuffleAnswers = preferences.DEFAULTS.shuffleAnswers;
+  private pace: 'normal' | 'calm' | 'manual' = preferences.DEFAULTS.pace;
+  private autoQuestionTime = preferences.DEFAULTS.autoQuestionTime;
   private expandedQuestions = new Set<string>(); // Track which questions have expanded answers
   private maxQuestions: number | null = null; // Limit number of questions (null = no limit)
   
@@ -57,6 +58,13 @@ export class QuestionPreviewScreen extends BaseComponent {
   private limit = 10;
 
   protected async onMount(): Promise<void> {
+    // Restore user's last session-configuration choices
+    const prefs = preferences.load();
+    this.randomOrder = prefs.randomOrder;
+    this.shuffleAnswers = prefs.shuffleAnswers;
+    this.pace = prefs.pace;
+    this.autoQuestionTime = prefs.autoQuestionTime;
+
     // Extract bankId from path: /preview/:bankId
     // bankId may be URL-encoded (e.g. "science%2Fphysics%2Felectromagnetism")
     // to preserve slashes in path-based IDs without confusing the hash router.
@@ -708,6 +716,14 @@ export class QuestionPreviewScreen extends BaseComponent {
         }
         questionIds = shuffled.slice(0, this.maxQuestions);
       }
+
+      // Persist the user's choices for next time
+      preferences.save({
+        randomOrder: this.randomOrder,
+        shuffleAnswers: this.shuffleAnswers,
+        pace: this.pace,
+        autoQuestionTime: this.autoQuestionTime,
+      });
 
       // Create session with selected questions and options
       const session = await api.createSession(this.bankId, {
