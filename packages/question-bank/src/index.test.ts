@@ -100,6 +100,46 @@ What is the answer?
     expect(q.timeLimit).toBe(45);
   });
 
+  it('should preserve colons in hierarchical topic and tag values', () => {
+    const markdown = `# Question Bank: Colon Test
+
+## Metadata
+- **Topics**: architecture:ha:multi-region-design, database:nosql:global-tables
+- **Default Time Limit**: 30s
+
+---
+
+## Questions
+
+### Q001
+**Difficulty**: medium
+**Topics**: architecture:ha:multi-region-design, database:nosql:global-tables
+**Tags**: dynamodb:global-tables, s3:replication
+
+Which service provides multi-region replication?
+
+- [x] DynamoDB Global Tables
+- [ ] RDS Read Replicas
+
+---
+`;
+
+    const bank = parseQuestionBank(markdown, 'colon-test');
+    expect(bank.metadata.topics).toEqual([
+      'architecture:ha:multi-region-design',
+      'database:nosql:global-tables',
+    ]);
+
+    const q = bank.questions[0];
+    expect(q).toBeDefined();
+    if (!q) throw new Error('Question not defined');
+    expect(q.topics).toEqual([
+      'architecture:ha:multi-region-design',
+      'database:nosql:global-tables',
+    ]);
+    expect(q.tags).toEqual(['dynamodb:global-tables', 's3:replication']);
+  });
+
   it('should identify correct answers', () => {
     const markdown = `# Question Bank: Test
 

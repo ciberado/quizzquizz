@@ -124,8 +124,8 @@ function parseQuestion(
       }
       textStartIdx = i + 1;
     } else if (line.startsWith('**Topics**:')) {
-      const topicPart = line.split(':')[1];
-      if (topicPart) {
+      const topicPart = line.substring(line.indexOf(':') + 1);
+      if (topicPart.trim()) {
         question.topics = topicPart
           .split(',')
           .map((t) => t.trim())
@@ -133,8 +133,8 @@ function parseQuestion(
       }
       textStartIdx = i + 1;
     } else if (line.startsWith('**Tags**:')) {
-      const tagPart = line.split(':')[1];
-      if (tagPart) {
+      const tagPart = line.substring(line.indexOf(':') + 1);
+      if (tagPart.trim()) {
         question.tags = tagPart
           .split(',')
           .map((t) => t.trim())
