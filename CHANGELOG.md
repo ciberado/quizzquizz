@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.5] — 2026-03-22
+
+### Changed
+- **[host-app]** Difficulty filter checkboxes now display question counts — e.g., "easy (2)".
+- **[host-app]** Topic filter counts for unselected topics now show how many **additional** questions they would contribute (prefixed with "+"), avoiding confusion when questions belong to multiple topics.
+
 ## [0.6.4] — 2026-03-22
 
 ### Changed

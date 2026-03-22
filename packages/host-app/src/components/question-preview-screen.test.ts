@@ -166,20 +166,37 @@ function hydrate(
   (el as any).render();
 }
 
-/** Return an array of {topic, count, checked, dimmed} from the rendered DOM. */
+/** Return an array of {topic, count, checked, dimmed, isAdditional} from the rendered DOM. */
 function readTopicCheckboxes(el: HTMLElement) {
   const labels = el.querySelectorAll('input[data-filter="topic"]');
   return Array.from(labels).map(input => {
     const inp = input as HTMLInputElement;
     const span = inp.closest('label')?.querySelector('span');
     const text = span?.textContent?.trim() ?? '';
-    // Text is like "Networking (3)"
-    const match = text.match(/^(.+?)\s*\((\d+)\)$/);
+    // Text is like "Networking (3)" or "Networking (+2)"
+    const match = text.match(/^(.+?)\s*\((\+?)(\d+)\)$/);
     return {
       topic: match ? match[1]!.trim() : text,
-      count: match ? parseInt(match[2]!, 10) : -1,
+      count: match ? parseInt(match[3]!, 10) : -1,
+      isAdditional: match ? match[2] === '+' : false,
       checked: inp.checked,
       dimmed: span?.style.color?.includes('muted') ?? false,
+    };
+  });
+}
+
+/** Return an array of {difficulty, count} from the rendered DOM. */
+function readDifficultyCheckboxes(el: HTMLElement) {
+  const labels = el.querySelectorAll('input[data-filter="difficulty"]');
+  return Array.from(labels).map(input => {
+    const inp = input as HTMLInputElement;
+    const span = inp.closest('label')?.querySelector('span');
+    const text = span?.textContent?.trim() ?? '';
+    const match = text.match(/^(.+?)\s*\((\d+)\)$/);
+    return {
+      difficulty: match ? match[1]!.trim() : text,
+      count: match ? parseInt(match[2]!, 10) : -1,
+      checked: inp.checked,
     };
   });
 }
@@ -245,11 +262,40 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       const topics = readTopicCheckboxes(el);
       const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
 
-      // Counts are totals, not excluding selected questions
+      // Counts are totals when no topic filters active
       expect(byName['Networking']?.count).toBe(3);
       expect(byName['Security']?.count).toBe(3);
       expect(byName['IAM']?.count).toBe(2);
       expect(byName['Compute']?.count).toBe(2);
+    });
+
+    it('shows additional counts for unselected topics when a topic is selected', async () => {
+      const el = await mountPreview();
+      // Select "Networking" (covers q1, q2, q5)
+      hydrate(el, { selectedTopics: ['Networking'] });
+
+      const topics = readTopicCheckboxes(el);
+      const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
+
+      // Networking is selected → shows its own total
+      expect(byName['Networking']?.count).toBe(3);
+      expect(byName['Networking']?.isAdditional).toBe(false);
+
+      // Security: q1(covered), q3(new), q6(new) → +2 additional
+      expect(byName['Security']?.count).toBe(2);
+      expect(byName['Security']?.isAdditional).toBe(true);
+
+      // IAM: q3(new), q7(new) → +2 additional
+      expect(byName['IAM']?.count).toBe(2);
+      expect(byName['IAM']?.isAdditional).toBe(true);
+
+      // Compute: q4(new), q5(covered) → +1 additional
+      // Compute has only 1 additional question → <2 → Others
+      // Actually Compute raw is 2 (q4, q5), but q5 is covered → only q4 is new = 1 additional
+      // That 1 goes to Others? No — Others grouping is based on getOthersTopics which uses raw totals
+      // Compute has 2 total questions → not in Others. So Compute shows +1.
+      expect(byName['Compute']?.count).toBe(1);
+      expect(byName['Compute']?.isAdditional).toBe(true);
     });
 
     it('filters counts by active difficulty', async () => {
@@ -426,18 +472,21 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(net?.count).toBe(3); // still totals
     });
 
-    it('counts are identical in selectAllMode and manual mode', async () => {
+    it('unselected topic counts decrease when a topic with overlap is selected', async () => {
       const el = await mountPreview();
+      // No topics selected → show totals
+      hydrate(el);
+      let topics = readTopicCheckboxes(el);
+      let sec = topics.find(t => t.topic === 'Security');
+      expect(sec?.count).toBe(3); // q1, q3, q6
 
-      hydrate(el, { selectAllMode: false, selectedQuestionIds: ['q1', 'q2', 'q3'] });
-      const manualTopics = readTopicCheckboxes(el);
-      const manualNet = manualTopics.find(t => t.topic === 'Networking');
-
-      hydrate(el, { selectAllMode: true, selectedQuestionIds: ['q1', 'q2', 'q3'] });
-      const allTopics = readTopicCheckboxes(el);
-      const allNet = allTopics.find(t => t.topic === 'Networking');
-
-      expect(manualNet?.count).toBe(allNet?.count);
+      // Select Networking (q1, q2, q5) → q1 overlaps with Security
+      hydrate(el, { selectedTopics: ['Networking'] });
+      topics = readTopicCheckboxes(el);
+      sec = topics.find(t => t.topic === 'Security');
+      // Security additional = q3, q6 (q1 already covered) → +2
+      expect(sec?.count).toBe(2);
+      expect(sec?.isAdditional).toBe(true);
     });
 
     it('counts update when difficulty filter changes', async () => {
@@ -457,6 +506,54 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(others!.count).toBe(3); // Net(1) + Sec(1) + Compute(1)
       net = topics.find(t => t.topic === 'Networking');
       expect(net).toBeUndefined(); // merged into Others
+    });
+  });
+
+  // ── Difficulty counts ──────────────────────────────────────────────────────
+
+  describe('Difficulty counts', () => {
+    it('shows question count next to each difficulty level', async () => {
+      const el = await mountPreview();
+      hydrate(el);
+
+      const diffs = readDifficultyCheckboxes(el);
+      const byName = Object.fromEntries(diffs.map(d => [d.difficulty, d]));
+
+      // easy: q1, q2 => 2
+      expect(byName['easy']?.count).toBe(2);
+      // medium: q3, q4, q7 => 3
+      expect(byName['medium']?.count).toBe(3);
+      // hard: q5, q6 => 2
+      expect(byName['hard']?.count).toBe(2);
+    });
+
+    it('difficulty counts are always raw totals (not filtered)', async () => {
+      const el = await mountPreview();
+      // Even with a difficulty filter active, counts should show raw totals
+      hydrate(el, { selectedDifficulties: ['easy'] });
+
+      const diffs = readDifficultyCheckboxes(el);
+      const byName = Object.fromEntries(diffs.map(d => [d.difficulty, d]));
+
+      expect(byName['easy']?.count).toBe(2);
+      expect(byName['medium']?.count).toBe(3);
+      expect(byName['hard']?.count).toBe(2);
+    });
+
+    it('renders all three difficulty options even when bank has no questions for some', async () => {
+      const el = await mountPreview();
+      const onlyEasy = [
+        makeQuestion({ id: 'e1', difficulty: 'easy', topics: ['A'] }),
+        makeQuestion({ id: 'e2', difficulty: 'easy', topics: ['A'] }),
+      ];
+      hydrate(el, { questions: onlyEasy });
+
+      const diffs = readDifficultyCheckboxes(el);
+      expect(diffs).toHaveLength(3);
+      const byName = Object.fromEntries(diffs.map(d => [d.difficulty, d]));
+      expect(byName['easy']?.count).toBe(2);
+      expect(byName['medium']?.count).toBe(0);
+      expect(byName['hard']?.count).toBe(0);
     });
   });
 

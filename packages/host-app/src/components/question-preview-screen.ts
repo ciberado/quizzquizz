@@ -148,35 +148,74 @@ export class QuestionPreviewScreen extends BaseComponent {
   }
 
   /**
+   * Count questions per difficulty level, respecting no filters (shows raw totals).
+   */
+  private computeDifficultyCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const q of this.allBankQuestions) {
+      counts.set(q.difficulty, (counts.get(q.difficulty) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  /**
    * Compute topic counts from the actual questions in the bank.
-   * Shows how many questions each topic contains, respecting the active
-   * difficulty filter.  Topics with fewer than 2 questions are merged
-   * into an "Others" bucket.
+   *
+   * When no topics are selected the count is the total number of
+   * difficulty-filtered questions for that topic.
+   *
+   * When some topics ARE selected, the count for each *unselected* topic
+   * shows how many **additional** questions it would add to the set already
+   * covered by the selected topics — avoiding the "3 + 2 = 4" confusion
+   * caused by overlapping questions.
+   *
+   * Selected topics always show their own total (difficulty-filtered).
+   *
+   * Topics with fewer than 2 questions are merged into an "Others" bucket.
    */
   private computeTopicCounts(): Map<string, number> {
-    const raw = new Map<string, number>();
-    for (const q of this.allBankQuestions) {
-      // Respect active difficulty filter
-      if (this.selectedDifficulties.size > 0 && !this.selectedDifficulties.has(q.difficulty)) {
-        continue;
+    const othersTopics = this.getOthersTopics();
+
+    // Difficulty-filtered questions
+    const filtered = this.allBankQuestions.filter(
+      q => this.selectedDifficulties.size === 0 || this.selectedDifficulties.has(q.difficulty),
+    );
+
+    // Build the set of question IDs already covered by selected topics
+    const coveredIds = new Set<string>();
+    if (this.selectedTopics.size > 0) {
+      for (const q of filtered) {
+        const qTopics = q.topics.map(t => othersTopics.has(t) ? 'Others' : t);
+        if (qTopics.some(t => this.selectedTopics.has(t))) {
+          coveredIds.add(q.id);
+        }
       }
+    }
+
+    // Raw per-topic counts (total for selected, additional for unselected)
+    const raw = new Map<string, number>();
+    for (const q of filtered) {
       for (const topic of q.topics) {
-        raw.set(topic, (raw.get(topic) ?? 0) + 1);
+        const displayTopic = othersTopics.has(topic) ? 'Others' : topic;
+        if (this.selectedTopics.has(displayTopic)) {
+          // Selected topic → always show its full total
+          raw.set(displayTopic, (raw.get(displayTopic) ?? 0) + 1);
+        } else if (!coveredIds.has(q.id)) {
+          // Unselected topic → only count questions not already covered
+          raw.set(displayTopic, (raw.get(displayTopic) ?? 0) + 1);
+        }
       }
     }
 
     // Group topics with fewer than 2 questions into "Others"
+    // (only for topics not already mapped to Others by getOthersTopics)
     const grouped = new Map<string, number>();
-    let othersCount = 0;
     for (const [topic, count] of raw) {
-      if (count < 2) {
-        othersCount += count;
+      if (topic === 'Others') {
+        grouped.set('Others', (grouped.get('Others') ?? 0) + count);
       } else {
         grouped.set(topic, count);
       }
-    }
-    if (othersCount > 0) {
-      grouped.set('Others', othersCount);
     }
     return grouped;
   }
@@ -242,17 +281,23 @@ export class QuestionPreviewScreen extends BaseComponent {
                     Difficulty
                   </label>
                   <div style="display: flex; gap: var(--spacing-sm);">
-                    ${['easy', 'medium', 'hard'].map(diff => `
-                      <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
-                        <input 
-                          type="checkbox" 
-                          data-filter="difficulty" 
-                          value="${diff}"
-                          ${this.selectedDifficulties.has(diff as Difficulty) ? 'checked' : ''}
-                        />
-                        <span style="text-transform: capitalize;">${diff}</span>
-                      </label>
-                    `).join('')}
+                    ${(() => {
+                      const diffCounts = this.computeDifficultyCounts();
+                      return ['easy', 'medium', 'hard'].map(diff => {
+                        const count = diffCounts.get(diff) ?? 0;
+                        return `
+                          <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                            <input 
+                              type="checkbox" 
+                              data-filter="difficulty" 
+                              value="${diff}"
+                              ${this.selectedDifficulties.has(diff as Difficulty) ? 'checked' : ''}
+                            />
+                            <span style="text-transform: capitalize;">${diff} <small>(${count})</small></span>
+                          </label>
+                        `;
+                      }).join('');
+                    })()}
                   </div>
                 </div>
 
@@ -286,6 +331,9 @@ export class QuestionPreviewScreen extends BaseComponent {
                       }).map(topic => {
                         const count = topicCounts.get(topic) ?? 0;
                         const isChecked = this.selectedTopics.has(topic);
+                        // Show "+" prefix for unselected topics when other topics are selected
+                        // to signal the count is "additional questions", not total
+                        const prefix = !isChecked && this.selectedTopics.size > 0 ? '+' : '';
                         return `
                           <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
                             <input 
@@ -294,7 +342,7 @@ export class QuestionPreviewScreen extends BaseComponent {
                               value="${this.escapeHtml(topic)}"
                               ${isChecked ? 'checked' : ''}
                             />
-                            <span style="${count === 0 && !isChecked ? 'color: var(--color-text-muted);' : ''}">${this.escapeHtml(topic)} <small>(${count})</small></span>
+                            <span style="${count === 0 && !isChecked ? 'color: var(--color-text-muted);' : ''}">${this.escapeHtml(topic)} <small>(${prefix}${count})</small></span>
                           </label>
                         `;
                       }).join('');
