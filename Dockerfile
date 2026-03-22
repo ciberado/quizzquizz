@@ -117,6 +117,10 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Run as root so the entrypoint can fix volume ownership, then drops to nodejs via su-exec
 
+# Build-time metadata
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 # Set environment variables
 ENV NODE_ENV=production \
     PORT=3000 \

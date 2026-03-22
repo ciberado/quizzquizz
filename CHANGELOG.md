@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-03-22
+
+### Changed
+- **[api-server]** `/health` endpoint now returns `version`, `gitCommit`, and `nodeVersion` alongside `status` and `timestamp`.
+- **[docker]** Docker build injects `GIT_COMMIT` build arg (short SHA) into the image as an environment variable.
+
 ## [0.6.0] — 2026-03-22
 
 ### Added

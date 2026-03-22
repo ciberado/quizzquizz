@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/root",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "QuizzQuizz - Real-time competitive quiz platform",
   "repository": {
@@ -20,8 +20,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "docker:build": "docker build -t quizzquizz:latest .",
-    "docker:build:version": "docker build -t quizzquizz:$(node -p \"require('./package.json').version\") -t quizzquizz:latest .",
+    "docker:build": "docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) -t quizzquizz:latest .",
+    "docker:build:version": "docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) -t quizzquizz:$(node -p \"require('./package.json').version\") -t quizzquizz:latest .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",

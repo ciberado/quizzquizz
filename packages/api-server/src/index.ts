@@ -52,7 +52,13 @@ app.use('*', cors({
 
 // Health check
 app.get('/health', (c) => {
-  return c.json({ status: 'ok', timestamp: Date.now() });
+  return c.json({
+    status: 'ok',
+    version: APP_VERSION,
+    gitCommit: process.env.GIT_COMMIT || 'unknown',
+    nodeVersion: process.version,
+    timestamp: Date.now(),
+  });
 });
 
 // API routes
