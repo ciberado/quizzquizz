@@ -22,6 +22,10 @@ coverage/
 .env.local
 .env.*.local
 
+# AWS credentials (question-bank-builder)
+packages/question-bank-builder/credentials
+packages/question-bank-builder/config
+
 # IDE
 .vscode/
 .idea/

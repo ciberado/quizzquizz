@@ -54,6 +54,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
   - **18 new Vitest integration tests** + **19 Playwright E2E tests** (quiz-upload + username display)
 - 🎯 **Next: Phase 10 — Additional Question Types** (or Phase 7F — Question Bank Folder Navigation)
 
+**Tooling**:
+- ✅ **`@quizzquizz/question-bank-builder`** — Standalone CLI for bulk question-bank production. Reads JSONL, enriches with AI (Bedrock), classifies by topic taxonomy, and writes Markdown files directly into `question-banks/`. See [`packages/question-bank-builder/README.md`](../packages/question-bank-builder/README.md).
+
 **Upcoming MVP Phases**:
 - ⏳ **Phase 5**: Host App (6-9 hours) - "Complete MVP experience" ✅ COMPLETE
   - 5A: Foundation & Session Creation (1-2 hrs) ✅

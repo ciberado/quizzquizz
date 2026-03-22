@@ -53,6 +53,27 @@ npm run build --workspace=@quizzquizz/api-server
 npm run build:prod --workspaces
 ```
 
+### Question Bank Builder (offline CLI)
+
+```bash
+# Build the builder
+npm run build -w @quizzquizz/question-bank-builder
+
+# Classify JSONL → per-category Markdown (requires AWS credentials)
+npx question-bank-builder classify \
+  -i source.jsonl -t topics.json -o question-banks/ -p my-quiz \
+  --bedrock-model-id anthropic.claude-3-haiku-20240307-v1:0 --aws-region us-east-1
+
+# Transform + enrich + split by topic
+npx question-bank-builder \
+  -i input.json -o question-banks/ -p prefix --enrich \
+  --bedrock-model-id anthropic.claude-3-haiku-20240307-v1:0 --aws-region us-east-1
+
+# Test with limited questions
+npx question-bank-builder -i input.json -o output/ -p test --enrich --limit 5 \
+  --bedrock-model-id anthropic.claude-3-haiku-20240307-v1:0 --aws-region us-east-1
+```
+
 ### Quality & Linting
 
 ```bash
@@ -135,6 +156,20 @@ packages/
 ├── question-bank/
 │   ├── index.ts              # Markdown parser, question loader
 │   └── index.test.ts         # Parser tests
+│
+├── question-bank-builder/    # Standalone CLI (not part of dev server)
+│   ├── src/
+│   │   ├── cli.ts            # yargs CLI (classify / default command)
+│   │   ├── classify.ts       # JSONL → AI classify → per-category output
+│   │   ├── generate_quizzes.ts # Classified JSONL → Markdown quiz files
+│   │   ├── enrich.ts         # LangGraph + Bedrock enrichment
+│   │   ├── transform.ts      # Load / save / split-by-topic
+│   │   ├── markdown.ts       # Markdown parser & serializer
+│   │   ├── ai_samples.ts     # JSON/JSONL input loader
+│   │   ├── types.ts          # RawQuestion, QuestionBank, etc.
+│   │   └── prompts/          # Prompt templates for AI
+│   ├── samples/              # Example inputs and topic taxonomy
+│   └── README.md             # Full CLI reference
 │
 ├── api-server/
 │   ├── src/
@@ -233,6 +268,7 @@ e2e/
 - API Server: `packages/api-server/tsconfig.json`
 - Common: `packages/common/tsconfig.json`
 - Question Bank: `packages/question-bank/tsconfig.json`
+- Question Bank Builder: `packages/question-bank-builder/tsconfig.json` (extends base; `commonjs` module for Node CLI)
 - Host App: `packages/host-app/tsconfig.json`
 - Player App: `packages/player-app/tsconfig.json`
 

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
+- **[question-bank-builder]** New `@quizzquizz/question-bank-builder` package — standalone CLI tool for ingesting JSONL question banks, enriching them with AI (Amazon Bedrock / LangGraph), classifying by topic taxonomy, and generating Markdown files compatible with the `@quizzquizz/question-bank` parser.
+  - Two commands: `classify` (JSONL → topic taxonomy → per-category quiz files) and default (transform + enrich + split-by-topic)
+  - AI enrichment: topic extraction, difficulty tagging, quality scoring via LangGraph ReAct agents
+  - Concurrent processing with configurable workers, retry with exponential backoff, incremental save
+  - Outputs follow the standard QuizzQuizz question-bank Markdown format
 - **[docs]** Workspace instructions (`copilot-instructions.md`) rewritten to be concise and link-first, replacing the stale bootstrap content.
 - **[docs]** Three scoped instruction files: `frontend-web-components`, `api-contracts`, and `e2e-playwright` — auto-attach to matching package globs.
 - **[docs]** `add-quiz-feature` prompt: a six-step guided workflow for implementing end-to-end features across packages.

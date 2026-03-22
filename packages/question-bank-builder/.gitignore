@@ -1,0 +1,17 @@
+# AWS credentials — never commit
+credentials
+config
+.env
+
+# Builder output artefacts
+output/
+output.json
+logs/
+*.jsonl
+
+# Dev/test scratch files
+test-body.json
+test-error-handling.js
+
+# Samples with real question data (keep output-example.md and topics.json)
+samples/source-*

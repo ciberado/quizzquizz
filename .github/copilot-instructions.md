@@ -13,6 +13,7 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 
 - `packages/common`: shared Zod schemas, types, and utilities
 - `packages/question-bank`: Markdown question-bank parsing and loading
+- `packages/question-bank-builder`: standalone CLI — JSONL ingestion, AI enrichment (Bedrock/LangGraph), Markdown generation
 - `packages/api-server`: Hono API, Prisma, SQLite, auth, game/session logic
 - `packages/host-app`: host UI built with Web Components and Vite
 - `packages/player-app`: player UI built with Web Components and Vite
@@ -39,12 +40,14 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 - Run unit and package tests with `npm test -- --run` when you need a one-shot run.
 - Run Playwright coverage with `npm run test:e2e`.
 - Run Docker workflows with the root `docker:*` scripts or `docker compose`.
+- The question-bank-builder is **not** part of `npm run dev`. Build it with `npm run build -w @quizzquizz/question-bank-builder` and run via `npx question-bank-builder`. It requires AWS credentials for AI enrichment — see its [README](../packages/question-bank-builder/README.md).
 
 ## Implementation Guidance
 
 - Respect TypeScript project references. If a package build fails, check whether its dependencies need to be built first.
 - Do not edit generated Prisma client files under `packages/api-server/src/generated/prisma`.
 - Question banks are Markdown files. Keep new parsing or validation behavior aligned with the documented format instead of inventing new syntax.
+- The question-bank-builder has its own internal types (`RawQuestion`, `QuestionBank`) that are a superset of the runtime types in `@quizzquizz/common`. It does **not** import from `@quizzquizz/common`; it generates Markdown that the `@quizzquizz/question-bank` parser reads. Do not couple the builder to runtime packages.
 - User-uploaded banks live under `question-banks/user-quizzes/` and should remain treated as user data.
 - When changing API contracts, update shared types and validate both API and consuming apps.
 - Keep tests close to the code they validate, matching the existing Vitest and Playwright patterns.
@@ -61,3 +64,5 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 - Do not assume old phase docs reflect current status without checking the code and package scripts.
 - Prisma generation is part of the API server workflow; generated output may need regeneration before builds in fresh environments.
 - E2E tests can be sensitive to text and selector drift. Check the current UI before changing tests.
+- The question-bank-builder uses `commonjs` modules and has relaxed `noUncheckedIndexedAccess`. This is intentional — it is a standalone CLI tool imported from another project. Do not try to convert it to ESM or tighten its type checks without cause.
+- Never commit AWS credentials or `.env` files from the builder. The builder's `.gitignore` and root `.gitignore` both guard against this.

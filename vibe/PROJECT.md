@@ -48,6 +48,7 @@ quizzquizz/
 ├── packages/
 │   ├── common/              # Shared types, utilities, validation
 │   ├── question-bank/       # Markdown parsing, question bank management
+│   ├── question-bank-builder/ # CLI tool: JSONL → AI enrichment → Markdown banks
 │   ├── api-server/          # REST API backend
 │   ├── host-app/            # Host/presenter web application
 │   └── player-app/          # Player web application
@@ -70,6 +71,15 @@ quizzquizz/
 - Question bank loader and validator
 - Question selection/filtering by difficulty, topics, tags
 - Random question sampling
+
+#### `@quizzquizz/question-bank-builder`
+- Standalone CLI tool (not a runtime dependency)
+- Reads JSONL question banks from external sources
+- AI enrichment via Amazon Bedrock / LangGraph (topic extraction, difficulty tagging, quality scoring)
+- Classification with a topic taxonomy
+- Generates Markdown files compatible with the `@quizzquizz/question-bank` parser
+- Splits large banks by topic into multiple files
+- See [`packages/question-bank-builder/README.md`](../packages/question-bank-builder/README.md) for full CLI reference
 
 #### `@quizzquizz/api-server`
 - REST API endpoints
