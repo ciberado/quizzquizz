@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.2] — 2026-03-22
+
+### Fixed
+- **[docker]** Entrypoint now syncs `package.json` files from `dist-build/` into the volume-mounted `/app/packages/` on every container start, preventing stale version reads when the named volume persists across image upgrades.
+
 ## [0.6.1] — 2026-03-22
 
 ### Changed

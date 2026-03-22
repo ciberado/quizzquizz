@@ -88,6 +88,12 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dis
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./dist-build/api-server/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./dist-build/api-server/prisma
 
+# Also stage package.json files so entrypoint can refresh them on volume-mounted /app/packages
+COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./dist-build/common/package.json
+COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./dist-build/question-bank/package.json
+COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/package.json ./dist-build/api-server/package.json
+COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/package.json ./dist-build/analytics/package.json
+
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
 RUN cd packages/api-server && npx prisma generate

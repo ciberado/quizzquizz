@@ -21,6 +21,11 @@ for pkg in common question-bank api-server analytics; do
     cp -rf "${src}/"* "$dst/"
     echo "  ✓ ${pkg}/dist (backend)"
   fi
+  # Sync package.json so version reads stay current across image upgrades
+  srcpkg="/app/dist-build/${pkg}/package.json"
+  if [ -f "$srcpkg" ]; then
+    cp -f "$srcpkg" "/app/packages/${pkg}/package.json"
+  fi
 done
 
 # Sync Prisma schema and migrations (needed for runtime migrations)
