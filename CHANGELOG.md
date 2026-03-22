@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Changed
+- **[host-app]** Topic filters on the question preview screen now show actual question topics (derived from questions) instead of bank metadata, with a counter displaying how many additional questions each topic would add to the selection.
+
 ## [0.5.0] — 2026-03-22
 
 ### Added

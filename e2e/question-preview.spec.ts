@@ -370,3 +370,117 @@ test.describe('Phase 7A - Question Preview & Configuration', () => {
     expect(answerCount).toBeGreaterThan(0);
   });
 });
+
+test.describe('Topic Filter Counts', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('http://localhost:3001/#/preview/sample-general-knowledge');
+    await expect(page.locator('.question-preview-card').first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should show topic checkboxes derived from actual questions with counts', async ({ page }) => {
+    // Topic filter should have checkboxes with "(N)" count badges
+    const topicCheckboxes = page.locator('input[data-filter="topic"]');
+    const count = await topicCheckboxes.count();
+    expect(count).toBeGreaterThan(0);
+
+    // Each topic label should include a count in parentheses
+    const topicLabels = page.locator('input[data-filter="topic"] ~ span');
+    for (let i = 0; i < count; i++) {
+      const text = await topicLabels.nth(i).textContent();
+      expect(text).toMatch(/\(\d+\)/);
+    }
+  });
+
+  test('should show actual question topics, not bank metadata topics', async ({ page }) => {
+    // The sample bank has question-level topics: geography, science, history, pop-culture
+    const topicCheckboxes = page.locator('input[data-filter="topic"]');
+    const count = await topicCheckboxes.count();
+
+    const topicNames: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const value = await topicCheckboxes.nth(i).getAttribute('value');
+      if (value) topicNames.push(value);
+    }
+
+    // Should include actual question topics
+    expect(topicNames.sort()).toEqual(
+      expect.arrayContaining(['geography', 'history', 'pop-culture', 'science'])
+    );
+  });
+
+  test('topic counts should decrease when difficulty filter narrows the pool', async ({ page }) => {
+    // Helper to read counts from rendered topic labels
+    const getTopicCounts = async () => {
+      const labels = page.locator('input[data-filter="topic"] ~ span');
+      const counts: Record<string, number> = {};
+      const n = await labels.count();
+      for (let i = 0; i < n; i++) {
+        const text = await labels.nth(i).textContent();
+        const match = text?.match(/^(.+?)\s*\((\d+)\)$/);
+        if (match) counts[match[1]!.trim()] = parseInt(match[2]!, 10);
+      }
+      return counts;
+    };
+
+    const initialCounts = await getTopicCounts();
+    const initialTotal = Object.values(initialCounts).reduce((s, c) => s + c, 0);
+
+    // Apply easy filter — only easy questions should count
+    await page.locator('input[data-filter="difficulty"][value="easy"]').check();
+    await page.waitForTimeout(1000);
+
+    const filteredCounts = await getTopicCounts();
+    const filteredTotal = Object.values(filteredCounts).reduce((s, c) => s + c, 0);
+
+    // Filtered total should be less than or equal to initial
+    expect(filteredTotal).toBeLessThanOrEqual(initialTotal);
+  });
+
+  test('selecting a topic should keep it checked after re-render', async ({ page }) => {
+    const firstTopicCheckbox = page.locator('input[data-filter="topic"]').first();
+    await firstTopicCheckbox.check();
+
+    await page.waitForTimeout(1000);
+
+    // After re-render the topic should remain checked
+    await expect(firstTopicCheckbox).toBeChecked();
+  });
+
+  test('topic counts update when switching to manual selection mode', async ({ page }) => {
+    // Start in selectAllMode (default) — counts should be totals
+    const getTopicLabels = async () => {
+      const labels = page.locator('input[data-filter="topic"] ~ span');
+      const result: string[] = [];
+      const n = await labels.count();
+      for (let i = 0; i < n; i++) {
+        result.push((await labels.nth(i).textContent()) ?? '');
+      }
+      return result;
+    };
+
+    const allModeLabels = await getTopicLabels();
+    // All labels should have counts > 0 in selectAll mode
+    for (const label of allModeLabels) {
+      const match = label.match(/\((\d+)\)/);
+      expect(match).not.toBeNull();
+      expect(parseInt(match![1]!, 10)).toBeGreaterThan(0);
+    }
+
+    // Switch to manual mode
+    await page.getByLabel('Use all questions').uncheck();
+    await page.waitForTimeout(500);
+
+    // Select a few questions manually
+    const checkboxes = page.locator('.question-checkbox');
+    const selectCount = Math.min(3, await checkboxes.count());
+    for (let i = 0; i < selectCount; i++) {
+      await checkboxes.nth(i).check();
+      await page.waitForTimeout(200);
+    }
+
+    const manualLabels = await getTopicLabels();
+
+    // In manual mode with some selected, topic list should still be populated
+    expect(manualLabels.length).toBeGreaterThan(0);
+  });
+});

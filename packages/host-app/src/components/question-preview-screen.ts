@@ -38,6 +38,7 @@ export class QuestionPreviewScreen extends BaseComponent {
   private bankId: string = '';
   private bank: QuestionBank | null = null;
   private preview: QuestionPreviewResponse | null = null;
+  private allBankQuestions: Question[] = []; // All questions for client-side topic counting
   private selectedQuestionIds = new Set<string>();
   private selectAllMode = true; // By default, select all questions
   private randomOrder = false;
@@ -50,7 +51,6 @@ export class QuestionPreviewScreen extends BaseComponent {
   // Filter state
   private selectedDifficulties = new Set<Difficulty>();
   private selectedTopics = new Set<string>();
-  private availableTopics: string[] = [];
   
   // Pagination state
   private currentPage = 1;
@@ -83,8 +83,8 @@ export class QuestionPreviewScreen extends BaseComponent {
         questionCount: bankData.questions.length,
       };
 
-      // Extract available topics from bank metadata
-      this.availableTopics = this.bank.topics || [];
+      // Store all questions for client-side topic/tag counting
+      this.allBankQuestions = bankData.questions as Question[];
     } catch (error) {
       console.error('Failed to load question bank:', error);
       handleApiError(error, 'Loading question bank');
@@ -127,6 +127,31 @@ export class QuestionPreviewScreen extends BaseComponent {
       handleApiError(error, 'Loading questions');
       this.showError(`Failed to load questions: ${getErrorMessage(error)}`);
     }
+  }
+
+  /**
+   * Compute topic counts from the actual questions in the bank.
+   * Counts only questions NOT already selected, so the number shows
+   * how many *new* questions would be added by enabling that topic filter.
+   * Difficulty filters are respected so only difficulty-matching questions count.
+   */
+  private computeTopicCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const q of this.allBankQuestions) {
+      // Respect active difficulty filter
+      if (this.selectedDifficulties.size > 0 && !this.selectedDifficulties.has(q.difficulty)) {
+        continue;
+      }
+      // In manual selection mode, skip already-selected questions
+      // so the count reflects how many *new* questions a topic would add.
+      // In selectAllMode all questions are logically selected, so show totals.
+      if (!this.selectAllMode && this.selectedQuestionIds.has(q.id)) continue;
+
+      for (const topic of q.topics) {
+        counts.set(topic, (counts.get(topic) ?? 0) + 1);
+      }
+    }
+    return counts;
   }
 
   protected render(): void {
@@ -187,17 +212,29 @@ export class QuestionPreviewScreen extends BaseComponent {
                     Topics
                   </label>
                   <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
-                    ${this.availableTopics.length > 0 ? this.availableTopics.map(topic => `
-                      <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
-                        <input 
-                          type="checkbox" 
-                          data-filter="topic" 
-                          value="${this.escapeHtml(topic)}"
-                          ${this.selectedTopics.has(topic) ? 'checked' : ''}
-                        />
-                        <span>${this.escapeHtml(topic)}</span>
-                      </label>
-                    `).join('') : '<span style="color: var(--color-text-muted);">No topics available</span>'}
+                    ${(() => {
+                      const topicCounts = this.computeTopicCounts();
+                      // Merge: all topics with a count + any currently-selected topics (count may be 0)
+                      const allTopics = new Set([...topicCounts.keys(), ...this.selectedTopics]);
+                      if (allTopics.size === 0) {
+                        return '<span style="color: var(--color-text-muted);">No topics available</span>';
+                      }
+                      return Array.from(allTopics).sort().map(topic => {
+                        const count = topicCounts.get(topic) ?? 0;
+                        const isChecked = this.selectedTopics.has(topic);
+                        return `
+                          <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                            <input 
+                              type="checkbox" 
+                              data-filter="topic" 
+                              value="${this.escapeHtml(topic)}"
+                              ${isChecked ? 'checked' : ''}
+                            />
+                            <span style="${count === 0 && !isChecked ? 'color: var(--color-text-muted);' : ''}">${this.escapeHtml(topic)} <small>(${count})</small></span>
+                          </label>
+                        `;
+                      }).join('');
+                    })()}
                   </div>
                 </div>
               </div>
