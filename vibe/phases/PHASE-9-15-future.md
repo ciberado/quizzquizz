@@ -229,41 +229,9 @@ These come "for free" once the infrastructure is in place:
 
 ---
 
-## Phase 10: Additional Question Types (Est. 4-6 hours)
+## Phase 10: Additional Question Types — ❌ DISCARDED
 
-**Goal**: Support more question formats beyond multiple choice.
-
-**Scope**:
-- [ ] True/False questions:
-  - New question type flag in markdown
-  - 2-option UI variant
-  - Simpler answer submission
-- [ ] Text input questions:
-  - Short answer questions (exact match or regex)
-  - Case-insensitive matching option
-  - Multiple acceptable answers support
-  - Text input UI component
-- [ ] Ordering questions:
-  - "Put these in order" question type
-  - Drag-and-drop interface
-  - Scoring: partial credit for partial correctness
-  - Answer validation (sequence matching)
-- [ ] Image-based questions:
-  - Embed images in questions (markdown: `![alt](url)`)
-  - Image answers (click hotspots)
-  - Gallery view for multiple images
-  - Asset hosting (local or CDN)
-- [ ] Markdown extensions:
-  - New syntax for each question type
-  - Backward compatibility
-  - Parser updates
-  - Validation for new formats
-- [ ] UI updates:
-  - Dynamic question renderer based on type
-  - Type-specific answer components
-  - Consistent styling across types
-
-**Deliverable**: Diverse question types make quizzes more engaging and versatile.
+**Reason**: The complexity of supporting multiple question types (drag-and-drop ordering, image hotspots, text input with regex matching) was assessed against actual usage patterns. Multiple-choice covers 95%+ of real-world quiz needs. The parser, API contracts, and frontend components would all need non-trivial changes for limited gain. This phase is discarded in favour of deeper quality improvements to the existing experience.
 
 ---
 
@@ -301,7 +269,7 @@ These come "for free" once the infrastructure is in place:
 
 ---
 
-## Phase 12: Analytics Package (Est. 17-24 hours)
+## Phase 12: Analytics Package ✅ COMPLETE (Mar 9, 2026)
 
 **Goal**: Provide detailed analytics exploration for hosts and players via two new packages (`@quizzquizz/analytics` backend + `@quizzquizz/analytics-ui` frontend).
 
@@ -310,31 +278,40 @@ These come "for free" once the infrastructure is in place:
 **Detailed implementation plan**: [PHASE-12-analytics.md](PHASE-12-analytics.md)
 
 **Completed work**:
-- [x] **Host question analytics** (Feb 11, 2026):
-  - [x] `GET /api/sessions/:id/question-stats` with host token auth
-  - [x] `question-stats-table` component — sortable, expandable, color-coded accuracy bars
-  - [x] E2E test: 27 steps validating all functionality
+- [x] **`@quizzquizz/analytics`** — pure computation library: `shared/stats.ts`, `shared/quality.ts`, `shared/streaks.ts`, `loaders.ts`, host and player modules — **47 unit tests passing**
+- [x] **`@quizzquizz/analytics-ui`** — standalone Vite app (port 3003, base `/analytics/`): hash-based router, LRU-cached API client, shared Web Components (`<bar-chart>`, `<line-chart>`, `<stat-card>`, `<data-table>`), host screens (Session Report, Bank Health, Engagement, Comparison), player screens (Dashboard, Accuracy Trend, Weak Topics, Response Profile, Practice, Global Comparison)
+- [x] **`api-server` analytics routes** at `/api/analytics/*` — `requireAuth` on every route, 30-second LRU cache, per-endpoint ownership checks — **17 authorization tests passing**
+- [x] **Cross-app linking** — host-app and player-app both link to analytics-ui
 
 **Sub-phases** (see [PHASE-12-analytics.md](PHASE-12-analytics.md) for full task breakdown):
-- [ ] **12A**: Package scaffolding & shared computation library (2–3 hrs)
-- [ ] **12B**: Host analytics backend — session report, bank health, engagement, comparison (3–4 hrs)
-- [ ] **12C**: Player analytics backend — dashboard, trends, topics, practice, global comparison (3–4 hrs)
-- [ ] **12D**: API routes & authorization — all endpoints require auth, ownership checks (2–3 hrs)
-- [ ] **12E**: Analytics-UI — shared components & host screens (3–4 hrs)
-- [ ] **12F**: Analytics-UI — player screens & linking from existing apps (3–4 hrs)
-- [ ] **12G**: Docker & deployment integration (1–2 hrs)
+- [x] **12A**: Package scaffolding & shared computation library ✅
+- [x] **12B**: Host analytics backend ✅
+- [x] **12C**: Player analytics backend ✅
+- [x] **12D**: API routes & authorization ✅
+- [x] **12E**: Analytics-UI shared components & host screens ✅
+- [x] **12F**: Analytics-UI player screens & linking ✅
+- [x] **12G**: Docker & deployment integration ✅
 
-**Key design decisions**:
-- Backend analytics package is **read-only** — never writes to the database
-- Frontend is a **separate Vite app** (`analytics-ui`) — not embedded in host-app or player-app
-- **Authorization**: all endpoints require authentication; players see only own data; hosts see only own sessions
-- **Admin role** deferred to a later phase
-
-**Deliverable**: Data-driven insights to improve teaching and learning. Hosts explore session and bank performance; players track progress, weak topics, and get practice recommendations.
+**Deliverable**: ✅ Data-driven insights for hosts and players. Linked from both apps. Served at `/analytics/` in Docker.
 
 ---
 
-## Phase 13: Public Question Bank Marketplace (Est. 6-8 hours)
+## Phase 13: User Quiz Upload ✅ COMPLETE (Mar 13, 2026)
+
+See the detailed implementation plan: [PHASE-13-quiz-upload.md](PHASE-13-quiz-upload.md)
+
+**Implemented**:
+- [x] `POST /api/user-banks/upload` — auth-required, 500 KB limit, path-traversal guard, Markdown validation, mutex-serialised write + hot-reload
+- [x] `GET /api/user-banks/mine` — list authenticated user's uploaded banks
+- [x] `<qz-upload-quiz-modal>` Web Component — textarea + file picker, inline Claude prompt copy button, per-error validation
+- [x] Bank-browser shows username instead of raw user ID; own folder sorted first with 👤 icon + "you" badge
+- [x] 18 Vitest integration tests + 19 Playwright E2E tests
+
+**Deliverable**: ✅ Authenticated hosts can upload Markdown question banks via the host UI; banks are immediately available for all users.
+
+---
+
+## Phase 13M: Public Question Bank Marketplace (Est. 6-8 hours)
 
 **Goal**: Community-driven question sharing.
 
