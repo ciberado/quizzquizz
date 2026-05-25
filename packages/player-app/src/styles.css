@@ -706,6 +706,12 @@ label {
     max-width: 1000px;
     padding: 0 var(--spacing-lg);
   }
+  
+  /* Switch to 3-column grid for 5-6 answers to prevent excessive scrolling */
+  .answers-grid:has(.answer-btn:nth-child(5)) {
+    grid-template-columns: repeat(3, 1fr) !important;
+    max-width: 1200px;
+  }
 
   .answer-btn {
     min-height: 100px;
@@ -779,6 +785,11 @@ label {
   .answers-grid {
     max-width: 1200px;
   }
+  
+  /* Keep 3-column grid for 5-6 answers on very large screens */
+  .answers-grid:has(.answer-btn:nth-child(5)) {
+    max-width: 1400px;
+  }
 }
 
 /* Landscape phones - optimize for horizontal space (ONLY on actual landscape phones) */
@@ -839,6 +850,10 @@ label {
 .question-screen {
   padding: 0;
   justify-content: flex-start;
+  min-height: 100vh;
+  height: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .question-header {

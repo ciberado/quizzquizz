@@ -455,8 +455,8 @@ export class QuestionDisplayScreen extends HTMLElement {
       .question-display-screen {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
-        padding: 1rem;
+        gap: clamp(0.5rem, 1vh, 1rem);
+        padding: clamp(0.5rem, 1vh, 1rem);
         height: 100dvh;
         height: 100vh;
         overflow: hidden;
@@ -467,10 +467,11 @@ export class QuestionDisplayScreen extends HTMLElement {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0;
       }
 
       .question-number {
-        font-size: 1.25rem;
+        font-size: clamp(1rem, 1.5vw, 1.25rem);
         font-weight: 600;
         color: var(--color-text-secondary);
       }
@@ -482,40 +483,62 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .answered-count {
-        font-size: 1.75rem;
+        font-size: clamp(1.25rem, 2vw, 1.75rem);
         font-weight: 700;
         color: var(--color-primary);
       }
 
       .player-stats .label {
-        font-size: 0.875rem;
+        font-size: clamp(0.75rem, 1vw, 0.875rem);
         color: var(--color-text-secondary);
       }
 
       .question-content {
         background: var(--color-surface);
-        padding: 1.25rem 2rem;
+        padding: clamp(0.75rem, 1.5vh, 1.25rem) clamp(1rem, 2vw, 2rem);
         border-radius: 1rem;
         box-shadow: var(--shadow-lg);
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow: hidden;
       }
 
       .question-text {
-        font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+        font-size: clamp(1.125rem, 3vw, 2.5rem);
         font-weight: 600;
-        line-height: 1.4;
+        line-height: 1.3;
         text-align: center;
         color: var(--color-text);
       }
 
       .answers-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-        margin: 0.75rem 0;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        gap: clamp(0.5rem, 1vh, 0.75rem);
+        margin: clamp(0.5rem, 1vh, 0.75rem) 0;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+      }
+      
+      /* Adaptive grid: 2 columns for ≤4 answers, 3 columns for 5-6 answers */
+      .answers-grid:has(.answer-card:nth-child(5)) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      
+      .answers-grid:has(.answer-card:nth-child(5):last-child) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      
+      .answers-grid:has(.answer-card:nth-child(6)) {
+        grid-template-columns: repeat(3, 1fr);
       }
 
       .answer-card {
-        padding-left: 5rem; /* push text right to clear the absolute-positioned label */
+        padding-left: clamp(4rem, 8vw, 5rem); /* push text right to clear the absolute-positioned label */
+        display: flex;
+        align-items: center;
+        min-height: 0;
       }
 
       .answer-card.correct {
@@ -541,24 +564,24 @@ export class QuestionDisplayScreen extends HTMLElement {
 
       .answer-label {
         position: absolute;
-        left: 1rem;
+        left: clamp(0.5rem, 1vw, 1rem);
         top: 50%;
         transform: translateY(-50%);
-        width: 2.75rem;
-        height: 2.75rem;
+        width: clamp(2rem, 4vw, 2.75rem);
+        height: clamp(2rem, 4vw, 2.75rem);
         background: var(--color-primary);
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
+        font-size: clamp(1rem, 1.8vw, 1.4rem);
         font-weight: 700;
         color: white;
       }
 
       .answer-text {
-        font-size: clamp(1rem, 1.8vw, 1.375rem);
-        line-height: 1.4;
+        font-size: clamp(0.875rem, 1.5vw, 1.375rem);
+        line-height: 1.3;
         flex: 1;
         padding-left: 0;
       }
@@ -582,7 +605,8 @@ export class QuestionDisplayScreen extends HTMLElement {
       .timer-controls-row {
         display: flex;
         align-items: stretch;
-        gap: 1.5rem;
+        gap: clamp(0.75rem, 1.5vw, 1.5rem);
+        flex-shrink: 0;
       }
 
       /* Reset global .timer-section styles */
@@ -623,7 +647,7 @@ export class QuestionDisplayScreen extends HTMLElement {
 
       /* Override global font-family and font-size on timer-value */
       .timer-value {
-        font-size: 3rem;
+        font-size: clamp(2rem, 4vw, 3rem);
         font-weight: 700;
         color: var(--color-text);
         font-family: var(--font-family);
@@ -632,7 +656,7 @@ export class QuestionDisplayScreen extends HTMLElement {
       }
 
       .timer-section.expired .timer-value {
-        font-size: 1.75rem;
+        font-size: clamp(1.25rem, 2vw, 1.75rem);
         color: var(--color-error);
         font-weight: 700;
         font-family: var(--font-family);
@@ -676,7 +700,7 @@ export class QuestionDisplayScreen extends HTMLElement {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        font-size: 1.5rem;
+        font-size: clamp(1rem, 1.8vw, 1.5rem);
         color: var(--color-text-secondary);
         font-weight: 500;
       }

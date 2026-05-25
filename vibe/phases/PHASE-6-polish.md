@@ -280,3 +280,45 @@
 - CSS grid for answer options ensures perfect text alignment with or without badges
 
 **Development Time**: 2.5 hours
+
+---
+
+## Phase 6E: Viewport-Fit & Layout Overflow Fixes ✅ COMPLETE
+
+**Status**: COMPLETE (May 6, 2026)
+
+**Objective**: Prevent content overflow on question screens; ensure all content fits or scrolls appropriately.
+
+**Problem**: 
+- Host question screen (projector): long question text or 5-6 answers overflow viewport with `overflow: hidden`, causing clipping
+- Player question screen (mobile): similar overflow issues but should prioritize readability over viewport-fit
+
+**Solution**:
+- **Host screen** (projector): CSS-only auto-fit using flexbox `flex-shrink`, viewport-relative units (`clamp()` with vh/vw), and adaptive grids
+- **Player screen** (mobile): Enable vertical scrolling, maintain readable font sizes
+
+**Completed**:
+- [x] Host question display screen (`question-display-screen.ts`):
+  - ✅ Viewport-relative gaps and padding: `clamp(0.5rem, 1vh, 1rem)`
+  - ✅ Shrinkable `.question-content` and `.answers-grid` sections: `flex: 0/1 1 auto; min-height: 0`
+  - ✅ Lower font-size minimums: `clamp(1.125rem, 3vw, 2.5rem)` for question, `clamp(0.875rem, 1.5vw, 1.375rem)` for answers
+  - ✅ Adaptive grid: 2 columns for ≤4 answers, 3 columns for 5-6 answers (`:has()` selector)
+  - ✅ Timer/controls row stays fixed at bottom (`flex-shrink: 0`)
+- [x] Player question screen (`styles.css`):
+  - ✅ Enable vertical scrolling: `min-height: 100vh; height: auto; overflow-y: auto`
+  - ✅ Adaptive grid for 5-6 answers: 3 columns on tablets/desktop (768px+)
+  - ✅ Keep readable font sizes (no aggressive shrinking)
+
+**Files Modified**: 2 files
+- `packages/host-app/src/components/question-display-screen.ts` (inline styles)
+- `packages/player-app/src/styles.css` (`.question-screen` and responsive breakpoints)
+
+**Design Decisions**:
+- Host screen must fit everything in viewport (projector constraint — no scrolling)
+- Player screen prioritizes readability with scrolling over forced viewport-fit
+- CSS-only solution (no JS libraries) for simplicity and maintainability
+- `:has()` selector for adaptive grids (modern browser support is sufficient for 2026)
+
+**Deliverable**: Host screen auto-fits content to projector viewport. Player screen scrolls vertically while maintaining readability. Both handle 5-6 answer questions gracefully.
+
+**Development Time**: 45 minutes
