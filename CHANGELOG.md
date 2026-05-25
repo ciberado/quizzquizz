@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.6.6] — 2026-05-25
+
 ### Fixed
 - **[host-app]** Question display screen now auto-fits long question text and 5-6 answer options within projector viewport using viewport-relative units and adaptive grid layouts (2-column for ≤4 answers, 3-column for 5-6 answers).
 - **[player-app]** Question screen now enables vertical scrolling for readability instead of clipping content, with adaptive 3-column grid for 5-6 answers on tablets/desktop.
