@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[player-app]** Submit button now displays "Select N more answers" when more than one additional answer is still required for multi-answer questions.
+- **[player-app]** Submit button pulses with a glowing indigo shadow animation when it is enabled and ready to submit.
+- **[config]** `AGENTS.md` at the repo root as the canonical AI agent instructions file; `.github/copilot-instructions.md` now points to it.
+- **[config]** `commit-changes` skill (`.github/skills/commit-changes/SKILL.md`) with file grouping, per-group test gating, CHANGELOG updating, and optional patch/minor version bump.
+- **[config]** Improved `copilot-instructions.md`: single-test commands, dev service port table, TypeScript build order, Prisma workflow commands, and `BaseComponent` pattern documentation.
+
 ## [0.7.0] — 2026-05-25
 
 ### Added
