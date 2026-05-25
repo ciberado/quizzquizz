@@ -209,9 +209,21 @@ export class QuestionScreen extends BaseComponent {
     });
   }
 
+  private getSubmitButtonText(): string {
+    if (this.hasSubmitted) return 'Submitted';
+    const correctCount = this.currentQuestion?.correctAnswerIds?.length ?? 1;
+    const remaining = correctCount - this.selectedAnswerIds.size;
+    if (remaining > 1) {
+      return `Select ${remaining} more answers`;
+    }
+    return 'Submit Answer';
+  }
+
   private updateSubmitButton(): void {
     const submitBtn = this.querySelector('.submit-btn') as HTMLButtonElement;
     if (submitBtn) {
+      submitBtn.textContent = this.getSubmitButtonText();
+
       // If already submitted, keep disabled
       if (this.hasSubmitted) {
         submitBtn.disabled = true;

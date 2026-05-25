@@ -983,6 +983,19 @@ label {
   font-size: var(--font-size-lg);
 }
 
+.submit-btn:not(:disabled) {
+  animation: submit-shine 2s ease-in-out infinite;
+}
+
+@keyframes submit-shine {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+  50% {
+    box-shadow: 0 0 18px 6px rgba(99, 102, 241, 0.55);
+  }
+}
+
 .hint {
   font-size: var(--font-size-sm);
   color: var(--color-text-light);
