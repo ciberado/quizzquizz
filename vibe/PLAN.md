@@ -52,7 +52,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
   - Auth-header login state fix: AbortError no longer clears user; `onMount()` + `auth-state` event listener
   - "QuizzQuizz" heading is now a `#/` home link in both apps
   - **18 new Vitest integration tests** + **19 Playwright E2E tests** (quiz-upload + username display)
-- 🎯 **Next: Phase 10 — Additional Question Types** (or Phase 7F — Question Bank Folder Navigation)
+- 🎯 **Next: Phase 7F — Question Bank Folder Navigation** (or Phase 8 production hardening)
 
 **Tooling**:
 - ✅ **`@quizzquizz/question-bank-builder`** — Standalone CLI for bulk question-bank production. Reads JSONL, enriches with AI (Bedrock), classifies by topic taxonomy, and writes Markdown files directly into `question-banks/`. See [`packages/question-bank-builder/README.md`](../packages/question-bank-builder/README.md).
@@ -75,9 +75,9 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 **Future Vision** (Post-v1.0):
 - ✅ Phase 9: User Accounts (9A–9E complete)
 - ✅ Phase 9F: Granular Question Statistics & Post-Game Stat Recording (COMPLETE)
-- 🎯 Phase 10: Additional Question Types (4-6 hrs)
+- ❌ Phase 10: Additional Question Types — **DISCARDED** (complexity vs. value tradeoff; multiple-choice covers 95%+ of use cases)
 - Phase 11: Team Mode (4-5 hrs)
-- 🟡 Phase 12: Analytics (17-24 hrs) - PARTIAL: Host question analytics complete; [detailed plan](phases/PHASE-12-analytics.md)
+- ✅ Phase 12: Analytics (17-24 hrs) — COMPLETE! — [detailed plan](phases/PHASE-12-analytics.md)
 - ✅ **Phase 13**: User Quiz Upload (4-6 hrs) — COMPLETE! — [detailed plan](phases/PHASE-13-quiz-upload.md)
   - 13A: Backend API — upload endpoint, validation, in-process reload with mutex ✅
   - 13B: Host App UI — upload modal in bank-browser, file picker + textarea, Claude prompt button ✅
@@ -86,11 +86,13 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Phase 15: Enterprise Features (4-5 hrs)
 
 **Test Coverage Summary**: 
-- **~218 tests total** (unit + integration) — **~216 pass, 2 skip, 100% pass rate**
-- Common utilities: 25 tests (PIN generation, scoring, validation) - ✅ 100%
-- Question bank parser: 16 tests (markdown parsing, filtering) - ✅ 100%
-- API server: 213 unit + integration tests across 12 test files (incl. 18 upload tests) - ✅ 100%
-- Player app: 12 unit tests (components, state management, router) - ✅ 100%
+- **~400 tests total** (unit + integration) — **~399 pass, 1 failing, 2 skip**
+- Common utilities: 46 tests (PIN generation, scoring, validation) - ✅ 100%
+- Question bank parser: 28 tests (markdown parsing, filtering) - ✅ 100%
+- API server: 251 unit + integration tests across 13 test files (incl. upload + analytics auth tests) — ⚠️ 1 failing (`auth/middleware.test.ts`: timing issue with Better Auth session cookie in test environment)
+- Player app: 28 unit tests (components, state management, router) - ✅ 100%
+- Analytics: 47 unit tests (stats, quality, streaks) - ✅ 100%
+- Analytics-UI: no tests (UI components only)
 - E2E: 43+ comprehensive scenarios (complete flows, edge cases, isolation) - ✅ 95%+
   - API tests: 4 scenarios ✅
   - Player UI tests: 4 scenarios ✅
@@ -237,17 +239,11 @@ See [PHASE-7-8-features-deployment.md](phases/PHASE-7-8-features-deployment.md)
 See [PHASE-9-15-future.md](phases/PHASE-9-15-future.md)
 - ✅ Phase 9: User Accounts & Persistence (9A–9E complete)
 - ✅ Phase 9F: Granular Question Statistics & Post-Game Stat Recording (COMPLETE)
-- 🎯 Phase 10: Additional Question Types
+- ❌ Phase 10: Additional Question Types — **DISCARDED**
 - Phase 11: Team Mode & Collaboration
-- 🟡 Phase 12: Analytics Package (17-24 hrs) — [detailed plan](phases/PHASE-12-analytics.md), [design doc](ANALYTICS-PACKAGE.md)
-  - 12A: Package scaffolding & shared computation library
-  - 12B: Host analytics backend
-  - 12C: Player analytics backend
-  - 12D: API routes & authorization
-  - 12E: Analytics-UI shared components & host screens
-  - 12F: Analytics-UI player screens & linking
-  - 12G: Docker & deployment integration
-- Phase 13: Public Question Bank Marketplace
+- ✅ Phase 12: Analytics Package — COMPLETE! — [detailed plan](phases/PHASE-12-analytics.md), [design doc](ANALYTICS-PACKAGE.md)
+- ✅ Phase 13: User Quiz Upload — COMPLETE! — [detailed plan](phases/PHASE-13-quiz-upload.md)
+- Phase 13M: Public Question Bank Marketplace
 - Phase 14: Mobile Apps (Native)
 - Phase 15: Advanced Hosting Features
 
