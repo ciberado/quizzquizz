@@ -447,6 +447,14 @@ export class QuestionPreviewScreen extends BaseComponent {
               <button class="btn-secondary" data-action="back">
                 Cancel
               </button>
+              <button
+                class="btn-secondary"
+                data-action="download"
+                ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
+                title="Download the filtered questions as a Markdown question bank"
+              >
+                ⬇ Download
+              </button>
               <button 
                 class="btn" 
                 data-action="create"
@@ -768,6 +776,14 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
+    // Download button
+    const downloadBtn = this.qs('[data-action="download"]');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        this.downloadFilteredBank();
+      });
+    }
+
     // Create session button
     const createBtn = this.qs('[data-action="create"]');
     if (createBtn) {
@@ -775,6 +791,89 @@ export class QuestionPreviewScreen extends BaseComponent {
         this.createSession();
       });
     }
+  }
+
+  private async downloadFilteredBank(): Promise<void> {
+    if (!this.bank || !this.preview) return;
+
+    const btn = this.qs<HTMLButtonElement>('[data-action="download"]');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparing...'; }
+
+    try {
+      // Fetch all filtered questions in a single request
+      const total = this.preview.pagination.totalQuestions;
+      const qParams: { page?: number; limit?: number; difficulty?: string; topic?: string } = {
+        page: 1,
+        limit: total > 0 ? total : 9999,
+      };
+      if (this.selectedDifficulties.size > 0) {
+        qParams.difficulty = Array.from(this.selectedDifficulties).join(',');
+      }
+      if (this.selectedTopics.size > 0) {
+        const realTopics: string[] = [];
+        const othersTopics = this.getOthersTopics();
+        for (const t of this.selectedTopics) {
+          if (t === 'Others') {
+            realTopics.push(...othersTopics);
+          } else {
+            realTopics.push(t);
+          }
+        }
+        qParams.topic = realTopics.join(',');
+      }
+
+      const allData = await api.getQuestionBankQuestions(this.bankId, qParams) as QuestionPreviewResponse;
+      const markdown = this.generateMarkdown(allData.questions);
+
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const slug = this.bank.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      a.href = url;
+      a.download = `${slug}-filtered.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download filtered bank:', error);
+      handleApiError(error, 'Downloading question bank');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '⬇ Download'; }
+    }
+  }
+
+  private generateMarkdown(questions: Question[]): string {
+    const bankName = this.bank!.name;
+    const allTopics = [...new Set(questions.flatMap(q => q.topics))].sort();
+    const topicsLine = allTopics.length > 0 ? allTopics.join(', ') : 'General';
+
+    const lines: string[] = [
+      `# Question Bank: ${bankName}`,
+      '',
+      '## Metadata',
+      `- **Topics**: ${topicsLine}`,
+    ];
+    if (this.bank!.description) {
+      lines.push(`- **Description**: ${this.bank!.description}`);
+    }
+    lines.push('', '---', '', '## Questions', '');
+
+    for (const q of questions) {
+      lines.push(`### ${q.id}`);
+      lines.push(`**Difficulty**: ${q.difficulty}`);
+      if (q.topics.length > 0) lines.push(`**Topics**: ${q.topics.join(', ')}`);
+      if (q.tags.length > 0) lines.push(`**Tags**: ${q.tags.join(', ')}`);
+      if (q.timeLimit) lines.push(`**Time Limit**: ${q.timeLimit}s`);
+      lines.push('');
+      lines.push(q.text);
+      lines.push('');
+      for (const answer of q.answers) {
+        const correct = q.correctAnswerIds.includes(answer.id);
+        lines.push(`- [${correct ? 'x' : ' '}] ${answer.text}`);
+      }
+      lines.push('', '---', '');
+    }
+
+    return lines.join('\n');
   }
 
   private async createSession(): Promise<void> {

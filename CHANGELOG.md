@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
+- **[host-app]** Download button on the question preview screen that fetches all questions matching the active difficulty/topic filters and saves them as a Markdown question bank file.
 - **[player-app]** Submit button now displays "Select N more answers" when more than one additional answer is still required for multi-answer questions.
 - **[player-app]** Submit button pulses with a glowing indigo shadow animation when it is enabled and ready to submit.
 - **[config]** `AGENTS.md` at the repo root as the canonical AI agent instructions file; `.github/copilot-instructions.md` now points to it.
