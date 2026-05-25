@@ -42,7 +42,10 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
       return c.json({ error: 'Session not found' }, 404);
     }
 
-    if (session.status !== 'lobby') {
+    // Flashcard sessions start immediately in 'playing' state - allow joining them
+    // Regular quiz sessions require 'lobby' state
+    const canJoin = session.status === 'lobby' || (session.mode === 'flashcard' && session.status === 'playing');
+    if (!canJoin) {
       return c.json({ error: 'Session has already started' }, 400);
     }
 
@@ -76,6 +79,7 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
         playerId,
         sessionId: session.id,
         nickname,
+        mode: session.mode,
       },
       201
     );

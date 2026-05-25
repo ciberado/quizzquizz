@@ -40,6 +40,14 @@
         file_server
     }
 
+    # Flashcard app - serve static files directly from filesystem
+    handle /flashcard* {
+        root * /app/static/flashcard-app
+        uri strip_prefix /flashcard
+        try_files {path} /index.html
+        file_server
+    }
+
     # Player app - serve static files directly from filesystem (root and all other routes)
     handle /* {
         root * /app/static/player-app

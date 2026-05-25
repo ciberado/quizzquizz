@@ -35,11 +35,11 @@ if [ -d /app/dist-build/api-server/prisma ]; then
   echo "  ✓ api-server/prisma"
 fi
 
-# ── Frontend packages (host-app, player-app, analytics-ui) ─────────────────────
+# ── Frontend packages (host-app, player-app, analytics-ui, flashcard-app) ────────────
 # Sync dist/ into /app/static/<pkg>/ — this directory IS volume-mounted and shared
 # with the Caddy container for static file serving. Keeping it separate from
 # /app/packages means node_modules under /app/packages are never clobbered.
-for pkg in host-app player-app analytics-ui; do
+for pkg in host-app player-app analytics-ui flashcard-app; do
   src="/app/dist-build/${pkg}/dist"
   dst="/app/static/${pkg}"
   if [ -d "$src" ]; then

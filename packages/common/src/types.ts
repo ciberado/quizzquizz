@@ -51,11 +51,15 @@ export type QuestionBank = z.infer<typeof QuestionBankSchema>;
 export const SessionStatusSchema = z.enum(['lobby', 'playing', 'finished']);
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 
+export const SessionModeSchema = z.enum(['quiz', 'flashcard']);
+export type SessionMode = z.infer<typeof SessionModeSchema>;
+
 export const SessionSchema = z.object({
   id: z.string().uuid(),
   pin: z.string().length(6),
   hostToken: z.string().uuid(),
   status: SessionStatusSchema,
+  mode: SessionModeSchema.default('quiz'),
   questionBankId: z.string(),
   questions: z.array(QuestionSchema),
   currentQuestionIndex: z.number(),
@@ -101,6 +105,7 @@ export type PlayerAnswer = z.infer<typeof PlayerAnswerSchema>;
 // Session creation
 export const CreateSessionRequestSchema = z.object({
   questionBankId: z.string(),
+  mode: SessionModeSchema.optional().default('quiz'),
   questionIds: z.array(z.string()).optional(), // Specific question IDs to use (omit for all questions)
   randomOrder: z.boolean().optional(), // Whether to shuffle questions
   shuffleAnswers: z.boolean().optional().default(true), // Whether to shuffle answer order within each question
@@ -163,6 +168,21 @@ export const GameStateSchema = z.object({
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
+
+// Flashcard session state (returned by GET /api/sessions/:id/flashcard-state)
+export const FlashcardSessionStateSchema = z.object({
+  sessionId: z.string().uuid(),
+  pin: z.string().length(6),
+  status: SessionStatusSchema,
+  mode: SessionModeSchema,
+  questionBankId: z.string(),
+  questionBankName: z.string(),
+  questions: z.array(QuestionSchema),
+  totalQuestions: z.number(),
+  createdAt: z.number(),
+});
+
+export type FlashcardSessionState = z.infer<typeof FlashcardSessionStateSchema>;
 
 // Leaderboard
 export const LeaderboardEntrySchema = z.object({

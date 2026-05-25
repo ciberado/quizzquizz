@@ -720,3 +720,73 @@ describe('Session Routes', () => {
     });
   });
 });
+
+describe('Flashcard Session Routes', () => {
+  beforeEach(async () => {
+    await resetPrismaInstance();
+    process.env.DATABASE_URL = 'file::memory:?cache=flashcard-tests';
+    await initDatabase();
+    questionBanks.set('test-bank', {
+      id: 'test-bank',
+      metadata: { name: 'Test Bank', defaultTimeLimit: 10, topics: [] },
+      questions: [
+        { id: 'q1', text: 'Q1', answers: [{ id: 'a1', text: 'A1' }, { id: 'a2', text: 'A2' }], correctAnswerIds: ['a1'], difficulty: 'easy', topics: [], tags: [] },
+        { id: 'q2', text: 'Q2', answers: [{ id: 'a3', text: 'A3' }, { id: 'a4', text: 'A4' }], correctAnswerIds: ['a3'], difficulty: 'easy', topics: [], tags: [] },
+      ],
+    } as any);
+  });
+
+  it('should create a flashcard session with mode=flashcard and status=playing', async () => {
+    const res = await request('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionBankId: 'test-bank', mode: 'flashcard' }),
+    });
+    expect(res.status).toBe(201);
+    const data: any = await res.json();
+    expect(data.mode).toBe('flashcard');
+    expect(data.status).toBe('playing');
+    expect(data.pin).toHaveLength(6);
+  });
+
+  it('should return flashcard state with all questions', async () => {
+    const createRes = await request('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionBankId: 'test-bank', mode: 'flashcard' }),
+    });
+    const { id } = await createRes.json() as any;
+
+    const stateRes = await request(`/api/sessions/${id}/flashcard-state`);
+    expect(stateRes.status).toBe(200);
+    const state: any = await stateRes.json();
+    expect(state.mode).toBe('flashcard');
+    expect(state.questions).toHaveLength(2);
+    expect(state.totalQuestions).toBe(2);
+    expect(state.sessionId).toBe(id);
+  });
+
+  it('should return 400 for flashcard-state on a quiz session', async () => {
+    const createRes = await request('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionBankId: 'test-bank', mode: 'quiz' }),
+    });
+    const { id } = await createRes.json() as any;
+
+    const stateRes = await request(`/api/sessions/${id}/flashcard-state`);
+    expect(stateRes.status).toBe(400);
+  });
+
+  it('should default to quiz mode when mode is omitted', async () => {
+    const res = await request('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionBankId: 'test-bank' }),
+    });
+    expect(res.status).toBe(201);
+    const data: any = await res.json();
+    expect(data.mode).toBe('quiz');
+    expect(data.status).toBe('lobby');
+  });
+});

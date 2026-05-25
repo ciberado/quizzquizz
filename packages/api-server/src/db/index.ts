@@ -143,6 +143,7 @@ export async function initDatabase() {
         pin TEXT NOT NULL UNIQUE,
         host_token TEXT NOT NULL,
         user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+        mode TEXT NOT NULL DEFAULT 'quiz',
         question_bank_id TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'lobby',
         current_question_index INTEGER NOT NULL DEFAULT -1,

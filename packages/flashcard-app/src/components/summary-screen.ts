@@ -1,0 +1,198 @@
+/**
+ * Summary Screen — shown after completing all flashcards.
+ * Displays stats: first-try successes, retried cards, total attempts per card, time spent.
+ * Provides download button for JSON/CSV export.
+ */
+import { BaseComponent } from './base-component';
+import { router } from '../router';
+import type { LeitnerStats } from '../leitner';
+
+export class FlashcardSummaryScreen extends BaseComponent {
+  private stats: LeitnerStats | null = null;
+  private bankName: string = '';
+
+  protected onMount(): void {
+    try {
+      const raw = sessionStorage.getItem('qz-flashcard-stats');
+      if (raw) this.stats = JSON.parse(raw) as LeitnerStats;
+      this.bankName = sessionStorage.getItem('qz-flashcard-bank-name') || 'Flashcard Session';
+    } catch { /* ignore */ }
+    this.render();
+  }
+
+  protected render(): void {
+    if (!this.stats) {
+      this.setContent(`
+        <div class="screen"><div class="container"><div class="card text-center">
+          <h2>No session data found</h2>
+          <button class="btn-primary" id="home-btn" style="margin-top: var(--spacing-md);">← Start New Session</button>
+        </div></div></div>
+      `);
+      this.qs('#home-btn')?.addEventListener('click', () => router.navigate('/'));
+      return;
+    }
+
+    const s = this.stats;
+    const minutesStr = this.formatTime(s.totalTimeMs);
+    const masteredPct = s.totalCards > 0 ? Math.round((s.graduated / s.totalCards) * 100) : 0;
+
+    this.setContent(`
+      <div class="screen">
+        <div class="container" style="max-width: 700px;">
+          <div class="card" style="margin-bottom: var(--spacing-md); text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: var(--spacing-sm);">🎓</div>
+            <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Session Complete!</h1>
+            <p class="text-secondary">${this.escapeHtml(this.bankName)}</p>
+          </div>
+
+          <!-- Summary Stats -->
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+            <div class="card text-center" style="padding: var(--spacing-md);">
+              <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);">${s.graduated}</div>
+              <div class="text-secondary" style="font-size: var(--font-size-sm);">Cards Mastered</div>
+              <div class="text-secondary" style="font-size: var(--font-size-sm);">(${masteredPct}%)</div>
+            </div>
+            <div class="card text-center" style="padding: var(--spacing-md);">
+              <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">${s.firstTrySuccessCount}</div>
+              <div class="text-secondary" style="font-size: var(--font-size-sm);">Known on First Try</div>
+            </div>
+            <div class="card text-center" style="padding: var(--spacing-md);">
+              <div style="font-size: 2rem; font-weight: 700; color: var(--color-warning);">${s.retriedCount}</div>
+              <div class="text-secondary" style="font-size: var(--font-size-sm);">Needed Retries</div>
+            </div>
+            <div class="card text-center" style="padding: var(--spacing-md);">
+              <div style="font-size: 2rem; font-weight: 700;">${minutesStr}</div>
+              <div class="text-secondary" style="font-size: var(--font-size-sm);">Time Spent</div>
+            </div>
+          </div>
+
+          <!-- Per-Card Details -->
+          <div class="card" style="margin-bottom: var(--spacing-md);">
+            <h2 style="margin-bottom: var(--spacing-md);">Card Details</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-sm);">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--color-border);">
+                  <th style="text-align: left; padding: var(--spacing-xs);">Question</th>
+                  <th style="text-align: center; padding: var(--spacing-xs);">✓ Yes</th>
+                  <th style="text-align: center; padding: var(--spacing-xs);">✗ No</th>
+                  <th style="text-align: center; padding: var(--spacing-xs);">First Try</th>
+                  <th style="text-align: center; padding: var(--spacing-xs);">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${s.cardDetails
+                  .map(
+                    (d) => `
+                  <tr style="border-bottom: 1px solid var(--color-border);">
+                    <td style="padding: var(--spacing-xs); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeHtml(d.card.text)}">${this.escapeHtml(d.card.text)}</td>
+                    <td style="text-align: center; padding: var(--spacing-xs); color: var(--color-success);">${d.yesCount}</td>
+                    <td style="text-align: center; padding: var(--spacing-xs); color: var(--color-error);">${d.noCount}</td>
+                    <td style="text-align: center; padding: var(--spacing-xs);">
+                      ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
+                    </td>
+                    <td style="text-align: center; padding: var(--spacing-xs);">
+                      ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">✓ Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+            <button id="download-json-btn" class="btn-secondary" style="padding: var(--spacing-md);">⬇ Download JSON</button>
+            <button id="download-csv-btn" class="btn-secondary" style="padding: var(--spacing-md);">⬇ Download CSV</button>
+          </div>
+
+          <button id="new-session-btn" class="btn-primary" style="width: 100%; padding: var(--spacing-md); font-size: var(--font-size-lg);">
+            ← Start New Session
+          </button>
+        </div>
+      </div>
+    `);
+
+    this.qs('#download-json-btn')?.addEventListener('click', () => this.downloadJson());
+    this.qs('#download-csv-btn')?.addEventListener('click', () => this.downloadCsv());
+    this.qs('#new-session-btn')?.addEventListener('click', () => router.navigate('/'));
+  }
+
+  private formatTime(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes === 0) return `${seconds}s`;
+    return `${minutes}m ${seconds}s`;
+  }
+
+  private downloadJson(): void {
+    if (!this.stats) return;
+    const data = {
+      bankName: this.bankName,
+      completedAt: new Date().toISOString(),
+      summary: {
+        totalCards: this.stats.totalCards,
+        graduated: this.stats.graduated,
+        firstTrySuccessCount: this.stats.firstTrySuccessCount,
+        retriedCount: this.stats.retriedCount,
+        neverSucceededCount: this.stats.neverSucceededCount,
+        totalTimeMs: this.stats.totalTimeMs,
+      },
+      cards: this.stats.cardDetails.map((d) => ({
+        id: d.card.id,
+        question: d.card.text,
+        answer: d.card.answer,
+        yesCount: d.yesCount,
+        noCount: d.noCount,
+        totalAttempts: d.totalAttempts,
+        firstTrySuccess: d.firstTrySuccess,
+        graduated: d.graduated,
+      })),
+    };
+    this.triggerDownload(
+      JSON.stringify(data, null, 2),
+      'application/json',
+      `flashcard-stats-${Date.now()}.json`
+    );
+  }
+
+  private downloadCsv(): void {
+    if (!this.stats) return;
+    const header = 'id,question,answer,yesCount,noCount,totalAttempts,firstTrySuccess,graduated';
+    const rows = this.stats.cardDetails.map((d) => {
+      const q = d.card.text.replace(/"/g, '""');
+      const a = d.card.answer.replace(/"/g, '""');
+      return `"${d.card.id}","${q}","${a}",${d.yesCount},${d.noCount},${d.totalAttempts},${d.firstTrySuccess ?? ''},${d.graduated}`;
+    });
+    this.triggerDownload(
+      [header, ...rows].join('\n'),
+      'text/csv',
+      `flashcard-stats-${Date.now()}.csv`
+    );
+  }
+
+  private triggerDownload(content: string, mimeType: string, filename: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+}
+
+customElements.define('flashcard-summary-screen', FlashcardSummaryScreen);

@@ -16,6 +16,7 @@ import './components/question-display-screen';
 import './components/leaderboard-screen';
 import './components/final-results-screen';
 import './components/question-stats-table';
+import './components/flashcard-lobby-screen';
 
 /**
  * QuizzQuizz Host App
@@ -66,6 +67,10 @@ router.on('/leaderboard', () => {
 
 router.on('/results', () => {
   showScreen('final-results-screen');
+});
+
+router.on('/flashcard-lobby/:sessionId', () => {
+  showScreen('flashcard-lobby-screen');
 });
 
 // Helper function to show a screen

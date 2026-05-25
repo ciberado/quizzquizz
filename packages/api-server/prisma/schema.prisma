@@ -92,6 +92,7 @@ model QuizSession {
   pin                  String    @unique
   hostToken            String    @map("host_token")
   userId               String?   @map("user_id") // NEW: Link to authenticated host (nullable for anonymous)
+  mode                 String    @default("quiz") // 'quiz' | 'flashcard'
   questionBankId       String    @map("question_bank_id")
   questionIds          String?   @map("question_ids") // JSON array of question IDs to use (null = all questions) 
   randomOrder          Boolean   @default(false) @map("random_order") // Whether to shuffle questions

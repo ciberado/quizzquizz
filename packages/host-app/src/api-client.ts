@@ -228,6 +228,7 @@ export const api = {
   async createSession(
     questionBankId: string,
     options?: {
+      mode?: 'quiz' | 'flashcard';
       questionIds?: string[];
       randomOrder?: boolean;
       shuffleAnswers?: boolean;
@@ -239,11 +240,13 @@ export const api = {
     id: string;
     pin: string;
     hostToken: string;
+    mode?: string;
   }> {
     return apiRequest('/api/sessions', {
       method: 'POST',
       body: JSON.stringify({
         questionBankId,
+        ...(options?.mode && { mode: options.mode }),
         ...(options?.questionIds && { questionIds: options.questionIds }),
         ...(options?.randomOrder !== undefined && { randomOrder: options.randomOrder }),
         ...(options?.shuffleAnswers !== undefined && { shuffleAnswers: options.shuffleAnswers }),

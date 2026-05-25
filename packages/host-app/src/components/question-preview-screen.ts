@@ -456,6 +456,14 @@ export class QuestionPreviewScreen extends BaseComponent {
                 ⬇ Download
               </button>
               <button 
+                class="btn-secondary" 
+                data-action="create-flashcard"
+                ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
+                title="Launch a self-paced flashcard session with these questions"
+              >
+                🃏 Launch Flashcards
+              </button>
+              <button 
                 class="btn" 
                 data-action="create"
                 ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
@@ -784,6 +792,14 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
+    // Launch flashcard session button
+    const flashcardBtn = this.qs('[data-action="create-flashcard"]');
+    if (flashcardBtn) {
+      flashcardBtn.addEventListener('click', () => {
+        this.createFlashcardSession();
+      });
+    }
+
     // Create session button
     const createBtn = this.qs('[data-action="create"]');
     if (createBtn) {
@@ -874,6 +890,65 @@ export class QuestionPreviewScreen extends BaseComponent {
     }
 
     return lines.join('\n');
+  }
+
+  private async createFlashcardSession(): Promise<void> {
+    if (!this.bank || !this.preview) return;
+
+    let selectedCount = this.selectAllMode
+      ? this.preview.pagination.totalQuestions
+      : this.selectedQuestionIds.size;
+
+    if (this.maxQuestions !== null && selectedCount > this.maxQuestions) {
+      selectedCount = this.maxQuestions;
+    }
+
+    if (selectedCount === 0) {
+      this.showError('Please select at least one question');
+      return;
+    }
+
+    this.showLoading('Creating flashcard session...');
+
+    try {
+      let questionIds: string[] | undefined;
+      if (this.selectAllMode) {
+        questionIds = this.preview.questions.map((q) => q.id);
+      } else {
+        questionIds = Array.from(this.selectedQuestionIds);
+      }
+
+      if (this.maxQuestions !== null && questionIds && questionIds.length > this.maxQuestions) {
+        const shuffled = [...questionIds];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const temp = shuffled[i]!;
+          shuffled[i] = shuffled[j]!;
+          shuffled[j] = temp;
+        }
+        questionIds = shuffled.slice(0, this.maxQuestions);
+      }
+
+      const session = await api.createSession(this.bankId, {
+        mode: 'flashcard',
+        questionIds,
+        randomOrder: this.randomOrder,
+        shuffleAnswers: this.shuffleAnswers,
+      });
+
+      state.setState({
+        sessionId: session.id,
+        hostToken: session.hostToken,
+        pin: session.pin,
+        questionBankId: this.bankId,
+      });
+
+      router.navigate(`/flashcard-lobby/${session.id}`);
+    } catch (error) {
+      console.error('Failed to create flashcard session:', error);
+      handleApiError(error, 'Creating flashcard session');
+      this.showError(`Failed to create flashcard session: ${getErrorMessage(error)}`);
+    }
   }
 
   private async createSession(): Promise<void> {

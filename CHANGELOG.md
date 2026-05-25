@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
+- **[flashcard-app]** New `packages/flashcard-app` package — standalone Vite + Web Components SPA for flashcard-mode study sessions, served at `/flashcard/` (port 3004 in dev).
+- **[flashcard-app]** Modified Leitner System engine (`leitner.ts`) — 3-box spaced-repetition algorithm with card-count spacing (Box 2 = 4 cards, Box 3 = 9 cards), deadlock fallback, and full session stats.
+- **[flashcard-app]** Join screen — PIN + nickname entry, validates flashcard session, navigates to play screen.
+- **[flashcard-app]** Play screen — shows question, "Show Answer" button reveals correct answer, then "Yes ✓" / "No ✗" buttons to mark knowledge; progress bar and box indicators shown.
+- **[flashcard-app]** Summary screen — per-card results table, session stats (mastered on first try, retried, total time), and JSON/CSV download button.
+- **[host-app]** "🃏 Launch Flashcards" button on the question preview screen, alongside the existing "Create Quiz" button.
+- **[host-app]** Flashcard lobby screen (`/flashcard-lobby/:sessionId`) — shows PIN, share link, and "▶ Play Now" button that redirects the host directly into the flashcard app.
+- **[api-server]** `mode` field on `quiz_sessions` table (`'quiz' | 'flashcard'`, default `'quiz'`); Prisma migration `20260525180957_add_session_mode`.
+- **[api-server]** `GET /api/sessions/:id/flashcard-state` endpoint — returns all questions for a flashcard session (returns 400 for quiz sessions).
+- **[api-server]** Flashcard sessions auto-start with `status='playing'`; the join endpoint accepts players into playing flashcard sessions.
+- **[common]** `SessionModeSchema` (`'quiz' | 'flashcard'`), `mode` field on `SessionSchema` and `CreateSessionRequestSchema`, and `FlashcardSessionStateSchema`.
+- **[config]** `/flashcard*` route in Caddyfile, flashcard-app build/copy stages in Dockerfile, flashcard-app in `docker-entrypoint.sh`, flashcard-app added to root `npm run dev` on port 3004.
+- **[tests]** 15 Leitner engine unit tests, 6 flashcard component/logic tests, 4 flashcard API integration tests, 9 flashcard E2E Playwright tests.
+
 - **[host-app]** Download button on the question preview screen that fetches all questions matching the active difficulty/topic filters and saves them as a Markdown question bank file.
 - **[player-app]** Submit button now displays "Select N more answers" when more than one additional answer is still required for multi-answer questions.
 - **[player-app]** Submit button pulses with a glowing indigo shadow animation when it is enabled and ready to submit.

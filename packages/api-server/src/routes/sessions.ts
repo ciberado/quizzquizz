@@ -26,6 +26,7 @@ sessionRoutes.use('*', authMiddleware);
 // Create session request schema
 const CreateSessionSchema = z.object({
   questionBankId: z.string(),
+  mode: z.enum(['quiz', 'flashcard']).optional().default('quiz'),
   questionIds: z.array(z.string()).optional(),
   randomOrder: z.boolean().optional(),
   shuffleAnswers: z.boolean().optional().default(true),
@@ -44,11 +45,14 @@ function getAutoTimeMuliplier(): number {
 
 // Create a new session
 sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
-  const { questionBankId, questionIds, randomOrder, shuffleAnswers, automaticPace, autoQuestionTime, pace } = c.req.valid('json');
+  const { questionBankId, mode, questionIds, randomOrder, shuffleAnswers, automaticPace, autoQuestionTime, pace } = c.req.valid('json');
   
   // Derive automaticPace from pace: 'normal' means auto-advance, others don't
   const effectiveAutomaticPace = automaticPace !== undefined ? automaticPace : (pace === 'normal');
   
+  // Flashcard sessions start immediately in 'playing' state (no lobby wait)
+  const initialStatus = mode === 'flashcard' ? 'playing' : 'lobby';
+
   // Get authenticated user if present (optional auth)
   const user = c.get('user');
 
@@ -68,6 +72,7 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         pin,
         hostToken,
         userId: user?.id || null, // Link to authenticated user if logged in
+        mode: mode || 'quiz',
         questionBankId,
         questionIds: questionIds ? JSON.stringify(questionIds) : null,
         randomOrder: randomOrder || false,
@@ -75,7 +80,7 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         automaticPace: effectiveAutomaticPace,
         autoQuestionTime: autoQuestionTime || false,
         pace: pace || 'normal',
-        status: 'lobby',
+        status: initialStatus,
         currentQuestionIndex: -1,
         // createdAt uses @default(now()) in schema
         expiresAt,
@@ -88,7 +93,8 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         pin,
         hostToken,
         questionBankId,
-        status: 'lobby',
+        mode: mode || 'quiz',
+        status: initialStatus,
       },
       201
     );
@@ -511,6 +517,43 @@ sessionRoutes.get('/:id/question-stats', async (c) => {
   } catch (error) {
     console.error('Error fetching question statistics:', error);
     return c.json({ error: 'Failed to fetch question statistics' }, 500);
+  }
+});
+
+// Get flashcard session state (returns all questions for client-side Leitner engine)
+sessionRoutes.get('/:id/flashcard-state', async (c) => {
+  const sessionId = c.req.param('id');
+
+  try {
+    const session = await getPrisma().quizSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    if (session.mode !== 'flashcard') {
+      return c.json({ error: 'Session is not a flashcard session' }, 400);
+    }
+
+    const questions = getSessionQuestions(session);
+    const questionBank = questionBanks.get(session.questionBankId);
+
+    return c.json({
+      sessionId: session.id,
+      pin: session.pin,
+      status: session.status,
+      mode: session.mode,
+      questionBankId: session.questionBankId,
+      questionBankName: questionBank?.metadata.name || session.questionBankId,
+      questions,
+      totalQuestions: questions.length,
+      createdAt: session.createdAt.getTime(),
+    });
+  } catch (error) {
+    console.error('Error fetching flashcard state:', error);
+    return c.json({ error: 'Failed to fetch flashcard state' }, 500);
   }
 });
 

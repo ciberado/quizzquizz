@@ -17,6 +17,7 @@ COPY packages/analytics/package*.json ./packages/analytics/
 COPY packages/analytics-ui/package*.json ./packages/analytics-ui/
 COPY packages/host-app/package*.json ./packages/host-app/
 COPY packages/player-app/package*.json ./packages/player-app/
+COPY packages/flashcard-app/package*.json ./packages/flashcard-app/
 
 # Install all dependencies (including devDependencies for build)
 # Use --ignore-scripts: prisma schema isn't copied yet; explicit "prisma generate" runs later
@@ -31,6 +32,7 @@ COPY packages/analytics/ ./packages/analytics/
 COPY packages/analytics-ui/ ./packages/analytics-ui/
 COPY packages/host-app/ ./packages/host-app/
 COPY packages/player-app/ ./packages/player-app/
+COPY packages/flashcard-app/ ./packages/flashcard-app/
 
 # Generate Prisma client
 RUN cd packages/api-server && npx prisma generate
@@ -82,6 +84,7 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/prisma ./pack
 COPY --chown=nodejs:nodejs --from=builder /app/packages/host-app/dist ./dist-build/host-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./dist-build/player-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics-ui/dist ./dist-build/analytics-ui/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/flashcard-app/dist ./dist-build/flashcard-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/dist ./dist-build/analytics/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./dist-build/common/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dist-build/question-bank/dist
@@ -111,7 +114,7 @@ RUN mkdir -p \
     chown -R nodejs:nodejs /app/packages
 
 # Create target directory for frontend static files (shared with Caddy via app-static volume)
-RUN mkdir -p /app/static/host-app /app/static/player-app /app/static/analytics-ui && \
+RUN mkdir -p /app/static/host-app /app/static/player-app /app/static/analytics-ui /app/static/flashcard-app && \
     chown -R nodejs:nodejs /app/static
 
 # Copy default question banks (can be overridden with volume mount)
