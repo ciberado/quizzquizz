@@ -7,6 +7,10 @@ import { BaseComponent } from './base-component';
 import { state } from '../state';
 import { router } from '../router';
 
+// Injected by Vite at build time (see vite.config.ts define).
+// In dev: 'http://localhost:3004'; in production builds: ''.
+declare const __FLASHCARD_ORIGIN__: string;
+
 export class FlashcardLobbyScreen extends BaseComponent {
   private sessionId: string = '';
   private pin: string = '';
@@ -136,7 +140,9 @@ export class FlashcardLobbyScreen extends BaseComponent {
   }
 
   private getFlashcardBaseUrl(): string {
-    const origin = window.location.origin;
+    const origin = (typeof __FLASHCARD_ORIGIN__ !== 'undefined' && __FLASHCARD_ORIGIN__)
+      ? __FLASHCARD_ORIGIN__
+      : window.location.origin;
     return `${origin}/flashcard/`;
   }
 
