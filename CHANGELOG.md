@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-05-25
+
 ### Added
 - **[flashcard-app]** New `packages/flashcard-app` package — standalone Vite + Web Components SPA for flashcard-mode study sessions, served at `/flashcard/` (port 3004 in dev).
 - **[flashcard-app]** Modified Leitner System engine (`leitner.ts`) — 3-box spaced-repetition algorithm with card-count spacing (Box 2 = 4 cards, Box 3 = 9 cards), deadlock fallback, and full session stats.
@@ -12,19 +14,21 @@ All notable changes to this project will be documented in this file, organized b
 - **[flashcard-app]** Summary screen — per-card results table, session stats (mastered on first try, retried, total time), and JSON/CSV download button.
 - **[host-app]** "🃏 Launch Flashcards" button on the question preview screen, alongside the existing "Create Quiz" button.
 - **[host-app]** Flashcard lobby screen (`/flashcard-lobby/:sessionId`) — shows PIN, share link, and "▶ Play Now" button that redirects the host directly into the flashcard app.
+- **[host-app]** Download button on the question preview screen that fetches all questions matching the active difficulty/topic filters and saves them as a Markdown question bank file.
 - **[api-server]** `mode` field on `quiz_sessions` table (`'quiz' | 'flashcard'`, default `'quiz'`); Prisma migration `20260525180957_add_session_mode`.
 - **[api-server]** `GET /api/sessions/:id/flashcard-state` endpoint — returns all questions for a flashcard session (returns 400 for quiz sessions).
 - **[api-server]** Flashcard sessions auto-start with `status='playing'`; the join endpoint accepts players into playing flashcard sessions.
 - **[common]** `SessionModeSchema` (`'quiz' | 'flashcard'`), `mode` field on `SessionSchema` and `CreateSessionRequestSchema`, and `FlashcardSessionStateSchema`.
-- **[config]** `/flashcard*` route in Caddyfile, flashcard-app build/copy stages in Dockerfile, flashcard-app in `docker-entrypoint.sh`, flashcard-app added to root `npm run dev` on port 3004.
-- **[tests]** 15 Leitner engine unit tests, 6 flashcard component/logic tests, 4 flashcard API integration tests, 9 flashcard E2E Playwright tests.
-
-- **[host-app]** Download button on the question preview screen that fetches all questions matching the active difficulty/topic filters and saves them as a Markdown question bank file.
 - **[player-app]** Submit button now displays "Select N more answers" when more than one additional answer is still required for multi-answer questions.
 - **[player-app]** Submit button pulses with a glowing indigo shadow animation when it is enabled and ready to submit.
+- **[config]** `/flashcard*` route in Caddyfile, flashcard-app build/copy stages in Dockerfile, flashcard-app in `docker-entrypoint.sh`, flashcard-app added to root `npm run dev` on port 3004.
 - **[config]** `AGENTS.md` at the repo root as the canonical AI agent instructions file; `.github/copilot-instructions.md` now points to it.
 - **[config]** `commit-changes` skill (`.github/skills/commit-changes/SKILL.md`) with file grouping, per-group test gating, CHANGELOG updating, and optional patch/minor version bump.
 - **[config]** Improved `copilot-instructions.md`: single-test commands, dev service port table, TypeScript build order, Prisma workflow commands, and `BaseComponent` pattern documentation.
+- **[tests]** 15 Leitner engine unit tests, 6 flashcard component/logic tests, 4 flashcard API integration tests, 9 flashcard E2E Playwright tests.
+
+### Fixed
+- **[host-app]** Flashcard share/play links now point to the correct origin in dev mode (`localhost:3004`) via Vite `define` injection.
 
 ## [0.7.0] — 2026-05-25
 
