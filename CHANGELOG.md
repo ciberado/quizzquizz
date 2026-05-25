@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-05-25
+
+### Added
+- **[host-app]** Timer adjustment buttons (+5s / −5s) on the question screen so the host can lengthen or shorten the countdown on the fly.
+- **[host-app]** "Jump to Scoreboard" button on the question screen to immediately skip remaining time and navigate to the leaderboard.
+- **[host-app]** Unit tests for timer control buttons (11 new Vitest cases covering render, click handlers, and boundary conditions).
+- **[e2e]** Playwright `timer-controls` spec (5 tests) verifying timer buttons, "Jump to Scoreboard" navigation, and leaderboard-only "End Quiz" placement.
+
+### Changed
+- **[host-app]** "End Quiz" button moved exclusively to the leaderboard screen — it no longer appears on question pages.
+- **[playwright]** WebServer startup commands made nvm-version-agnostic (graceful fallback when Node 22 is unavailable); host-app health URL updated to `/host/` to return 200.
+- **[playwright]** Added `--no-sandbox` / `--disable-setuid-sandbox` launch flags for container compatibility.
+
 ## [0.6.6] — 2026-05-25
 
 ### Fixed

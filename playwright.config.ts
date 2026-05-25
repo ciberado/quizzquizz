@@ -11,6 +11,9 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    launchOptions: {
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
   },
 
   projects: [
@@ -59,6 +62,14 @@ export default defineConfig({
       },
     },
     {
+      name: 'timer-controls-tests',
+      testMatch: '**/timer-controls.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+    {
       name: 'quiz-upload-tests',
       testMatch: '**/quiz-upload.spec.ts',
       use: {
@@ -71,7 +82,7 @@ export default defineConfig({
   // Start the API server and host/player apps before running tests
   webServer: [
     {
-      command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/api-server"',
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); npm run dev --workspace=@quizzquizz/api-server"',
       url: 'http://localhost:3000/health',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
@@ -79,15 +90,15 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/host-app"',
-      url: 'http://localhost:3001',
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); npm run dev --workspace=@quizzquizz/host-app"',
+      url: 'http://localhost:3001/host/',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
       stdout: 'pipe',
       stderr: 'pipe',
     },
     {
-      command: 'bash -c "source /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run dev --workspace=@quizzquizz/player-app"',
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); npm run dev --workspace=@quizzquizz/player-app"',
       url: 'http://localhost:3002',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,

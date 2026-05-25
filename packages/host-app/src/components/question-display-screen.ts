@@ -39,7 +39,6 @@ export class QuestionDisplayScreen extends HTMLElement {
   private automaticPace: boolean = false; // Auto-advance enabled
   private pace: 'normal' | 'calm' | 'manual' = 'normal'; // Session pacing mode
   private serverTime: number = 0; // Server's current time for clock synchronization
-  private isNavigating: boolean = false; // Prevent concurrent API calls
   private earlyStop: boolean = false; // Set when all players answered early (prevents timer restart in polls)
 
   async connectedCallback() {
@@ -293,29 +292,43 @@ export class QuestionDisplayScreen extends HTMLElement {
     router.navigate('/leaderboard');
   }
 
-  private async handleEndQuiz() {
-    const confirmed = confirm('Are you sure you want to end the quiz? This will show the final leaderboard.');
-    if (!confirmed) return;
-
-    // Prevent concurrent calls
-    if (this.isNavigating) {
-      console.log('⚠️ Already navigating, skipping duplicate call');
-      return;
+  private handleAddTime() {
+    if (this.pace === 'manual') return;
+    this.timeRemaining += 5;
+    if (this.timeRemaining > this.currentTimeLimit) {
+      this.currentTimeLimit = this.timeRemaining;
     }
-
-    const { sessionId, hostToken } = state.getState();
-    if (!sessionId || !hostToken) return;
-
-    this.isNavigating = true;
-    try {
-      await api.endQuiz(sessionId, hostToken);
-      // Navigate to results (use /results, not /leaderboard, since quiz is ended)
-      router.navigate('/results');
-    } catch (error) {
-      console.error('Failed to end quiz:', error);
-      alert('Failed to end quiz. Please try again.');
-      this.isNavigating = false; // Reset on error
+    // If timer was stopped (e.g. early-stop), restart it
+    if (this.earlyStop) {
+      this.earlyStop = false;
     }
+    if (!this.timerInterval && this.timeRemaining > 0) {
+      this.wasTimerActive = true;
+      this.startTimer();
+      this.render(); // Re-render to show timer controls again
+    } else {
+      this.updateTimerDisplay();
+    }
+  }
+
+  private handleRemoveTime() {
+    if (this.pace === 'manual') return;
+    this.timeRemaining = Math.max(0, this.timeRemaining - 5);
+    if (this.timeRemaining === 0) {
+      this.stopTimer();
+      this.wasTimerActive = false;
+      this.render();
+    } else {
+      this.updateTimerDisplay();
+    }
+  }
+
+  private handleJumpToScoreboard() {
+    if (this.autoNavigateTimeout) {
+      clearTimeout(this.autoNavigateTimeout);
+      this.autoNavigateTimeout = null;
+    }
+    router.navigate('/leaderboard');
   }
 
   private getAnswerLabel(index: number): string {
@@ -417,9 +430,14 @@ export class QuestionDisplayScreen extends HTMLElement {
                        <span>${this.earlyStop ? 'Showing leaderboard in a moment…' : 'Loading leaderboard…'}</span>
                      </div>`
                   : `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`)
-                : '')
+                : `
+                  <div class="time-adjust-row">
+                    <button class="btn-secondary btn-action btn-time-adjust" id="minus-5-button">−5s</button>
+                    <button class="btn-secondary btn-action btn-time-adjust" id="plus-5-button">+5s</button>
+                  </div>
+                  <button class="btn-primary btn-action" id="jump-button">Jump to Scoreboard →</button>
+                `)
             }
-            <button class="btn-secondary btn-action" id="end-button">End Quiz</button>
           </div>
         </div>
       </div>
@@ -431,10 +449,9 @@ export class QuestionDisplayScreen extends HTMLElement {
       nextButton.addEventListener('click', () => this.handleNextQuestion());
     }
 
-    const endButton = this.querySelector('#end-button');
-    if (endButton) {
-      endButton.addEventListener('click', () => this.handleEndQuiz());
-    }
+    this.querySelector('#minus-5-button')?.addEventListener('click', () => this.handleRemoveTime());
+    this.querySelector('#plus-5-button')?.addEventListener('click', () => this.handleAddTime());
+    this.querySelector('#jump-button')?.addEventListener('click', () => this.handleJumpToScoreboard());
 
     // Add inline styles for component-specific styling
     this.addStyles();
@@ -694,6 +711,17 @@ export class QuestionDisplayScreen extends HTMLElement {
         padding-right: 1.5rem;
         width: auto;
         min-width: 0;
+      }
+
+      .time-adjust-row {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .btn-time-adjust {
+        flex: 1;
+        font-weight: 700;
+        font-size: clamp(0.875rem, 1.5vw, 1.125rem);
       }
 
       .autopace-status {

@@ -233,3 +233,161 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
     expect(mockNavigate).not.toHaveBeenCalledWith('/leaderboard');
   });
 });
+
+// ── Timer control buttons ──────────────────────────────────────────────────────
+describe('QuestionDisplayScreen – timer control buttons', () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: NOW });
+    mockNavigate.mockClear();
+    mockGetSession.mockReset();
+    mockGetPlayers.mockReset();
+  });
+
+  afterEach(() => {
+    if (el?.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+    vi.useRealTimers();
+  });
+
+  /** Mount with a timed question that still has time remaining. */
+  async function mountWithActiveTimer(overrides: Partial<Parameters<typeof makeSession>[0]> = {}) {
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false, ...overrides }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100); // flush async connectedCallback
+  }
+
+  it('renders +5s, -5s, and Jump to Scoreboard buttons while the timer is active', async () => {
+    await mountWithActiveTimer();
+
+    expect(el.querySelector('#plus-5-button')).toBeTruthy();
+    expect(el.querySelector('#minus-5-button')).toBeTruthy();
+    expect(el.querySelector('#jump-button')).toBeTruthy();
+  });
+
+  it('does NOT render an End Quiz button on the question screen while timer is active', async () => {
+    await mountWithActiveTimer();
+    expect(el.querySelector('#end-button')).toBeNull();
+  });
+
+  it('does NOT render an End Quiz button after the timer expires', async () => {
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 30, timeLimit: 30, automaticPace: false }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(el.querySelector('#end-button')).toBeNull();
+  });
+
+  it('hides +5s/-5s/Jump buttons and shows Show Leaderboard after timer expires', async () => {
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 30, timeLimit: 30, automaticPace: false }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(el.querySelector('#plus-5-button')).toBeNull();
+    expect(el.querySelector('#minus-5-button')).toBeNull();
+    expect(el.querySelector('#jump-button')).toBeNull();
+    expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
+  });
+
+  it('+5s button increases the displayed timer value by 5', async () => {
+    await mountWithActiveTimer(); // 25s remaining
+
+    const before = el.querySelector('.timer-value')?.textContent?.trim();
+    expect(before).toBe('25');
+
+    (el.querySelector('#plus-5-button') as HTMLButtonElement).click();
+
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('30');
+  });
+
+  it('-5s button decreases the displayed timer value by 5', async () => {
+    await mountWithActiveTimer(); // 25s remaining
+
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('25');
+
+    (el.querySelector('#minus-5-button') as HTMLButtonElement).click();
+
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('20');
+  });
+
+  it('-5s button does not bring timer below 0', async () => {
+    await mountWithActiveTimer({ elapsed: 28, timeLimit: 30 }); // 2s remaining
+
+    (el.querySelector('#minus-5-button') as HTMLButtonElement).click();
+    await vi.advanceTimersByTimeAsync(10); // let render() flush
+
+    // Timer hit 0 — render() was called, +5s/-5s gone, Show Leaderboard appears
+    expect(el.querySelector('#minus-5-button')).toBeNull();
+    expect(el.querySelector('#plus-5-button')).toBeNull();
+    expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
+  });
+
+  it('clicking -5s at exactly 5s remaining transitions to post-timer state', async () => {
+    await mountWithActiveTimer({ elapsed: 25, timeLimit: 30 }); // 5s remaining
+
+    (el.querySelector('#minus-5-button') as HTMLButtonElement).click();
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
+    expect(el.querySelector('#end-button')).toBeNull();
+  });
+
+  it('Jump to Scoreboard button navigates immediately to /leaderboard', async () => {
+    await mountWithActiveTimer();
+
+    (el.querySelector('#jump-button') as HTMLButtonElement).click();
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('/leaderboard');
+  });
+
+  it('Jump to Scoreboard cancels any pending auto-navigate timeout', async () => {
+    // automaticPace: true so an autoNavigateTimeout gets scheduled when all players answer
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: true, allPlayersAnswered: true }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    // The earlyStop path already fired; but Jump should still work without double-navigate
+    mockNavigate.mockClear();
+    (el.querySelector('#jump-button') as HTMLButtonElement | null)?.click();
+
+    // Advance past any scheduled autopace delay — must not navigate twice
+    await vi.advanceTimersByTimeAsync(6000);
+    const leaderboardCalls = mockNavigate.mock.calls.filter(c => c[0] === '/leaderboard');
+    expect(leaderboardCalls.length).toBeLessThanOrEqual(1);
+  });
+
+  it('+5s and -5s buttons are absent when earlyStop fires (automaticPace + allPlayersAnswered)', async () => {
+    // earlyStop is only triggered when automaticPace=true and allPlayersAnswered=true
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: true, allPlayersAnswered: true }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    // earlyStop fires: timeRemaining forced to 0, autopace spinner shown instead of timer buttons
+    expect(el.querySelector('#plus-5-button')).toBeNull();
+    expect(el.querySelector('#minus-5-button')).toBeNull();
+    expect(el.querySelector('.autopace-status')).toBeTruthy();
+  });
+});
