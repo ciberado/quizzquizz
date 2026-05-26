@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Changed
+- **[flashcard-app]** Play screen redesigned: now shows all answer options in an A/B/C/D labeled grid (matching the host game screen style); "Show Answer" reveals correct answers in green and wrong ones dimmed in red, before the Yes/No verdict buttons appear.
+
 ## [0.8.1] — 2026-05-26
 
 ### Fixed
