@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Changed
+- **[flashcard-app]** Summary screen Card Details table is now sortable by every column (Question, Yes, No, First Try, Status); active column is highlighted with directional arrow indicator
+
 ### Fixed
 - **[flashcard-app]** Play screen: progress bar now shows a 4-segment breakdown (Learning / Reviewing / Mastering / Done) so users see movement after every card, not just after full graduation.
 - **[flashcard-app]** Play screen: "Show Answer" and Yes/No buttons always render at the same vertical position (`height: 100dvh` flex layout, answers grid scrollable, actions pinned to bottom).

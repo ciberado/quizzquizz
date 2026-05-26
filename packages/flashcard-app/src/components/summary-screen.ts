@@ -9,10 +9,15 @@ import type { LeitnerStats } from '../leitner';
 
 const RETURN_URL_KEY = 'qz-flashcard-return-url';
 
+type SortCol = 'question' | 'yes' | 'no' | 'firstTry' | 'status';
+type SortDir = 'asc' | 'desc';
+
 export class FlashcardSummaryScreen extends BaseComponent {
   private stats: LeitnerStats | null = null;
   private bankName: string = '';
   private returnUrl: string = '';
+  private sortCol: SortCol = 'question';
+  private sortDir: SortDir = 'asc';
 
   protected onMount(): void {
     try {
@@ -73,18 +78,19 @@ export class FlashcardSummaryScreen extends BaseComponent {
           <!-- Per-Card Details -->
           <div class="card" style="margin-bottom: var(--spacing-md);">
             <h2 style="margin-bottom: var(--spacing-md);">Card Details</h2>
+            <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-sm);">
               <thead>
                 <tr style="border-bottom: 2px solid var(--color-border);">
-                  <th style="text-align: left; padding: var(--spacing-xs);">Question</th>
-                  <th style="text-align: center; padding: var(--spacing-xs);">✓ Yes</th>
-                  <th style="text-align: center; padding: var(--spacing-xs);">✗ No</th>
-                  <th style="text-align: center; padding: var(--spacing-xs);">First Try</th>
-                  <th style="text-align: center; padding: var(--spacing-xs);">Status</th>
+                  ${this.renderTh('question', 'Question', 'left')}
+                  ${this.renderTh('yes', '✓ Yes', 'center')}
+                  ${this.renderTh('no', '✗ No', 'center')}
+                  ${this.renderTh('firstTry', 'First Try', 'center')}
+                  ${this.renderTh('status', 'Status', 'center')}
                 </tr>
               </thead>
               <tbody>
-                ${s.cardDetails
+                ${this.sortedRows(s)
                   .map(
                     (d) => `
                   <tr style="border-bottom: 1px solid var(--color-border);">
@@ -103,6 +109,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
                   .join('')}
               </tbody>
             </table>
+            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -121,6 +128,48 @@ export class FlashcardSummaryScreen extends BaseComponent {
     this.qs('#download-json-btn')?.addEventListener('click', () => this.downloadJson());
     this.qs('#download-csv-btn')?.addEventListener('click', () => this.downloadCsv());
     this.qs('#new-session-btn')?.addEventListener('click', () => this.goBack());
+    this.qsAll<HTMLElement>('[data-sort-col]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const col = th.dataset['sortCol'] as SortCol;
+        if (this.sortCol === col) {
+          this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          this.sortCol = col;
+          this.sortDir = col === 'question' ? 'asc' : 'desc';
+        }
+        this.render();
+      });
+    });
+  }
+
+  private renderTh(col: SortCol, label: string, align: 'left' | 'center'): string {
+    const active = this.sortCol === col;
+    const arrow = active ? (this.sortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅';
+    return `<th data-sort-col="${col}" style="text-align: ${align}; padding: var(--spacing-xs); cursor: pointer; user-select: none; white-space: nowrap; ${active ? 'color: var(--color-primary);' : ''}">${label}<span style="font-size: 0.75em; opacity: ${active ? '1' : '0.4'};">${arrow}</span></th>`;
+  }
+
+  private sortedRows(s: LeitnerStats): LeitnerStats['cardDetails'] {
+    const rows = [...s.cardDetails];
+    const dir = this.sortDir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (this.sortCol) {
+        case 'question':
+          return dir * a.card.text.localeCompare(b.card.text);
+        case 'yes':
+          return dir * (a.yesCount - b.yesCount);
+        case 'no':
+          return dir * (a.noCount - b.noCount);
+        case 'firstTry': {
+          const toNum = (v: boolean | null | undefined) => (v === true ? 1 : v === false ? 0 : -1);
+          return dir * (toNum(a.firstTrySuccess) - toNum(b.firstTrySuccess));
+        }
+        case 'status':
+          return dir * ((a.graduated ? 1 : 0) - (b.graduated ? 1 : 0));
+        default:
+          return 0;
+      }
+    });
+    return rows;
   }
 
   private goBack(): void {
