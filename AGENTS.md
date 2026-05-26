@@ -24,8 +24,9 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 - `packages/question-bank`: Markdown question-bank parsing and loading
 - `packages/question-bank-builder`: standalone CLI — JSONL ingestion, AI enrichment (Bedrock/LangGraph), Markdown generation
 - `packages/api-server`: Hono API, Prisma, SQLite, auth, game/session logic
-- `packages/host-app`: host UI built with Web Components and Vite
-- `packages/player-app`: player UI built with Web Components and Vite
+- `packages/host-app`: host UI built with Web Components and Vite — quiz host interface (projector display)
+- `packages/player-app`: player UI built with Web Components and Vite — quiz player interface (mobile)
+- `packages/flashcard-app`: flashcard player UI built with Web Components and Vite — standalone self-study mode served at `/flashcard/`
 - `packages/analytics`: analytics calculation and aggregation logic
 - `packages/analytics-ui`: analytics dashboard UI
 - `question-banks/`: built-in and user-uploaded quiz banks
@@ -37,7 +38,7 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 - Keep TypeScript strict. Avoid implicit `any` and prefer explicit types.
 - Use named exports, not default exports.
 - Follow a Zod-first pattern for shared contracts: define the schema, then infer the TypeScript type.
-- Keep frontend packages separate. Do not introduce shared UI code between host and player apps unless the repo already establishes that pattern.
+- Keep frontend packages separate. Do not introduce shared UI code between `host-app`, `player-app`, `flashcard-app`, and `analytics-ui` unless the repo already establishes that pattern.
 - Use server time for answer validation and scoring decisions.
 
 ## Build, Test, And Run
@@ -57,14 +58,23 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 
 ### Dev Service Ports
 
-| Service      | Port |
-|--------------|------|
-| API server   | 3000 |
-| Host app     | 3001 |
-| Player app   | 3002 |
-| Analytics UI | 3003 |
+| Service        | Port |
+|----------------|------|
+| API server     | 3000 |
+| Host app       | 3001 |
+| Player app     | 3002 |
+| Analytics UI   | 3003 |
+| Flashcard app  | 3004 |
 
-In Docker, Caddy proxies everything through port 3000 (`/` → player, `/host` → host, `/api/*` → API).
+In Docker, Caddy proxies everything through port 3000:
+
+| Path prefix   | App            |
+|---------------|----------------|
+| `/api/*`      | API server     |
+| `/host*`      | host-app       |
+| `/analytics*` | analytics-ui   |
+| `/flashcard*` | flashcard-app  |
+| `/*`          | player-app     |
 
 ## Implementation Guidance
 
@@ -103,4 +113,5 @@ protected attachEventListeners(): void { /* querySelector + addEventListener */ 
 - Prisma generation is part of the API server workflow; generated output may need regeneration before builds in fresh environments.
 - E2E tests can be sensitive to text and selector drift. Check the current UI before changing tests.
 - The question-bank-builder uses `commonjs` modules and has relaxed `noUncheckedIndexedAccess`. This is intentional — it is a standalone CLI tool imported from another project. Do not try to convert it to ESM or tighten its type checks without cause.
+- The `flashcard-app` is a fully independent frontend. It has its own `styles.css`, `router.ts`, `state.ts`, `api-client.ts`, and `BaseComponent`. The `play-screen` component also injects additional scoped styles at runtime via `injectStyles()` — edit those inline styles inside `play-screen.ts`, not a separate CSS file.
 - Never commit AWS credentials or `.env` files from the builder. The builder's `.gitignore` and root `.gitignore` both guard against this.
