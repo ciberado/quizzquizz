@@ -146,7 +146,7 @@ export class FlashcardPlayScreen extends BaseComponent {
       /* ── Answers grid ────────────────────────────── */
       .fc-answers-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        grid-template-columns: 1fr;
         gap: var(--spacing-xs);
         flex: 1;
         overflow-y: auto;
@@ -157,6 +157,13 @@ export class FlashcardPlayScreen extends BaseComponent {
 
       /* Single answer: full width */
       .fc-answers-grid.fc-single { grid-template-columns: 1fr; }
+
+      /* 2-column layout on screens wide enough to give text room */
+      @media (min-width: 560px) {
+        .fc-answers-grid:not(.fc-single) {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
 
       /* 3 answers: last spans full width */
       .fc-answers-grid:has(.fc-answer-card:nth-child(3):last-child) .fc-answer-card:last-child {
