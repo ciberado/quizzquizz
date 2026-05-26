@@ -6,6 +6,7 @@
 import { BaseComponent } from './base-component';
 import { router } from '../router';
 import type { LeitnerStats } from '../leitner';
+import { getActiveSession, clearActiveSession, markSetCompleted } from '../flashcard-sets';
 
 const RETURN_URL_KEY = 'qz-flashcard-return-url';
 
@@ -27,6 +28,16 @@ export class FlashcardSummaryScreen extends BaseComponent {
       // Return URL set by the host app before navigating here
       this.returnUrl = localStorage.getItem(RETURN_URL_KEY) || '';
     } catch { /* ignore */ }
+
+    // Mark the active set as completed in the host-app's localStorage progress
+    try {
+      const active = getActiveSession();
+      if (active) {
+        markSetCompleted(active.bankId, active.setIndex);
+        clearActiveSession();
+      }
+    } catch { /* ignore */ }
+
     this.render();
   }
 
