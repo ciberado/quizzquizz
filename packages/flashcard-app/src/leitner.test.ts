@@ -199,4 +199,34 @@ describe('LeitnerEngine', () => {
       expect(stats.totalTimeMs).toBeGreaterThanOrEqual(0);
     });
   });
+
+  describe('getBoxDistribution', () => {
+    it('should start with all cards in box 1', () => {
+      const dist = engine.getBoxDistribution();
+      expect(dist.box1).toBe(5);
+      expect(dist.box2).toBe(0);
+      expect(dist.box3).toBe(0);
+      expect(dist.graduated).toBe(0);
+    });
+
+    it('should update when a card moves to box 2', () => {
+      const card = engine.getNextCard()!;
+      engine.markCard(card.id, true); // box1 -> box2
+      const dist = engine.getBoxDistribution();
+      expect(dist.box1).toBe(4);
+      expect(dist.box2).toBe(1);
+      expect(dist.graduated).toBe(0);
+    });
+
+    it('should count graduated cards', () => {
+      // Graduate a single card through all 3 boxes
+      const e = new LeitnerEngine([cards[0]!]);
+      e.getNextCard(); e.markCard('q1', true); // box2
+      e.getNextCard(); e.markCard('q1', true); // box3
+      e.getNextCard(); e.markCard('q1', true); // graduated
+      const dist = e.getBoxDistribution();
+      expect(dist.graduated).toBe(1);
+      expect(dist.box1 + dist.box2 + dist.box3).toBe(0);
+    });
+  });
 });

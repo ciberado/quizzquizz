@@ -216,6 +216,18 @@ export class LeitnerEngine {
     return count;
   }
 
+  /** Distribution of cards across boxes and graduated */
+  getBoxDistribution(): { box1: number; box2: number; box3: number; graduated: number } {
+    const dist = { box1: 0, box2: 0, box3: 0, graduated: 0 };
+    for (const state of this.cards.values()) {
+      if (state.graduated) dist.graduated++;
+      else if (state.box === 1) dist.box1++;
+      else if (state.box === 2) dist.box2++;
+      else dist.box3++;
+    }
+    return dist;
+  }
+
   /** Total number of cards */
   getTotalCount(): number {
     return this.cards.size;

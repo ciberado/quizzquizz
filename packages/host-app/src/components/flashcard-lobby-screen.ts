@@ -303,6 +303,8 @@ export class FlashcardLobbyScreen extends BaseComponent {
     });
 
     this.qs('#play-now-btn')?.addEventListener('click', () => {
+      // Store current URL so the summary screen can navigate back here
+      try { localStorage.setItem('qz-flashcard-return-url', window.location.href); } catch { /* ignore */ }
       window.location.href = this.getFlashcardPlayUrl();
     });
 

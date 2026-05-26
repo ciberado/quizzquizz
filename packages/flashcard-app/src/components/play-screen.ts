@@ -50,21 +50,26 @@ export class FlashcardPlayScreen extends BaseComponent {
     const style = document.createElement('style');
     style.id = 'flashcard-play-styles';
     style.textContent = `
+      /* Full-viewport layout — buttons always stay at the bottom */
       .fc-play-screen {
         display: flex;
         flex-direction: column;
-        min-height: 100dvh;
-        background: var(--color-bg-secondary);
+        height: 100dvh;
+        height: 100vh;
+        max-width: 1000px;
+        width: 100%;
+        margin: 0 auto;
         padding: var(--spacing-sm);
         box-sizing: border-box;
+        overflow: hidden;
       }
 
-      /* Progress bar */
+      /* ── Progress bar ─────────────────────────────── */
       .fc-progress-bar {
         background: var(--color-bg);
         border-radius: var(--radius-md);
-        padding: var(--spacing-sm);
-        margin-bottom: var(--spacing-sm);
+        padding: 0.625rem var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
         box-shadow: var(--shadow-sm);
         flex-shrink: 0;
       }
@@ -72,70 +77,74 @@ export class FlashcardPlayScreen extends BaseComponent {
       .fc-progress-stats {
         display: flex;
         justify-content: space-between;
-        margin-bottom: var(--spacing-xs);
+        margin-bottom: 0.375rem;
         font-size: var(--font-size-sm);
-        color: var(--color-text-light);
         font-weight: 500;
+        gap: 0.5rem;
+        flex-wrap: wrap;
       }
 
-      .fc-progress-stats .mastered { color: var(--color-success); }
-      .fc-progress-stats .active   { color: var(--color-primary); }
+      .fc-stat-learning  { color: #6b7280; }
+      .fc-stat-reviewing { color: #d97706; }
+      .fc-stat-mastering { color: #2563eb; }
+      .fc-stat-mastered  { color: var(--color-success); }
 
       .fc-progress-track {
-        background: var(--color-border);
-        border-radius: var(--radius-full);
+        display: flex;
         height: 8px;
-        overflow: hidden;
-      }
-
-      .fc-progress-fill {
-        background: linear-gradient(90deg, var(--color-success), #34d399);
-        height: 100%;
         border-radius: var(--radius-full);
-        transition: width var(--transition-slow);
+        overflow: hidden;
+        background: var(--color-border);
       }
 
-      /* Question card */
+      .fc-seg { height: 100%; transition: width var(--transition-slow); }
+      .fc-seg-learning  { background: #9ca3af; }
+      .fc-seg-reviewing { background: #f59e0b; }
+      .fc-seg-mastering { background: #3b82f6; }
+      .fc-seg-mastered  { background: var(--color-success); }
+
+      /* ── Question card ─────────────────────────────── */
       .fc-question-card {
         background: var(--color-bg);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-md);
         padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
         flex-shrink: 0;
-        margin-bottom: var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
       }
 
       .fc-question-meta {
         font-size: var(--font-size-sm);
         color: var(--color-text-light);
         text-align: center;
-        margin-bottom: var(--spacing-xs);
+        margin-bottom: 0.375rem;
         font-weight: 500;
       }
 
       .fc-question-text {
-        font-size: clamp(1.1rem, 3vw, 1.75rem);
+        font-size: clamp(1.05rem, 3vw, 1.75rem);
         font-weight: 700;
         line-height: 1.35;
         text-align: center;
         color: var(--color-text);
       }
 
-      /* Answers grid */
+      /* ── Answers grid ────────────────────────────── */
       .fc-answers-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--spacing-xs);
-        margin-bottom: var(--spacing-sm);
         flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        margin-bottom: var(--spacing-xs);
+        align-content: start;
       }
 
       /* Single answer: full width */
-      .fc-answers-grid:has(.fc-answer-card:only-child) {
-        grid-template-columns: 1fr;
-      }
+      .fc-answers-grid.fc-single { grid-template-columns: 1fr; }
 
-      /* 3 answers: last one spans full width */
+      /* 3 answers: last spans full width */
       .fc-answers-grid:has(.fc-answer-card:nth-child(3):last-child) .fc-answer-card:last-child {
         grid-column: 1 / -1;
       }
@@ -146,7 +155,7 @@ export class FlashcardPlayScreen extends BaseComponent {
         border: 2px solid var(--color-border);
         border-radius: var(--radius-lg);
         padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 3.5rem;
-        min-height: 64px;
+        min-height: 60px;
         display: flex;
         align-items: center;
         box-shadow: var(--shadow-sm);
@@ -156,13 +165,13 @@ export class FlashcardPlayScreen extends BaseComponent {
       .fc-answer-card.revealed-correct {
         background: #d1fae5;
         border-color: var(--color-success);
-        animation: fc-pulse-correct 0.5s ease;
+        animation: fc-pulse-correct 0.45s ease;
       }
 
       .fc-answer-card.revealed-wrong {
         background: #fef2f2;
         border-color: #fca5a5;
-        opacity: 0.65;
+        opacity: 0.6;
       }
 
       @keyframes fc-pulse-correct {
@@ -172,7 +181,7 @@ export class FlashcardPlayScreen extends BaseComponent {
 
       .fc-answer-label {
         position: absolute;
-        left: 0.75rem;
+        left: 0.65rem;
         top: 50%;
         transform: translateY(-50%);
         width: 2rem;
@@ -182,22 +191,17 @@ export class FlashcardPlayScreen extends BaseComponent {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 700;
         color: white;
         flex-shrink: 0;
       }
 
-      .fc-answer-card.revealed-correct .fc-answer-label {
-        background: var(--color-success);
-      }
-
-      .fc-answer-card.revealed-wrong .fc-answer-label {
-        background: #ef4444;
-      }
+      .fc-answer-card.revealed-correct .fc-answer-label { background: var(--color-success); }
+      .fc-answer-card.revealed-wrong  .fc-answer-label { background: #ef4444; }
 
       .fc-answer-text {
-        font-size: clamp(0.85rem, 2vw, 1.05rem);
+        font-size: clamp(0.82rem, 1.8vw, 1rem);
         font-weight: 500;
         color: var(--color-text);
         line-height: 1.3;
@@ -210,20 +214,23 @@ export class FlashcardPlayScreen extends BaseComponent {
 
       .fc-correct-tick {
         position: absolute;
-        right: 0.75rem;
+        right: 0.65rem;
         top: 50%;
         transform: translateY(-50%);
         color: var(--color-success);
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         font-weight: 700;
       }
 
-      /* Action area */
+      /* ── Actions (always at bottom) ─────────────── */
       .fc-actions {
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
         gap: var(--spacing-xs);
+        /* Fixed-height container so layout doesn't shift between phases */
+        min-height: calc(var(--spacing-md) * 2 + var(--font-size-lg) + var(--spacing-xs) * 2 + var(--spacing-xs));
+        justify-content: flex-end;
       }
 
       .fc-show-btn {
@@ -248,7 +255,6 @@ export class FlashcardPlayScreen extends BaseComponent {
         text-align: center;
         color: var(--color-text-light);
         font-weight: 500;
-        margin-bottom: 0.25rem;
       }
 
       .fc-verdict-btns {
@@ -272,13 +278,12 @@ export class FlashcardPlayScreen extends BaseComponent {
       .fc-no-btn  { background: var(--color-error); }
       .fc-yes-btn { background: var(--color-success); }
 
-      .fc-no-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
-      .fc-yes-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+      .fc-no-btn:hover, .fc-yes-btn:hover { opacity: 0.88; transform: translateY(-1px); }
       .fc-no-btn:active, .fc-yes-btn:active { transform: translateY(0); }
 
       @media (max-width: 400px) {
-        .fc-answer-card { padding-left: 3rem; min-height: 56px; }
-        .fc-answer-label { width: 1.75rem; height: 1.75rem; font-size: 0.8rem; }
+        .fc-answer-card { padding-left: 3rem; min-height: 52px; }
+        .fc-answer-label { width: 1.75rem; height: 1.75rem; font-size: 0.78rem; }
       }
     `;
     document.head.appendChild(style);
@@ -323,7 +328,7 @@ export class FlashcardPlayScreen extends BaseComponent {
           sessionStorage.setItem('qz-flashcard-bank-name', this.sessionState?.questionBankName || '');
         } catch { /* ignore */ }
         router.navigate('/summary');
-      }, 1500);
+      }, 1200);
       return;
     }
 
@@ -362,7 +367,6 @@ export class FlashcardPlayScreen extends BaseComponent {
     if (this.phase === 'complete') {
       this.setContent(`
         <div class="screen"><div class="container"><div class="card text-center">
-          <div style="font-size: 4rem; margin-bottom: var(--spacing-md);">🎉</div>
           <h2>All cards mastered!</h2>
           <p class="text-secondary">Loading your results...</p>
         </div></div></div>
@@ -371,22 +375,22 @@ export class FlashcardPlayScreen extends BaseComponent {
     }
 
     const card = this.currentCard!;
-    const graduated = this.engine?.getGraduatedCount() ?? 0;
     const total = this.engine?.getTotalCount() ?? 0;
+    const dist = this.engine?.getBoxDistribution() ?? { box1: 0, box2: 0, box3: 0, graduated: 0 };
     const active = this.engine?.getActiveCount() ?? 0;
-    const progress = total > 0 ? Math.round((graduated / total) * 100) : 0;
     const revealed = this.phase === 'answer';
+    const isSingle = card.allAnswers.length === 1;
 
     this.setContent(`
       <div class="fc-play-screen">
-        ${this.renderProgressBar(graduated, active, progress)}
+        ${this.renderProgressBar(dist, total)}
 
         <div class="fc-question-card">
           <div class="fc-question-meta">${active} card${active !== 1 ? 's' : ''} remaining</div>
           <div class="fc-question-text">${this.escapeHtml(card.text)}</div>
         </div>
 
-        <div class="fc-answers-grid">
+        <div class="fc-answers-grid${isSingle ? ' fc-single' : ''}">
           ${card.allAnswers.map((answer, i) => this.renderAnswerCard(answer, i, card.correctAnswerIds, revealed)).join('')}
         </div>
 
@@ -441,16 +445,24 @@ export class FlashcardPlayScreen extends BaseComponent {
     `;
   }
 
-  private renderProgressBar(graduated: number, active: number, progress: number): string {
+  private renderProgressBar(
+    dist: { box1: number; box2: number; box3: number; graduated: number },
+    total: number,
+  ): string {
+    const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
     return `
       <div class="fc-progress-bar">
         <div class="fc-progress-stats">
-          <span class="mastered">✓ ${graduated} mastered</span>
-          <span>${progress}%</span>
-          <span class="active">${active} active</span>
+          <span class="fc-stat-learning">Learning: ${dist.box1}</span>
+          <span class="fc-stat-reviewing">Reviewing: ${dist.box2}</span>
+          <span class="fc-stat-mastering">Mastering: ${dist.box3}</span>
+          <span class="fc-stat-mastered">Done: ${dist.graduated}/${total}</span>
         </div>
         <div class="fc-progress-track">
-          <div class="fc-progress-fill" style="width: ${progress}%;"></div>
+          <div class="fc-seg fc-seg-learning"  style="width: ${pct(dist.box1)}%"></div>
+          <div class="fc-seg fc-seg-reviewing" style="width: ${pct(dist.box2)}%"></div>
+          <div class="fc-seg fc-seg-mastering" style="width: ${pct(dist.box3)}%"></div>
+          <div class="fc-seg fc-seg-mastered"  style="width: ${pct(dist.graduated)}%"></div>
         </div>
       </div>
     `;

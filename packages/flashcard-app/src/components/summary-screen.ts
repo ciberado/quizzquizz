@@ -7,15 +7,20 @@ import { BaseComponent } from './base-component';
 import { router } from '../router';
 import type { LeitnerStats } from '../leitner';
 
+const RETURN_URL_KEY = 'qz-flashcard-return-url';
+
 export class FlashcardSummaryScreen extends BaseComponent {
   private stats: LeitnerStats | null = null;
   private bankName: string = '';
+  private returnUrl: string = '';
 
   protected onMount(): void {
     try {
       const raw = sessionStorage.getItem('qz-flashcard-stats');
       if (raw) this.stats = JSON.parse(raw) as LeitnerStats;
       this.bankName = sessionStorage.getItem('qz-flashcard-bank-name') || 'Flashcard Session';
+      // Return URL set by the host app before navigating here
+      this.returnUrl = localStorage.getItem(RETURN_URL_KEY) || '';
     } catch { /* ignore */ }
     this.render();
   }
@@ -28,7 +33,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
           <button class="btn-primary" id="home-btn" style="margin-top: var(--spacing-md);">← Start New Session</button>
         </div></div></div>
       `);
-      this.qs('#home-btn')?.addEventListener('click', () => router.navigate('/'));
+      this.qs('#home-btn')?.addEventListener('click', () => this.goBack());
       return;
     }
 
@@ -40,7 +45,6 @@ export class FlashcardSummaryScreen extends BaseComponent {
       <div class="screen">
         <div class="container" style="max-width: 700px;">
           <div class="card" style="margin-bottom: var(--spacing-md); text-align: center;">
-            <div style="font-size: 3rem; margin-bottom: var(--spacing-sm);">🎓</div>
             <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Session Complete!</h1>
             <p class="text-secondary">${this.escapeHtml(this.bankName)}</p>
           </div>
@@ -91,7 +95,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
                       ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
                     </td>
                     <td style="text-align: center; padding: var(--spacing-xs);">
-                      ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">✓ Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
+                      ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
                     </td>
                   </tr>
                 `
@@ -103,12 +107,12 @@ export class FlashcardSummaryScreen extends BaseComponent {
 
           <!-- Action Buttons -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
-            <button id="download-json-btn" class="btn-secondary" style="padding: var(--spacing-md);">⬇ Download JSON</button>
-            <button id="download-csv-btn" class="btn-secondary" style="padding: var(--spacing-md);">⬇ Download CSV</button>
+            <button id="download-json-btn" class="btn-secondary" style="padding: var(--spacing-md);">Download JSON</button>
+            <button id="download-csv-btn" class="btn-secondary" style="padding: var(--spacing-md);">Download CSV</button>
           </div>
 
           <button id="new-session-btn" class="btn-primary" style="width: 100%; padding: var(--spacing-md); font-size: var(--font-size-lg);">
-            ← Start New Session
+            ${this.returnUrl ? '← Back to Game' : '← Start New Session'}
           </button>
         </div>
       </div>
@@ -116,7 +120,16 @@ export class FlashcardSummaryScreen extends BaseComponent {
 
     this.qs('#download-json-btn')?.addEventListener('click', () => this.downloadJson());
     this.qs('#download-csv-btn')?.addEventListener('click', () => this.downloadCsv());
-    this.qs('#new-session-btn')?.addEventListener('click', () => router.navigate('/'));
+    this.qs('#new-session-btn')?.addEventListener('click', () => this.goBack());
+  }
+
+  private goBack(): void {
+    if (this.returnUrl) {
+      try { localStorage.removeItem(RETURN_URL_KEY); } catch { /* ignore */ }
+      window.location.href = this.returnUrl;
+    } else {
+      router.navigate('/');
+    }
   }
 
   private formatTime(ms: number): string {

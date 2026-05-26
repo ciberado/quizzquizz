@@ -4,8 +4,16 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
-### Changed
-- **[flashcard-app]** Play screen redesigned: now shows all answer options in an A/B/C/D labeled grid (matching the host game screen style); "Show Answer" reveals correct answers in green and wrong ones dimmed in red, before the Yes/No verdict buttons appear.
+### Fixed
+- **[flashcard-app]** Play screen: progress bar now shows a 4-segment breakdown (Learning / Reviewing / Mastering / Done) so users see movement after every card, not just after full graduation.
+- **[flashcard-app]** Play screen: "Show Answer" and Yes/No buttons always render at the same vertical position (`height: 100dvh` flex layout, answers grid scrollable, actions pinned to bottom).
+- **[flashcard-app]** Play screen: layout is now wide (max-width: 1000px, centered) to use available space like the quiz game screen.
+- **[flashcard-app]** Summary screen: "Back to Game" button returns to the host flashcard lobby when launched via "Play Now"; falls back to flashcard join screen otherwise.
+- **[flashcard-app]** Removed emoji (🎉, 🎓, ⬇) from play and summary screens.
+- **[host-app]** Flashcard lobby "Play Now" stores the current URL in localStorage so the summary screen can navigate back.
+
+### Added
+- **[flashcard-app]** `LeitnerEngine.getBoxDistribution()` — returns count of cards per box and graduated; covered by 3 new unit tests.
 
 ## [0.8.1] — 2026-05-26
 
