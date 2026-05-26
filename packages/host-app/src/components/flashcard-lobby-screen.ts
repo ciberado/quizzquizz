@@ -297,9 +297,7 @@ export class FlashcardLobbyScreen extends BaseComponent {
           el.title = '✅ Copied to clipboard!';
           setTimeout(() => { el.title = orig; }, 2000);
         }
-      } catch {
-        alert(`Join link:\n${url}`);
-      }
+      } catch { /* ignore */ }
     });
   }
 
