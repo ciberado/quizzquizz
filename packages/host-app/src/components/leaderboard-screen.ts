@@ -150,7 +150,6 @@ export class LeaderboardScreen extends HTMLElement {
       router.navigate('/question');
     } catch (error) {
       console.error('Error advancing to next question:', error);
-      alert('Failed to advance to next question');
       this.isNavigating = false; // Reset on error
     }
   }
@@ -198,7 +197,6 @@ export class LeaderboardScreen extends HTMLElement {
       router.navigate('/results');
     } catch (error) {
       console.error('Error ending quiz:', error);
-      alert('Failed to end quiz');
       this.isNavigating = false; // Reset on error
     }
   }

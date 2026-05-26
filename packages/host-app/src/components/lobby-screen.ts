@@ -465,7 +465,7 @@ export class LobbyScreen extends BaseComponent {
       router.navigate(`/question/${this.sessionId}`);
     } catch (error) {
       console.error('Failed to start quiz:', error);
-      alert('Failed to start quiz. Please try again.');
+      this.showError('Failed to start quiz. Please try again.');
       this.startPolling(); // Resume polling on error
     }
   }
@@ -529,8 +529,8 @@ export class LobbyScreen extends BaseComponent {
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       
-      // Fallback: show alert
-      alert(`Join link:\n${playerUrlWithPin}`);
+      // Fallback: log to console
+      console.warn('Clipboard unavailable. Join link:', playerUrlWithPin);
     }
   }
 

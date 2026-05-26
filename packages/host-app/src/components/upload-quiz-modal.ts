@@ -130,7 +130,10 @@ export class UploadQuizModal extends BaseComponent {
         setTimeout(() => { btn.textContent = original; }, 2000);
       } catch {
         // Clipboard API may not be available (non-HTTPS, permission denied)
-        alert('Could not copy to clipboard. Please copy the prompt manually.');
+        const btn = this.qs<HTMLButtonElement>('.copy-prompt-btn')!;
+        const original = btn.textContent!;
+        btn.textContent = '⚠️ Copy failed — paste manually';
+        setTimeout(() => { btn.textContent = original; }, 3000);
       }
     });
 
