@@ -136,7 +136,7 @@ export class FlashcardPlayScreen extends BaseComponent {
       /* ── Answers grid ────────────────────────────── */
       .fc-answers-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
         gap: var(--spacing-xs);
         flex: 1;
         overflow-y: auto;
