@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-05-26
+
 ### Fixed
 - **[host-app]** Removed emoji icons (`⬇`, `🃏`) from "Download" and "Launch Flashcards" buttons on the question preview screen — buttons now match the clean text-only style of "Create Quiz".
 - **[host-app]** Flashcard lobby screen completely redesigned to match the quiz lobby's design language: gradient PIN banner with white text (high contrast), QR code for sharing, responsive layout that stacks vertically on mobile, no emoji icons.
