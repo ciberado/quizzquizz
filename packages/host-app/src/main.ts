@@ -3,9 +3,11 @@ import { router } from './router';
 import { state } from './state';
 import { OfflineIndicator } from './offline-indicator';
 import { ErrorBoundary } from './error-boundary';
+import { theme } from './theme';
 
 // Import screen components
 import './components/auth-header';
+import './components/theme-toggle';
 import './components/login-screen';
 import './components/bank-browser';
 import './components/upload-quiz-modal';
@@ -25,6 +27,9 @@ import './components/flashcard-lobby-screen';
 
 // Initialize error boundary (catches unhandled errors)
 new ErrorBoundary();
+
+// Apply saved theme before first render
+theme.init();
 
 // Initialize offline indicator
 new OfflineIndicator();
