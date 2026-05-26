@@ -1,7 +1,7 @@
 ---
 name: commit-changes
 description: "Workflow for committing staged or unstaged changes in the quizzquizz monorepo. Groups files by logical concern, runs relevant tests per group, updates CHANGELOG.md, optionally bumps all package.json versions (patch or minor), and produces Conventional Commit messages. Use whenever the user asks to commit, ship, or release work."
-argument-hint: "Optional: 'patch' or 'minor' to bump versions before committing. Leave blank to skip version bump."
+argument-hint: "Optional: 'patch' or 'minor' to bump versions before committing. Leave blank to auto-decide based on change type."
 ---
 
 # Commit Changes Workflow
@@ -19,11 +19,19 @@ Load this skill when:
 
 ### 0. Collect the argument
 
-The optional argument is the version bump type: `patch`, `minor`, or absent (no bump).
+The optional argument is the version bump type: `patch`, `minor`, or absent (auto-decide).
 
 ```
-bump = argument   # "patch" | "minor" | ""
+bump = argument   # "patch" | "minor" | "" (auto)
 ```
+
+If `bump` is absent but the user has asked for a version bump (e.g. "bump and commit", "release", "ship"), **auto-decide** the bump type by inspecting the changes:
+
+- Use **`minor`** when any change introduces a new user-visible feature: new screen, new workflow, new API endpoint, new option, or any `feat` commit type.
+- Use **`patch`** when all changes are bug fixes, styling tweaks, copy edits, refactors, test additions, or dependency updates — i.e. all `fix`, `chore`, `refactor`, `test`, `docs` commit types.
+- Use **no bump** only when the user has not asked for one at all.
+
+State the chosen bump type and the rationale (one sentence) before proceeding.
 
 ---
 
