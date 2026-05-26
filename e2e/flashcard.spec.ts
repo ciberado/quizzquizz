@@ -107,8 +107,9 @@ test.describe('Flashcard API Flow', () => {
 });
 
 test.describe('Flashcard App UI', () => {
-  test('flashcard join screen renders at /flashcard/', async ({ page }) => {
-    await page.goto('http://localhost:3004/flashcard/');
+  test('flashcard join screen renders at /flashcard/ (via proxy)', async ({ page }) => {
+    // Use the proxy entry point (port 3000) — mirrors production routing
+    await page.goto('/flashcard/');
     await page.waitForSelector('flashcard-join-screen', { timeout: 10000 });
 
     // Should show PIN input
@@ -126,7 +127,7 @@ test.describe('Flashcard App UI', () => {
   });
 
   test('flashcard join shows error for invalid PIN', async ({ page }) => {
-    await page.goto('http://localhost:3004/flashcard/');
+    await page.goto('/flashcard/');
     await page.waitForSelector('flashcard-join-screen', { timeout: 10000 });
 
     await page.fill('#nickname-input', 'TestPlayer');
@@ -139,7 +140,7 @@ test.describe('Flashcard App UI', () => {
 
   test('host app preview screen has Launch Flashcards button', async ({ page }) => {
     // Navigate to host app
-    await page.goto('http://localhost:3001/host/');
+    await page.goto('/host/');
 
     // Wait for the create session screen
     await page.waitForSelector('create-session-screen', { timeout: 10000 });
@@ -163,7 +164,7 @@ test.describe('Flashcard App UI', () => {
     else if (tree?.folders?.length > 0) firstBankId = tree.folders[0].banks?.[0]?.id;
 
     if (firstBankId) {
-      await page.goto(`http://localhost:3001/host/#/preview/${encodeURIComponent(firstBankId)}`);
+      await page.goto(`/host/#/preview/${encodeURIComponent(firstBankId)}`);
       await page.waitForSelector('question-preview-screen', { timeout: 10000 });
 
       // Should have Launch Flashcards button
@@ -192,8 +193,8 @@ test.describe('Flashcard App UI', () => {
     });
     const session = await createRes.json();
 
-    // Navigate to the flashcard play URL directly
-    await page.goto(`http://localhost:3004/flashcard/#/play/${session.id}`);
+    // Navigate to the flashcard play URL through the proxy
+    await page.goto(`/flashcard/#/play/${session.id}`);
     await page.waitForSelector('flashcard-play-screen', { timeout: 10000 });
 
     // Should show a question card with Show Answer button

@@ -78,6 +78,10 @@ export default defineConfig({
       },
     },
     {
+      name: 'proxy-tests',
+      testMatch: '**/proxy.spec.ts',
+    },
+    {
       name: 'flashcard-tests',
       testMatch: '**/flashcard.spec.ts',
       use: {
