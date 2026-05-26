@@ -67,24 +67,39 @@ export class FlashcardLobbyScreen extends BaseComponent {
             </button>
           </div>
 
-          <!-- Share link card -->
+          <!-- Benefits card -->
           <div class="card" style="margin-top: var(--spacing-lg);">
-            <h2 style="margin-bottom: var(--spacing-md); font-size: var(--font-size-large);">Share Link</h2>
-            <div class="share-row">
-              <input
-                type="text"
-                id="share-link"
-                value="${flashcardUrl}"
-                readonly
-                class="share-input"
-              />
-              <button id="copy-btn" class="secondary">
-                Copy Link
-              </button>
-            </div>
-            <p class="help-text" style="margin-top: var(--spacing-md); color: var(--color-text-secondary);">
-              Share this link or the PIN with participants. "Play Now" opens the flashcard player in this window.
-            </p>
+            <h2 style="margin-bottom: var(--spacing-md); font-size: var(--font-size-large);">Why Flashcards?</h2>
+            <ul class="benefits-list">
+              <li>
+                <span class="benefit-icon">🔁</span>
+                <div>
+                  <strong>Spaced repetition</strong>
+                  <p>Cards you struggle with come back more often. Cards you know well are retired — so you spend your time where it matters.</p>
+                </div>
+              </li>
+              <li>
+                <span class="benefit-icon">🧠</span>
+                <div>
+                  <strong>Active recall</strong>
+                  <p>Trying to retrieve an answer strengthens memory far more than re-reading ever could.</p>
+                </div>
+              </li>
+              <li>
+                <span class="benefit-icon">🚀</span>
+                <div>
+                  <strong>Self-paced</strong>
+                  <p>No timer, no pressure. Each player moves at their own speed and masters every card before the session ends.</p>
+                </div>
+              </li>
+              <li>
+                <span class="benefit-icon">📊</span>
+                <div>
+                  <strong>Full session report</strong>
+                  <p>A detailed summary shows which cards were mastered, how many retries each needed, and how long the session took — downloadable as JSON or CSV.</p>
+                </div>
+              </li>
+            </ul>
           </div>
 
         </div>
@@ -203,44 +218,38 @@ export class FlashcardLobbyScreen extends BaseComponent {
         box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
       }
 
-      .share-row {
+      .benefits-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
         display: flex;
-        gap: var(--spacing-sm);
-        align-items: stretch;
+        flex-direction: column;
+        gap: var(--spacing-md);
       }
 
-      .share-input {
-        flex: 1;
-        padding: var(--spacing-sm);
-        background: var(--color-bg-alt, #151932);
-        border: 2px solid var(--color-border);
-        border-radius: var(--border-radius);
+      .benefits-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+      }
+
+      .benefit-icon {
+        font-size: 1.6rem;
+        line-height: 1.3;
+        flex-shrink: 0;
+      }
+
+      .benefits-list strong {
+        display: block;
+        margin-bottom: 2px;
         color: var(--color-text);
-        font-size: var(--font-size-base);
-        min-width: 0;
       }
 
-      .share-input:focus {
-        outline: none;
-        border-color: var(--color-primary);
-      }
-
-      .share-row button.secondary {
-        padding: var(--spacing-sm) var(--spacing-md);
-        background: var(--color-bg-alt, #151932);
-        border: 2px solid var(--color-primary);
-        border-radius: var(--border-radius);
-        color: var(--color-primary);
-        font-size: var(--font-size-base);
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.2s ease;
-      }
-
-      .share-row button.secondary:hover {
-        background: var(--color-primary);
-        color: white;
+      .benefits-list p {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+        line-height: 1.5;
       }
 
       @media (max-width: 768px) {
@@ -274,10 +283,6 @@ export class FlashcardLobbyScreen extends BaseComponent {
         .lobby-controls button {
           min-width: unset;
         }
-
-        .share-row {
-          flex-direction: column;
-        }
       }
     `;
     document.head.appendChild(style);
@@ -306,19 +311,6 @@ export class FlashcardLobbyScreen extends BaseComponent {
           setTimeout(() => { (el as HTMLElement).title = orig; }, 2000);
         }
       } catch { /* ignore */ }
-    });
-
-    this.qs('#copy-btn')?.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(this.getFlashcardPlayerUrl());
-        const btn = this.qs<HTMLButtonElement>('#copy-btn');
-        if (btn) {
-          btn.textContent = 'Copied!';
-          setTimeout(() => { if (btn) btn.textContent = 'Copy Link'; }, 2000);
-        }
-      } catch {
-        this.qs<HTMLInputElement>('#share-link')?.select();
-      }
     });
   }
 
