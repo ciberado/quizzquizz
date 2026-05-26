@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[host-app]** Removed emoji icons (`⬇`, `🃏`) from "Download" and "Launch Flashcards" buttons on the question preview screen — buttons now match the clean text-only style of "Create Quiz".
+- **[host-app]** Flashcard lobby screen completely redesigned to match the quiz lobby's design language: gradient PIN banner with white text (high contrast), QR code for sharing, responsive layout that stacks vertically on mobile, no emoji icons.
+
 ### Added
 - **[config]** `npm start` / `npm stop` commands to start and stop all dev services behind a single port (3000).
 - **[config]** `scripts/dev-proxy.mjs` — pure Node.js reverse proxy mirroring the production Caddyfile routing: `/api*`→3010, `/host*`→3001, `/analytics*`→3003, `/flashcard*`→3004, `/*`→3002. Handles HTTP and WebSocket upgrades.

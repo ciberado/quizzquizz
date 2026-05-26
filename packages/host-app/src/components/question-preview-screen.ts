@@ -453,7 +453,7 @@ export class QuestionPreviewScreen extends BaseComponent {
                 ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
                 title="Download the filtered questions as a Markdown question bank"
               >
-                ⬇ Download
+                Download
               </button>
               <button 
                 class="btn-secondary" 
@@ -461,7 +461,7 @@ export class QuestionPreviewScreen extends BaseComponent {
                 ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
                 title="Launch a self-paced flashcard session with these questions"
               >
-                🃏 Launch Flashcards
+                Launch Flashcards
               </button>
               <button 
                 class="btn" 
@@ -853,7 +853,7 @@ export class QuestionPreviewScreen extends BaseComponent {
       console.error('Failed to download filtered bank:', error);
       handleApiError(error, 'Downloading question bank');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '⬇ Download'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
     }
   }
 
