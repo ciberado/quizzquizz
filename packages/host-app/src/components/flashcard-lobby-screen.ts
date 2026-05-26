@@ -188,7 +188,8 @@ export class FlashcardLobbyScreen extends BaseComponent {
       }
 
       .lobby-controls button {
-        width: 220px;
+        width: 280px;
+        white-space: nowrap;
         font-size: var(--font-size-large);
         padding: var(--spacing-md) var(--spacing-xl);
         border-radius: var(--border-radius);
