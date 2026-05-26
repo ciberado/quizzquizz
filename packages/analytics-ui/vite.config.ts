@@ -5,8 +5,8 @@ export default defineConfig({
   server: {
     port: 3003,
     host: '0.0.0.0',
-    allowedHosts: ['quizzquizz', 'quizzquizz.mininube.com'],
-    hmr: { clientPort: 3003 },
+    allowedHosts: 'all',
+    hmr: { clientPort: 3000, path: '/analytics/__hmr' },
     proxy: {
       '/api': {
         target: 'http://localhost:3010',
