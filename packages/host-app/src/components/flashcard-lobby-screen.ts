@@ -68,37 +68,13 @@ export class FlashcardLobbyScreen extends BaseComponent {
           </div>
 
           <!-- Benefits card -->
-          <div class="card" style="margin-top: var(--spacing-lg);">
-            <h2 style="margin-bottom: var(--spacing-md); font-size: var(--font-size-large);">Why Flashcards?</h2>
+          <div class="card" style="margin-top: var(--spacing-md);">
+            <h3 style="margin: 0 0 var(--spacing-sm); font-size: var(--font-size-base); opacity: 0.7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Why Flashcards?</h3>
             <ul class="benefits-list">
-              <li>
-                <span class="benefit-icon">🔁</span>
-                <div>
-                  <strong>Spaced repetition</strong>
-                  <p>Cards you struggle with come back more often. Cards you know well are retired — so you spend your time where it matters.</p>
-                </div>
-              </li>
-              <li>
-                <span class="benefit-icon">🧠</span>
-                <div>
-                  <strong>Active recall</strong>
-                  <p>Trying to retrieve an answer strengthens memory far more than re-reading ever could.</p>
-                </div>
-              </li>
-              <li>
-                <span class="benefit-icon">🚀</span>
-                <div>
-                  <strong>Self-paced</strong>
-                  <p>No timer, no pressure. Each player moves at their own speed and masters every card before the session ends.</p>
-                </div>
-              </li>
-              <li>
-                <span class="benefit-icon">📊</span>
-                <div>
-                  <strong>Full session report</strong>
-                  <p>A detailed summary shows which cards were mastered, how many retries each needed, and how long the session took — downloadable as JSON or CSV.</p>
-                </div>
-              </li>
+              <li><span class="benefit-icon">🔁</span><strong>Spaced repetition</strong> — hard cards repeat, mastered ones retire</li>
+              <li><span class="benefit-icon">🧠</span><strong>Active recall</strong> — retrieval beats re-reading for memory</li>
+              <li><span class="benefit-icon">🚀</span><strong>Self-paced</strong> — no timer, every player finishes every card</li>
+              <li><span class="benefit-icon">📊</span><strong>Session report</strong> — per-card stats, downloadable as JSON or CSV</li>
             </ul>
           </div>
 
@@ -222,34 +198,25 @@ export class FlashcardLobbyScreen extends BaseComponent {
         list-style: none;
         margin: 0;
         padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-md);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-xs) var(--spacing-md);
       }
 
       .benefits-list li {
         display: flex;
-        align-items: flex-start;
-        gap: var(--spacing-md);
+        align-items: baseline;
+        gap: var(--spacing-xs);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
       }
 
       .benefit-icon {
-        font-size: 1.6rem;
-        line-height: 1.3;
         flex-shrink: 0;
       }
 
       .benefits-list strong {
-        display: block;
-        margin-bottom: 2px;
         color: var(--color-text);
-      }
-
-      .benefits-list p {
-        margin: 0;
-        color: var(--color-text-secondary);
-        font-size: var(--font-size-sm);
-        line-height: 1.5;
       }
 
       @media (max-width: 768px) {
@@ -282,6 +249,10 @@ export class FlashcardLobbyScreen extends BaseComponent {
 
         .lobby-controls button {
           min-width: unset;
+        }
+
+        .benefits-list {
+          grid-template-columns: 1fr;
         }
       }
     `;
