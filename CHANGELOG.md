@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file, organized b
 - **[config]** `npm start` / `npm stop` commands to start and stop all dev services behind a single port (3000).
 - **[config]** `scripts/dev-proxy.mjs` — pure Node.js reverse proxy mirroring the production Caddyfile routing: `/api*`→3010, `/host*`→3001, `/analytics*`→3003, `/flashcard*`→3004, `/*`→3002. Handles HTTP and WebSocket upgrades.
 - **[config]** `scripts/start-dev.mjs` / `scripts/stop-dev.mjs` — orchestrate all services via concurrently, write PID to `.dev.pid` so `npm stop` works from any terminal.
+- **[config]** `scripts/proxy-router.mjs` — extracted routing logic (testable module); `scripts/proxy-router.test.mjs` — 18 unit tests using `node:test` covering all route rules and priority ordering.
+- **[e2e]** `e2e/proxy.spec.ts` — 9 E2E tests verifying proxy routing works through port 3000 for every service (API, host, player, flashcard, analytics).
 
 ### Changed
 - **[api-server]** Dev port moved 3000→3010; port 3000 is now the proxy entry point.
@@ -15,6 +17,8 @@ All notable changes to this project will be documented in this file, organized b
 - **[player-app]** `hmr.clientPort: 3002`.
 - **[analytics-ui]** Vite proxy target→`:3010`; `hmr.clientPort: 3003`.
 - **[flashcard-app]** Vite proxy target→`:3010`; `hmr.clientPort: 3004`.
+- **[e2e]** Flashcard E2E tests updated to route through proxy port 3000 instead of direct app ports.
+- **[docs]** `vibe/QUICK-REFERENCE.md` — updated port table, `npm start`/`npm stop` workflow, flashcard-app, and file structure.
 
 ## [0.8.0] — 2026-05-25
 

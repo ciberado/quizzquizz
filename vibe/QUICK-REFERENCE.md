@@ -5,20 +5,20 @@
 ### Development
 
 ```bash
-# Start API server (port 3000)
-npm run dev --workspace=@quizzquizz/api-server
+# Start everything behind a single port (recommended)
+npm start          # all services + proxy on :3000, blocks with logs
+npm stop           # stop from any other terminal (reads .dev.pid)
 
-# Start player UI (port 3002)
-npm run dev --workspace=@quizzquizz/player-app
+# Or run individual services (fine-grained, separate terminals)
+npm run dev -w @quizzquizz/api-server     # API server  (port 3010)
+npm run dev -w @quizzquizz/host-app       # Host UI     (port 3001)
+npm run dev -w @quizzquizz/player-app     # Player UI   (port 3002)
+npm run dev -w @quizzquizz/analytics-ui   # Analytics   (port 3003)
+npm run dev -w @quizzquizz/flashcard-app  # Flashcard   (port 3004)
+node scripts/dev-proxy.mjs               # Proxy       (port 3000)
 
-# Start host UI (port 3001)
-npm run dev --workspace=@quizzquizz/host-app
-
-# Start analytics UI (port 3003)
-npm run dev --workspace=@quizzquizz/analytics-ui
-
-# Start all in development mode
-npm run dev --workspaces
+# Start all services + proxy in one terminal (foreground concurrently)
+npm run dev
 ```
 
 ### Testing
@@ -116,13 +116,17 @@ npm run docker:clean
 
 ## Service Ports
 
-| Service         | Port | URL                          | Purpose                      |
-|-----------------|------|------------------------------|------------------------------|
-| API Server      | 3000 | http://localhost:3000        | REST API endpoints           |
-| Host App        | 3001 | http://localhost:3001        | Host/presenter UI            |
-| Player App      | 3002 | http://localhost:3002        | Player participation UI      |
-| Analytics UI    | 3003 | http://localhost:3003        | Analytics dashboard          |
-| Docker (Caddy)  | 3000 | http://localhost:3000        | Production reverse proxy     |
+| Service              | Port | URL (via proxy)               | Purpose                       |
+|----------------------|------|-------------------------------|-------------------------------|
+| **Dev Proxy** 🔀     | **3000** | http://localhost:3000      | Single entry point (dev)      |
+| API Server           | 3010 | :3000/api/*                   | REST API endpoints            |
+| Host App             | 3001 | :3000/host/                   | Host/presenter UI             |
+| Player App           | 3002 | :3000/                        | Player participation UI       |
+| Analytics UI         | 3003 | :3000/analytics/              | Analytics dashboard           |
+| Flashcard App        | 3004 | :3000/flashcard/              | Flashcard study sessions      |
+| Docker/Caddy (prod)  | 3000 | http://localhost:3000         | Production reverse proxy      |
+
+> In development, access **everything through port 3000** — the proxy routes to the right service.
 
 ---
 
@@ -130,15 +134,18 @@ npm run docker:clean
 
 ### Development
 
-- API: `http://localhost:3000`
+- Proxy (single-port): `http://localhost:3000`
+- API direct: `http://localhost:3010`
 - Player App: `http://localhost:3002`
 - Host App: `http://localhost:3001`
+- Flashcard App: `http://localhost:3004`
 
 ### Production (Docker)
 
 - All services: `http://localhost:3000`
   - `/` → Player app
   - `/host` → Host app
+  - `/flashcard` → Flashcard app
   - `/analytics` → Analytics UI
   - `/api/*` → API endpoints
 
@@ -178,7 +185,7 @@ packages/
 │   │   ├── reload-banks.ts   # Shared reload helper
 │   │   ├── upload-mutex.ts   # Async mutex for upload serialization
 │   │   ├── routes/
-│   │   │   ├── sessions.ts   # Session endpoints
+│   │   │   ├── sessions.ts   # Session endpoints (quiz + flashcard)
 │   │   │   ├── players.ts    # Player endpoints
 │   │   │   ├── game.ts       # Game state/answer endpoints
 │   │   │   ├── question-banks.ts  # Question bank endpoints
@@ -198,6 +205,7 @@ packages/
 │   │   │   ├── upload-quiz-modal.ts  # Quiz upload modal (paste/file/Claude)
 │   │   │   ├── create-session-screen.ts
 │   │   │   ├── lobby-screen.ts
+│   │   │   ├── flashcard-lobby-screen.ts  # Flashcard lobby with PIN + Play Now
 │   │   │   ├── question-display-screen.ts
 │   │   │   ├── leaderboard-screen.ts
 │   │   │   ├── final-results-screen.ts
@@ -225,6 +233,32 @@ packages/
 │   │   └── styles.css        # Mobile-first styling
 │   └── index.html
 │
+├── flashcard-app/            # Standalone Vite SPA at /flashcard/
+│   ├── src/
+│   │   ├── main.ts           # App entry point
+│   │   ├── router.ts         # Hash-based routing (#/play/:id, #/summary)
+│   │   ├── state.ts          # Session state
+│   │   ├── api-client.ts     # Flashcard API calls
+│   │   ├── leitner.ts        # Leitner 3-box spaced repetition engine
+│   │   ├── leitner.test.ts   # Leitner unit tests
+│   │   ├── components.test.ts# Component logic tests
+│   │   └── components/
+│   │       ├── base-component.ts
+│   │       ├── join-screen.ts        # PIN + nickname entry
+│   │       ├── play-screen.ts        # Card display + Yes/No
+│   │       └── summary-screen.ts     # Session summary + download
+│   └── index.html
+│
+├── analytics/
+└── analytics-ui/
+
+scripts/
+├── dev-proxy.mjs             # HTTP reverse proxy on :3000 (mirrors Caddyfile)
+├── proxy-router.mjs          # Exported routing logic (testable)
+├── proxy-router.test.mjs     # Unit tests for proxy routing (node --test)
+├── start-dev.mjs             # npm start: spawn all services + write .dev.pid
+└── stop-dev.mjs              # npm stop: read .dev.pid and SIGTERM
+
 question-banks/
 ├── sample-general-knowledge.md
 ├── [other .md question banks]
@@ -234,21 +268,14 @@ question-banks/
 
 vibe/
 ├── PROJECT.md                # Architecture & design decisions
-├── PLAN.md                   # Implementation plan (this file)
+├── PLAN.md                   # Implementation plan
 ├── FAILS.md                  # Known issues and failures
 └── phases/                   # Individual phase documentation
-    ├── PHASE-0-3-foundations.md
-    ├── PHASE-4-player-app.md
-    ├── PHASE-5-host-app.md
-    ├── PHASE-6-polish.md
-    ├── PHASE-7-8-features-deployment.md
-    ├── PHASE-9-15-future.md
-    ├── PHASE-12-analytics.md
-    ├── PHASE-13-quiz-upload.md
-    └── QUICK-REFERENCE.md   # This file
 
 e2e/
 ├── api.spec.ts              # API tests
+├── proxy.spec.ts            # Single-port proxy routing tests
+├── flashcard.spec.ts        # Flashcard session flow tests
 ├── player-ui.spec.ts        # Player UI tests
 ├── host-analytics.spec.ts   # Host analytics tests
 ├── quiz-upload.spec.ts      # Quiz upload tests
@@ -374,25 +401,30 @@ npm run prisma:studio  # Interactive UI
 ### Starting Development
 
 ```bash
-# Terminal 1: API Server
-npm run dev --workspace=@quizzquizz/api-server
+# Recommended: single command, everything on port 3000
+npm start
 
-# Terminal 2: Host App
-npm run dev --workspace=@quizzquizz/host-app
-
-# Terminal 3: Player App
-npm run dev --workspace=@quizzquizz/player-app
-
-# Terminal 4: Tests (watch mode)
-npm test
+# Or manual multi-terminal setup:
+# Terminal 1: npm run dev -w @quizzquizz/api-server     (port 3010)
+# Terminal 2: npm run dev -w @quizzquizz/host-app       (port 3001)
+# Terminal 3: npm run dev -w @quizzquizz/player-app     (port 3002)
+# Terminal 4: node scripts/dev-proxy.mjs               (port 3000)
+# Terminal 5: npm test
 ```
 
 ### Testing a Complete Flow
 
-1. Host app: http://localhost:3001 → Create session
-2. Player app: http://localhost:3002 → Enter PIN and join
-3. Host app: Start quiz and advance through questions
-4. Player app: Answer questions and see results
+1. Start all services: `npm start`
+2. Host app: http://localhost:3000/host/ → Create session
+3. Player app: http://localhost:3000 → Enter PIN and join
+4. Host app: Start quiz and advance through questions
+5. Player app: Answer questions and see results
+
+### Flashcard Mode
+
+1. Host app: http://localhost:3000/host/ → pick a bank → **🃏 Launch Flashcards**
+2. Share PIN or click **▶ Play Now** to open the flashcard app
+3. Flashcard app: http://localhost:3000/flashcard/ → study with Leitner spaced repetition
 
 ### Making Changes
 
@@ -446,7 +478,7 @@ docker push your-registry/quizzquizz:latest
 ## Common Issues & Solutions
 
 ### Issue: "Port already in use"
-**Solution**: Kill the process on that port or use different port via NODE_ENV and PORT env vars
+**Solution**: `npm stop` to kill the dev stack (if started with `npm start`). Otherwise kill the specific port: `lsof -ti:3000 | xargs kill`
 
 ### Issue: "Database locked"
 **Solution**: SQLite concurrent access - restart API server and ensure only one instance running
