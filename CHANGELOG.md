@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-05-26
+
+### Added
+- **[host-app]** Flashcard set tracking utility (`flashcard-sets.ts`): deterministic set slicing, localStorage progress persistence, active-session handoff key.
+- **[host-app]** Set picker modal on the flashcard launch screen: auto-selects first incomplete set, shows completion badges, Reset Progress button, Cancel and Launch buttons; 900px wide, stacks vertically on small screens.
+- **[flashcard-app]** `flashcard-sets.ts` mirror utility; `summary-screen` marks the active set as completed in localStorage on mount.
+- **[host-app]** 25 unit tests for flashcard-sets utility (all pass).
+- **[e2e]** 10 Playwright tests for set picker modal and completion tracking.
+
+### Fixed
+- **[host-app]** Lobby screen PIN banner text (label, code, URL, QR label) now uses hardcoded white/rgba-white so it always contrasts against the gradient background in both light and dark themes.
+- **[host-app]** Set picker modal Cancel button (action row) was not wired — switched `qs` to `qsa` to cover both the ✕ header button and the Cancel button.
+- **[host-app]** Set picker modal button layout: equal height/width via shared small padding, `flex-wrap` for small screens, modal widened to 900px.
+
 ## [0.10.0] — 2026-05-26
 
 ### Added
