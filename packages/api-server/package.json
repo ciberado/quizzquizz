@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc -b",
-    "dev": "tsx watch src/index.ts",
+    "dev": "PORT=3010 tsx watch src/index.ts",
     "start": "node dist/index.js",
     "clean": "rm -rf dist *.tsbuildinfo",
     "test": "vitest",

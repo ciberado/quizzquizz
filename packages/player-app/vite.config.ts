@@ -5,5 +5,6 @@ export default defineConfig({
     port: 3002,
     host: '0.0.0.0',
     allowedHosts: ['quizzquizz', 'quizzquizz.mininube.com'],
+    hmr: { clientPort: 3002 },
   },
 });

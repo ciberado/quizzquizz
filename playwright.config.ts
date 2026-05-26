@@ -90,8 +90,8 @@ export default defineConfig({
   // Start the API server and host/player apps before running tests
   webServer: [
     {
-      command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); npm run dev --workspace=@quizzquizz/api-server"',
-      url: 'http://localhost:3000/health',
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); PORT=3010 npm run dev --workspace=@quizzquizz/api-server"',
+      url: 'http://localhost:3010/health',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
       stdout: 'pipe',
@@ -118,6 +118,14 @@ export default defineConfig({
       url: 'http://localhost:3004/flashcard/',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'node scripts/dev-proxy.mjs',
+      url: 'http://localhost:3000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 30000,
       stdout: 'pipe',
       stderr: 'pipe',
     },

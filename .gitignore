@@ -64,3 +64,6 @@ test-results/
 
 # User-uploaded quiz banks (runtime data)
 question-banks/user-quizzes/
+
+# Dev server PID file (written by npm start)
+.dev.pid

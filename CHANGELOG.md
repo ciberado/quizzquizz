@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[config]** `npm start` / `npm stop` commands to start and stop all dev services behind a single port (3000).
+- **[config]** `scripts/dev-proxy.mjs` — pure Node.js reverse proxy mirroring the production Caddyfile routing: `/api*`→3010, `/host*`→3001, `/analytics*`→3003, `/flashcard*`→3004, `/*`→3002. Handles HTTP and WebSocket upgrades.
+- **[config]** `scripts/start-dev.mjs` / `scripts/stop-dev.mjs` — orchestrate all services via concurrently, write PID to `.dev.pid` so `npm stop` works from any terminal.
+
+### Changed
+- **[api-server]** Dev port moved 3000→3010; port 3000 is now the proxy entry point.
+- **[host-app]** Vite proxy target→`:3010`; `hmr.clientPort: 3001`.
+- **[player-app]** `hmr.clientPort: 3002`.
+- **[analytics-ui]** Vite proxy target→`:3010`; `hmr.clientPort: 3003`.
+- **[flashcard-app]** Vite proxy target→`:3010`; `hmr.clientPort: 3004`.
+
 ## [0.8.0] — 2026-05-25
 
 ### Added
