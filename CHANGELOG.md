@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-05-26
+
+### Added
+- **[host-app]** Light/dark theme system with CSS variables; defaults to dark mode; persists to `localStorage`.
+- **[player-app]** Light/dark theme system with CSS variables; defaults to light mode; persists to `localStorage`.
+- **[host-app]** Theme toggle button in the top bar (`auth-header`) and a fixed floating button (bottom-right) for in-game access.
+- **[player-app]** Theme toggle button in the top bar and fixed floating button (bottom-right).
+- **[config]** `flashcard-app` documented in `AGENTS.md` and `.github/copilot-instructions.md` with port table, Caddy routing table, and `injectStyles()` pitfall note.
+
+### Changed
+- **[host-app]** Top bar (`auth-header`) rewritten to use CSS variable-driven `.top-bar` classes; no more hardcoded dark colours.
+- **[player-app]** Same top bar refactor as host-app.
+- **[host-app]** Login screen replaced full-page dark gradient with `.screen` + `.login-card` layout driven by CSS variables.
+- **[player-app]** Same login screen refactor as host-app.
+- **[flashcard-app]** Answer grid capped at 2 columns (was `auto-fit` allowing 3+); responsive: 1 column on narrow viewports, 2 columns at ≥560 px.
+
+### Fixed
+- **[host-app]** Layout fix: header is now always visible (flex-column `body`; `#app` fills remaining space with `overflow-y: auto`) — header no longer scrolls off-screen during gameplay.
+- **[player-app]** Same layout fix as host-app.
+
 ## [0.9.0] — 2026-05-26
 
 ### Added
