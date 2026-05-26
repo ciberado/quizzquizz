@@ -92,6 +92,21 @@ export class FlashcardLobbyScreen extends BaseComponent {
     style.id = 'flashcard-lobby-styles';
     style.textContent = `
       /* Reuse lobby-screen pin-display layout */
+      #pin-display {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: var(--border-radius);
+      }
+
+      #pin-display:hover {
+        transform: scale(1.02);
+        filter: brightness(1.08);
+      }
+
+      #pin-display:active {
+        transform: scale(0.98);
+      }
+
       .pin-content {
         display: flex;
         justify-content: space-between;
@@ -273,15 +288,18 @@ export class FlashcardLobbyScreen extends BaseComponent {
     });
 
     this.qs('#pin-display')?.addEventListener('click', async () => {
+      const url = this.getFlashcardPlayerUrl();
       try {
-        await navigator.clipboard.writeText(this.getFlashcardPlayerUrl());
-        const el = this.qs('#pin-display');
+        await navigator.clipboard.writeText(url);
+        const el = this.qs<HTMLElement>('#pin-display');
         if (el) {
-          const orig = (el as HTMLElement).title;
-          (el as HTMLElement).title = 'Copied!';
-          setTimeout(() => { (el as HTMLElement).title = orig; }, 2000);
+          const orig = el.title;
+          el.title = '✅ Copied to clipboard!';
+          setTimeout(() => { el.title = orig; }, 2000);
         }
-      } catch { /* ignore */ }
+      } catch {
+        alert(`Join link:\n${url}`);
+      }
     });
   }
 
