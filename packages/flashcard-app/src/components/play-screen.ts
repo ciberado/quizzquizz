@@ -22,11 +22,21 @@ type Phase = 'loading' | 'question' | 'answer' | 'complete';
 // Letter labels for answers: A, B, C, D, E, F
 const ANSWER_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
+/** Fisher-Yates shuffle — returns a new array */
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+  return arr;
+}
+
 export class FlashcardPlayScreen extends BaseComponent {
   private sessionId: string = '';
   private sessionState: FlashcardSessionState | null = null;
   private engine: LeitnerEngine | null = null;
   private currentCard: FlashCard | null = null;
+  private shuffledAnswers: Array<{ id: string; text: string }> = [];
   private phase: Phase = 'loading';
   private error: string | null = null;
 
@@ -343,6 +353,8 @@ export class FlashcardPlayScreen extends BaseComponent {
       return;
     }
 
+    // Shuffle answers so the correct position changes every turn
+    this.shuffledAnswers = shuffle([...this.currentCard.allAnswers]);
     this.phase = 'question';
     this.render();
   }
@@ -383,7 +395,7 @@ export class FlashcardPlayScreen extends BaseComponent {
     const dist = this.engine?.getBoxDistribution() ?? { box1: 0, box2: 0, box3: 0, graduated: 0 };
     const active = this.engine?.getActiveCount() ?? 0;
     const revealed = this.phase === 'answer';
-    const isSingle = card.allAnswers.length === 1;
+    const isSingle = this.shuffledAnswers.length === 1;
 
     this.setContent(`
       <div class="fc-play-screen">
@@ -395,7 +407,7 @@ export class FlashcardPlayScreen extends BaseComponent {
         </div>
 
         <div class="fc-answers-grid${isSingle ? ' fc-single' : ''}">
-          ${card.allAnswers.map((answer, i) => this.renderAnswerCard(answer, i, card.correctAnswerIds, revealed)).join('')}
+          ${this.shuffledAnswers.map((answer, i) => this.renderAnswerCard(answer, i, card.correctAnswerIds, revealed)).join('')}
         </div>
 
         <div class="fc-actions">
