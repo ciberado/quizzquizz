@@ -1,5 +1,6 @@
 import { BaseComponent } from './base-component';
 import { api } from '../api-client';
+import { theme } from '../theme';
 
 /**
  * Authentication header component for player app
@@ -11,9 +12,10 @@ export class AuthHeader extends BaseComponent {
   constructor() {
     super();
     this.checkAuth();
-    
+
     // Listen for auth changes
     window.addEventListener('auth-changed', () => this.checkAuth());
+    window.addEventListener('theme-changed', () => this.render());
   }
 
   async checkAuth() {
@@ -48,33 +50,29 @@ export class AuthHeader extends BaseComponent {
   }
 
   render() {
+    const currentTheme = theme.load();
+    const isDark = currentTheme === 'dark';
+    const themeIcon = isDark ? '☀️' : '🌙';
+    const themeLabel = isDark ? 'Switch to light theme' : 'Switch to dark theme';
+
     this.innerHTML = `
-      <div style="background: #1a1a1a; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; font-size: 16px;">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <h2 style="margin: 0; font-size: 24px; line-height: 1;">
-            <a href="#/" style="color: #00d4ff; text-decoration: none;">QuizzQuizz</a>
-          </h2>
-          <span style="color: #666; font-size: 16px;">Player</span>
+      <div class="top-bar">
+        <div class="top-bar-brand">
+          <a href="#/">QuizzQuizz</a>
+          <span class="top-bar-label">Player</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="top-bar-actions">
           ${this.user ? `
-            <span style="color: #aaa; font-size: 16px;">
-              👤 ${this.user.name || this.user.email}
-            </span>
-            <button 
-              class="auth-logout-btn"
-              style="background: #ff4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-height: auto; line-height: 1.2;"
-            >
-              Logout
-            </button>
+            <span class="top-bar-user">👤 ${this.user.name || this.user.email}</span>
+            <button class="auth-logout-btn top-bar-btn logout">Logout</button>
           ` : `
-            <button 
-              class="auth-login-btn"
-              style="background: #00d4ff; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; min-height: auto; line-height: 1.2;"
-            >
-              Login / Sign Up
-            </button>
+            <button class="auth-login-btn top-bar-btn login">Login / Sign Up</button>
           `}
+          <button
+            class="theme-toggle-btn top-bar-theme-btn"
+            aria-label="${themeLabel}"
+            title="${themeLabel}"
+          >${themeIcon}</button>
         </div>
       </div>
     `;
@@ -88,6 +86,11 @@ export class AuthHeader extends BaseComponent {
     const loginBtn = this.querySelector('.auth-login-btn');
     if (loginBtn) {
       loginBtn.addEventListener('click', () => this.handleLogin());
+    }
+
+    const themeBtn = this.querySelector('.theme-toggle-btn');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => theme.toggle());
     }
   }
 }

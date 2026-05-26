@@ -3,6 +3,7 @@ import { router } from './router';
 import { state } from './state';
 import { OfflineIndicator } from './offline-indicator';
 import { ErrorBoundary } from './error-boundary';
+import { theme } from './theme';
 
 // Import screen components
 import './components/join-screen';
@@ -13,6 +14,7 @@ import './components/waiting-screen';
 import './components/results-screen';
 import './components/login-screen';
 import './components/auth-header';
+import './components/theme-toggle';
 
 /**
  * QuizzQuizz Player App
@@ -21,6 +23,9 @@ import './components/auth-header';
 
 // Initialize error boundary (catches unhandled errors)
 new ErrorBoundary();
+
+// Apply saved theme before first render
+theme.init();
 
 // Initialize offline indicator
 new OfflineIndicator();

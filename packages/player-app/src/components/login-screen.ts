@@ -59,17 +59,17 @@ export class LoginScreen extends BaseComponent {
 
   render() {
     this.innerHTML = `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 2rem;">
-        <div style="background: #2a2a2a; padding: 3rem; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 400px; width: 100%;">
-          <h1 style="color: #00d4ff; margin-bottom: 0.5rem; text-align: center;">
+      <div class="screen">
+        <div class="login-card">
+          <h1 style="color: var(--color-primary); margin-bottom: 0.5rem; text-align: center;">
             ${this.mode === 'login' ? 'Welcome Back' : 'Create Account'}
           </h1>
-          <p style="color: #aaa; text-align: center; margin-bottom: 2rem;">
+          <p style="color: var(--color-text-light); text-align: center; margin-bottom: 2rem;">
             ${this.mode === 'login' ? 'Sign in to track your quiz stats' : 'Sign up to save your performance history'}
           </p>
 
           ${this.error ? `
-            <div style="background: #ff4444; color: white; padding: 0.75rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.9rem;">
+            <div style="background: var(--color-error); color: white; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: var(--font-size-sm);">
               ${this.error}
             </div>
           ` : ''}
@@ -77,73 +77,40 @@ export class LoginScreen extends BaseComponent {
           <form class="auth-form">
             ${this.mode === 'signup' ? `
               <div style="margin-bottom: 1rem;">
-                <label style="display: block; color: #ccc; margin-bottom: 0.5rem; font-size: 0.9rem;">Full Name</label>
-                <input 
-                  type="text" 
-                  name="name" 
-                  required
-                  placeholder="John Doe"
-                  style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #444; border-radius: 6px; color: white; font-size: 1rem;"
-                />
+                <label>Full Name</label>
+                <input type="text" name="name" required placeholder="John Doe" />
               </div>
               <div style="margin-bottom: 1rem;">
-                <label style="display: block; color: #ccc; margin-bottom: 0.5rem; font-size: 0.9rem;">Username</label>
-                <input 
-                  type="text" 
-                  name="username" 
-                  required
-                  placeholder="johndoe"
-                  style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #444; border-radius: 6px; color: white; font-size: 1rem;"
-                />
+                <label>Username</label>
+                <input type="text" name="username" required placeholder="johndoe" />
               </div>
             ` : ''}
-            
+
             <div style="margin-bottom: 1rem;">
-              <label style="display: block; color: #ccc; margin-bottom: 0.5rem; font-size: 0.9rem;">Email</label>
-              <input 
-                type="email" 
-                name="email" 
-                required
-                placeholder="you@example.com"
-                style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #444; border-radius: 6px; color: white; font-size: 1rem;"
-              />
+              <label>Email</label>
+              <input type="email" name="email" required placeholder="you@example.com" />
             </div>
 
             <div style="margin-bottom: 1.5rem;">
-              <label style="display: block; color: #ccc; margin-bottom: 0.5rem; font-size: 0.9rem;">Password</label>
-              <input 
-                type="password" 
-                name="password" 
-                required
-                minlength="8"
-                placeholder="••••••••"
-                style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #444; border-radius: 6px; color: white; font-size: 1rem;"
-              />
+              <label>Password</label>
+              <input type="password" name="password" required minlength="8" placeholder="••••••••" />
             </div>
 
-            <button 
+            <button
               type="submit"
               ${this.loading ? 'disabled' : ''}
-              style="width: 100%; background: #00d4ff; color: black; border: none; padding: 0.875rem; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;"
+              style="width: 100%; margin-bottom: 1rem;"
             >
               ${this.loading ? 'Please wait...' : (this.mode === 'login' ? 'Sign In' : 'Sign Up')}
             </button>
           </form>
 
-          <div style="text-align: center; padding-top: 1rem; border-top: 1px solid #444;">
-            <button 
-              class="toggle-mode-btn"
-              style="background: none; border: none; color: #00d4ff; cursor: pointer; font-size: 0.9rem; text-decoration: underline;"
-            >
+          <hr class="login-card-divider" style="margin-bottom: 1rem;" />
+          <div style="text-align: center; display: flex; flex-direction: column; gap: 0.5rem;">
+            <button class="toggle-mode-btn secondary" style="min-height: auto; padding: 6px 12px; font-size: var(--font-size-sm);">
               ${this.mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
-          </div>
-
-          <div style="text-align: center; margin-top: 1rem;">
-            <button 
-              class="skip-btn"
-              style="background: none; border: none; color: #888; cursor: pointer; font-size: 0.9rem;"
-            >
+            <button class="skip-btn secondary" style="min-height: auto; padding: 6px 12px; font-size: var(--font-size-sm);">
               Continue without account →
             </button>
           </div>
