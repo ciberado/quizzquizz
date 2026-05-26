@@ -89,6 +89,14 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 },
       },
     },
+    {
+      name: 'flashcard-sets-tests',
+      testMatch: '**/flashcard-sets.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
   ],
 
   // Start the API server and host/player apps before running tests
