@@ -1,6 +1,5 @@
 /**
  * Start all QuizzQuizz dev services + proxy in the foreground.
- * Writes the process PID to .dev.pid so `npm stop` can find it.
  *
  * Services started:
  *   proxy        → node scripts/dev-proxy.mjs          (port 3000)
@@ -10,16 +9,16 @@
  *   analytics    → npm run dev -w @quizzquizz/analytics
  *   analytics-ui → npm run dev -w @quizzquizz/analytics-ui (port 3003)
  *   flashcard-app→ npm run dev -w @quizzquizz/flashcard-app (port 3004)
+ *
+ * Use `npm stop` to stop all services (finds processes by port, no PID file needed).
  */
 
 import { spawn }    from 'node:child_process';
-import { writeFileSync, unlinkSync } from 'node:fs';
 import path         from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root      = path.resolve(__dirname, '..');
-const pidFile   = path.join(root, '.dev.pid');
 
 const SERVICES = [
   { name: 'proxy',         color: 'white',   cmd: 'node',  args: ['scripts/dev-proxy.mjs'] },
@@ -31,33 +30,19 @@ const SERVICES = [
   { name: 'flashcard',     color: 'red',     cmd: 'npm',   args: ['run', 'dev', '-w', '@quizzquizz/flashcard-app'] },
 ];
 
-// Build concurrently command
-const names   = SERVICES.map(s => s.name).join(',');
-const colors  = SERVICES.map(s => s.color).join(',');
-const cmds    = SERVICES.map(s => `"${s.cmd} ${s.args.join(' ')}"`).join(' ');
-
 const child = spawn(
   'npx',
   [
     'concurrently',
-    `--names=${names}`,
-    `--prefix-colors=${colors}`,
+    `--names=${SERVICES.map(s => s.name).join(',')}`,
+    `--prefix-colors=${SERVICES.map(s => s.color).join(',')}`,
     '--kill-others-on-fail',
     ...SERVICES.map(s => `${s.cmd} ${s.args.join(' ')}`),
   ],
   { stdio: 'inherit', cwd: root, shell: false }
 );
 
-writeFileSync(pidFile, String(child.pid));
+child.on('exit', (code) => process.exit(code ?? 0));
 
-function cleanup() {
-  try { unlinkSync(pidFile); } catch { /* already gone */ }
-}
-
-child.on('exit', (code) => {
-  cleanup();
-  process.exit(code ?? 0);
-});
-
-process.on('SIGINT',  () => { child.kill('SIGINT');  });
-process.on('SIGTERM', () => { child.kill('SIGTERM'); });
+process.on('SIGINT',  () => child.kill('SIGINT'));
+process.on('SIGTERM', () => child.kill('SIGTERM'));
