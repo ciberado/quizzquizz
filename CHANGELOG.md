@@ -4,19 +4,24 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
-### Changed
-- **[flashcard-app]** Summary screen Card Details table is now sortable by every column (Question, Yes, No, First Try, Status); active column is highlighted with directional arrow indicator
-
-### Fixed
-- **[flashcard-app]** Play screen: progress bar now shows a 4-segment breakdown (Learning / Reviewing / Mastering / Done) so users see movement after every card, not just after full graduation.
-- **[flashcard-app]** Play screen: "Show Answer" and Yes/No buttons always render at the same vertical position (`height: 100dvh` flex layout, answers grid scrollable, actions pinned to bottom).
-- **[flashcard-app]** Play screen: layout is now wide (max-width: 1000px, centered) to use available space like the quiz game screen.
-- **[flashcard-app]** Summary screen: "Back to Game" button returns to the host flashcard lobby when launched via "Play Now"; falls back to flashcard join screen otherwise.
-- **[flashcard-app]** Removed emoji (🎉, 🎓, ⬇) from play and summary screens.
-- **[host-app]** Flashcard lobby "Play Now" stores the current URL in localStorage so the summary screen can navigate back.
+## [0.9.0] — 2026-05-26
 
 ### Added
+- **[flashcard-app]** Summary screen Card Details table is now sortable by every column (Question, Yes, No, First Try, Status); active column highlighted with directional arrow.
 - **[flashcard-app]** `LeitnerEngine.getBoxDistribution()` — returns count of cards per box and graduated; covered by 3 new unit tests.
+- **[flashcard-app]** Answers are Fisher-Yates shuffled on each new card draw so players cannot memorise the correct position across repetitions.
+
+### Changed
+- **[host-app]** "Share Link" section on the flashcard lobby replaced with a compact 2-column "Why Flashcards?" benefits card (spaced repetition, active recall, self-paced, session report).
+- **[host-app]** Cancel Session button now matches Play Now visual style (primary gradient); both buttons are equal width (280 px) with `white-space: nowrap`.
+- **[host-app]** Flashcard PIN banner is now clickable (copies join URL to clipboard) with hover scale/brightness effect matching the quiz lobby.
+
+### Fixed
+- **[flashcard-app]** Play screen: 4-segment progress bar (Learning / Reviewing / Mastering / Done) shows movement after every card.
+- **[flashcard-app]** Play screen: Show Answer and Yes/No buttons pinned at constant vertical position; answers grid scrollable.
+- **[flashcard-app]** Play screen: wide max-width layout (1000 px) matching quiz game screen; responsive answer grid collapses to 1 column on narrow viewports.
+- **[flashcard-app]** Summary: "Back to Game" navigates to host flashcard lobby when launched via "Play Now".
+- **[flashcard-app]** Removed remaining emoji (🎉, 🎓) from play and summary screens.
 
 ## [0.8.1] — 2026-05-26
 
