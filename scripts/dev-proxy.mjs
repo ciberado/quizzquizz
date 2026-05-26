@@ -13,28 +13,16 @@
 
 import http from 'node:http';
 import net  from 'node:net';
+import { buildRouter } from './proxy-router.mjs';
 
-const PROXY_PORT       = parseInt(process.env.PORT             ?? '3000');
-const API_PORT         = parseInt(process.env.DEV_API_PORT     ?? '3010');
-const HOST_PORT        = parseInt(process.env.DEV_HOST_PORT    ?? '3001');
-const PLAYER_PORT      = parseInt(process.env.DEV_PLAYER_PORT  ?? '3002');
-const ANALYTICS_PORT   = parseInt(process.env.DEV_ANALYTICS_PORT ?? '3003');
-const FLASHCARD_PORT   = parseInt(process.env.DEV_FLASHCARD_PORT ?? '3004');
+const PROXY_PORT     = parseInt(process.env.PORT               ?? '3000');
+const API_PORT       = parseInt(process.env.DEV_API_PORT       ?? '3010');
+const HOST_PORT      = parseInt(process.env.DEV_HOST_PORT      ?? '3001');
+const PLAYER_PORT    = parseInt(process.env.DEV_PLAYER_PORT    ?? '3002');
+const ANALYTICS_PORT = parseInt(process.env.DEV_ANALYTICS_PORT ?? '3003');
+const FLASHCARD_PORT = parseInt(process.env.DEV_FLASHCARD_PORT ?? '3004');
 
-const ROUTES = [
-  { test: (p) => p.startsWith('/api') || p === '/health', port: API_PORT,       label: 'api' },
-  { test: (p) => p.startsWith('/host'),                    port: HOST_PORT,      label: 'host' },
-  { test: (p) => p.startsWith('/analytics'),               port: ANALYTICS_PORT, label: 'analytics' },
-  { test: (p) => p.startsWith('/flashcard'),               port: FLASHCARD_PORT, label: 'flashcard' },
-  { test: () => true,                                      port: PLAYER_PORT,    label: 'player' },
-];
-
-function resolveTarget(pathname) {
-  for (const route of ROUTES) {
-    if (route.test(pathname)) return route.port;
-  }
-  return PLAYER_PORT;
-}
+const resolveTarget = buildRouter({ API_PORT, HOST_PORT, PLAYER_PORT, ANALYTICS_PORT, FLASHCARD_PORT });
 
 const server = http.createServer((req, res) => {
   const url   = new URL(req.url ?? '/', `http://localhost`);
