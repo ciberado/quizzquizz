@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Documentation
+- **[README]** Added flashcard self-study mode to features list, project structure, dev ports, Docker URLs, and a dedicated "Flashcard Self-Study Mode" section with Leitner algorithm table.
+
 ## [0.10.1] — 2026-05-26
 
 ### Added

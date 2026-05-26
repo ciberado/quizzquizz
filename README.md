@@ -20,6 +20,7 @@ docker compose down
 The application will be available at:
 - **Player app**: http://localhost:3000/
 - **Host app**: http://localhost:3000/host
+- **Flashcard app**: http://localhost:3000/flashcard/
 - **API**: http://localhost:3000/api/
 
 ## Architecture
@@ -49,6 +50,11 @@ QuizzQuizz uses a modern, simplified architecture:
   - One-click Claude AI prompt to help generate correctly-formatted banks
   - Validated on upload — bad format is rejected with clear error messages
   - Uploaded banks appear immediately in the bank browser under your personal folder
+- ✅ **Flashcard self-study mode** - Solo learning experience at `/flashcard/` — no host or game session needed
+  - Pick any question bank and study at your own pace
+  - Powered by a modified Leitner spaced-repetition system (3-box algorithm)
+  - Cards progress through Learning → Reviewing → Mastered based on your answers
+  - Session summary shows mastery rate and first-try success rate when you finish
 
 ## Development
 
@@ -81,6 +87,7 @@ Development servers:
 - API: http://localhost:3000
 - Host app: http://localhost:3001
 - Player app: http://localhost:3002
+- Flashcard app: http://localhost:3004
 
 ### Testing
 
@@ -101,7 +108,8 @@ quizzquizz/
 │   ├── question-bank/    # Markdown parser for question files
 │   ├── api-server/       # REST API (Hono + SQLite + Prisma)
 │   ├── host-app/         # Host UI (Web Components + Vite)
-│   └── player-app/       # Player UI (Web Components + Vite)
+│   ├── player-app/       # Player UI (Web Components + Vite)
+│   └── flashcard-app/    # Flashcard self-study UI (Web Components + Vite)
 ├── question-banks/       # Sample .md files with quiz questions
 ├── vibe/                 # Project documentation and plans
 ├── Dockerfile            # Multi-stage Docker build
@@ -193,6 +201,26 @@ Example:
 **Topics**: geography, capitals
 **Time Limit**: 20
 ```
+
+## Flashcard Self-Study Mode
+
+The flashcard app at `/flashcard/` lets anyone study a question bank solo — no host, no PIN, no game session required.
+
+1. Open `http://localhost:3000/flashcard/`
+2. Pick a question bank (and optionally a set)
+3. Answer each card — tap **✓ Yes** if you knew it, **✗ No** if you didn't
+4. Cards cycle through a 3-box Leitner algorithm until all are mastered
+5. A summary screen shows your mastery rate and first-try success rate at the end
+
+The Leitner system used:
+
+| Box | Name | Spacing |
+|-----|------|---------|
+| 1 | Learning | Reappears immediately |
+| 2 | Reviewing | Reappears after ~4 other cards |
+| 3 | Mastered | One final confirmation, then graduated |
+
+A "No" answer at any box returns the card to Box 1.
 
 ## License
 
