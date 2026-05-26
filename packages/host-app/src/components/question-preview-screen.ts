@@ -5,6 +5,14 @@ import { state } from '../state';
 import { preferences } from '../preferences';
 import { handleApiError, getErrorMessage } from '../error-handler';
 import type { Question, Difficulty } from '@quizzquizz/common';
+import {
+  getOrBuildProgress,
+  saveProgress,
+  nextIncompleteSetIndex,
+  resetProgress,
+  setActiveSession,
+} from '../flashcard-sets';
+import type { BankProgress } from '../flashcard-sets';
 
 interface QuestionBank {
   id: string;
@@ -56,6 +64,11 @@ export class QuestionPreviewScreen extends BaseComponent {
   // Pagination state
   private currentPage = 1;
   private limit = 10;
+
+  // Flashcard set picker state
+  private showingSetPicker = false;
+  private bankProgress: BankProgress | null = null;
+  private selectedSetIndex = 0;
 
   protected async onMount(): Promise<void> {
     // Restore user's last session-configuration choices
@@ -498,6 +511,7 @@ export class QuestionPreviewScreen extends BaseComponent {
           </div>
         </div>
       </div>
+      ${this.renderSetPickerModal()}
     `);
 
     this.attachEventListeners();
@@ -594,6 +608,118 @@ export class QuestionPreviewScreen extends BaseComponent {
         >
           Next →
         </button>
+      </div>
+    `;
+  }
+
+  private renderSetPickerModal(): string {
+    if (!this.showingSetPicker || !this.bankProgress) return '';
+
+    const progress = this.bankProgress;
+    const totalSets = progress.sets.length;
+
+    const setRows = progress.sets.map((set, i) => {
+      const isSelected = i === this.selectedSetIndex;
+      const isDone = set.completedAt !== null;
+      const doneDate = isDone
+        ? new Date(set.completedAt!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : null;
+
+      return `
+        <button
+          data-action="select-set"
+          data-set-index="${i}"
+          style="
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'};
+            border-radius: var(--border-radius);
+            background: ${isSelected ? 'color-mix(in srgb, var(--color-primary) 12%, var(--color-bg))' : 'var(--color-bg)'};
+            color: var(--color-text); cursor: pointer; text-align: left;
+            font-size: var(--font-size-base);
+          "
+        >
+          <span style="font-weight: ${isSelected ? '600' : '400'};">
+            Set ${i + 1}
+            <span style="color: var(--color-text-muted); font-weight: 400; font-size: var(--font-size-sm);">
+              &nbsp;(${set.ids.length} card${set.ids.length === 1 ? '' : 's'})
+            </span>
+          </span>
+          <span style="
+            font-size: var(--font-size-sm); padding: 2px 8px; border-radius: 9999px;
+            background: ${isDone ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : 'var(--color-bg-alt)'};
+            color: ${isDone ? 'var(--color-success)' : 'var(--color-text-muted)'};
+            font-weight: 500;
+          ">
+            ${isDone ? `Done ${doneDate}` : 'Not started'}
+          </span>
+        </button>
+      `;
+    }).join('');
+
+    const allDone = progress.sets.every((s) => s.completedAt !== null);
+
+    return `
+      <div
+        data-action="close-set-picker-backdrop"
+        style="
+          position: fixed; inset: 0; z-index: 1000;
+          background: rgba(0,0,0,0.55);
+          display: flex; align-items: center; justify-content: center;
+          padding: var(--spacing-md);
+        "
+      >
+        <div
+          style="
+            background: var(--color-bg); border-radius: var(--border-radius);
+            padding: var(--spacing-lg); max-width: 900px; width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          "
+          onclick="event.stopPropagation();"
+        >
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+            <div>
+              <h2 style="margin: 0 0 var(--spacing-xs);">Select Study Set</h2>
+              <p style="color: var(--color-text-muted); margin: 0; font-size: var(--font-size-sm);">
+                ${totalSets} set${totalSets === 1 ? '' : 's'} of up to ${progress.setSize} cards each
+                ${allDone ? ' — all sets completed!' : ''}
+              </p>
+            </div>
+            <button data-action="cancel-set-picker" style="
+              background: none; border: none; cursor: pointer; font-size: 1.25rem;
+              color: var(--color-text-muted); padding: 4px;
+            " aria-label="Close">✕</button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: var(--spacing-xs); margin-bottom: var(--spacing-md); max-height: 300px; overflow-y: auto;">
+            ${setRows}
+          </div>
+
+          <div style="
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+          ">
+            <button data-action="reset-progress" class="btn-secondary" style="
+              flex: 1 1 140px;
+              padding: var(--spacing-xs) var(--spacing-md);
+              font-size: var(--font-size-sm);
+              min-width: 0;
+            ">Reset Progress</button>
+            <button data-action="cancel-set-picker" class="btn-secondary" style="
+              flex: 1 1 100px;
+              padding: var(--spacing-xs) var(--spacing-md);
+              font-size: var(--font-size-sm);
+              min-width: 0;
+            ">Cancel</button>
+            <button data-action="launch-set" class="btn-primary" style="
+              flex: 1 1 140px;
+              padding: var(--spacing-xs) var(--spacing-md);
+              font-size: var(--font-size-sm);
+              min-width: 0;
+            ">Launch Set ${this.selectedSetIndex + 1}</button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -792,11 +918,54 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     }
 
-    // Launch flashcard session button
+    // Launch flashcard session button — opens set picker first
     const flashcardBtn = this.qs('[data-action="create-flashcard"]');
     if (flashcardBtn) {
       flashcardBtn.addEventListener('click', () => {
-        this.createFlashcardSession();
+        this.openSetPicker();
+      });
+    }
+
+    // Set picker modal interactions
+    const backdrop = this.qs('[data-action="close-set-picker-backdrop"]');
+    if (backdrop) {
+      backdrop.addEventListener('click', () => {
+        this.showingSetPicker = false;
+        this.render();
+      });
+    }
+
+    this.qsa('[data-action="select-set"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.selectedSetIndex = parseInt((btn as HTMLElement).dataset['setIndex'] ?? '0', 10);
+        this.render();
+      });
+    });
+
+    this.qsa('[data-action="cancel-set-picker"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.showingSetPicker = false;
+        this.render();
+      });
+    });
+
+    const resetBtn = this.qs('[data-action="reset-progress"]');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (!this.bankId) return;
+        resetProgress(this.bankId);
+        // Rebuild fresh progress
+        this.bankProgress = getOrBuildProgress(this.bankId, this.allBankQuestions.map((q) => q.id));
+        this.selectedSetIndex = 0;
+        saveProgress(this.bankId, this.bankProgress);
+        this.render();
+      });
+    }
+
+    const launchSetBtn = this.qs('[data-action="launch-set"]');
+    if (launchSetBtn) {
+      launchSetBtn.addEventListener('click', () => {
+        void this.launchWithSelectedSet();
       });
     }
 
@@ -892,49 +1061,41 @@ export class QuestionPreviewScreen extends BaseComponent {
     return lines.join('\n');
   }
 
-  private async createFlashcardSession(): Promise<void> {
-    if (!this.bank || !this.preview) return;
+  /** Open the set picker modal, building/loading progress from localStorage. */
+  private openSetPicker(): void {
+    if (!this.bank || this.allBankQuestions.length === 0) return;
 
-    let selectedCount = this.selectAllMode
-      ? this.preview.pagination.totalQuestions
-      : this.selectedQuestionIds.size;
+    const allIds = this.allBankQuestions.map((q) => q.id);
+    this.bankProgress = getOrBuildProgress(this.bankId, allIds);
+    saveProgress(this.bankId, this.bankProgress);
+    this.selectedSetIndex = nextIncompleteSetIndex(this.bankProgress);
+    this.showingSetPicker = true;
+    this.render();
+  }
 
-    if (this.maxQuestions !== null && selectedCount > this.maxQuestions) {
-      selectedCount = this.maxQuestions;
-    }
+  /** Create a flashcard session using the set the user selected in the picker. */
+  private async launchWithSelectedSet(): Promise<void> {
+    if (!this.bank || !this.bankProgress) return;
 
-    if (selectedCount === 0) {
-      this.showError('Please select at least one question');
+    const selectedSet = this.bankProgress.sets[this.selectedSetIndex];
+    if (!selectedSet || selectedSet.ids.length === 0) {
+      this.showError('Selected set has no questions');
       return;
     }
 
+    this.showingSetPicker = false;
     this.showLoading('Creating flashcard session...');
 
     try {
-      let questionIds: string[] | undefined;
-      if (this.selectAllMode) {
-        questionIds = this.preview.questions.map((q) => q.id);
-      } else {
-        questionIds = Array.from(this.selectedQuestionIds);
-      }
-
-      if (this.maxQuestions !== null && questionIds && questionIds.length > this.maxQuestions) {
-        const shuffled = [...questionIds];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          const temp = shuffled[i]!;
-          shuffled[i] = shuffled[j]!;
-          shuffled[j] = temp;
-        }
-        questionIds = shuffled.slice(0, this.maxQuestions);
-      }
-
       const session = await api.createSession(this.bankId, {
         mode: 'flashcard',
-        questionIds,
+        questionIds: selectedSet.ids,
         randomOrder: this.randomOrder,
         shuffleAnswers: this.shuffleAnswers,
       });
+
+      // Store active session so flashcard-app can mark this set complete on finish
+      setActiveSession({ bankId: this.bankId, setIndex: this.selectedSetIndex });
 
       state.setState({
         sessionId: session.id,

@@ -178,7 +178,7 @@ export class LobbyScreen extends BaseComponent {
 
         .pin-label {
           font-size: var(--font-size-sm);
-          color: var(--color-text-secondary);
+          color: rgba(255, 255, 255, 0.85);
           margin-bottom: var(--spacing-xs);
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -192,14 +192,14 @@ export class LobbyScreen extends BaseComponent {
         .pin-code {
           font-size: 4em;
           font-weight: 700;
-          color: var(--color-text);
+          color: #fff;
           letter-spacing: 0.1em;
         }
 
         .player-url {
           font-size: calc(var(--font-size-base) * 1.5);
           font-weight: 600;
-          color: var(--color-accent);
+          color: rgba(255, 255, 255, 0.95);
           word-break: break-all;
         }
 
@@ -215,7 +215,7 @@ export class LobbyScreen extends BaseComponent {
         .qr-code {
           width: 150px;
           height: 150px;
-          border: 3px solid var(--color-primary);
+          border: 3px solid rgba(255, 255, 255, 0.5);
           border-radius: var(--border-radius);
           background: white;
           padding: 6px;
@@ -223,7 +223,7 @@ export class LobbyScreen extends BaseComponent {
 
         .qr-label {
           font-size: var(--font-size-sm);
-          color: var(--color-text-secondary);
+          color: rgba(255, 255, 255, 0.8);
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
