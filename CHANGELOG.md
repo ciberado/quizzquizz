@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.10.2] — 2026-05-26
+
+### Changed
+- **[host-app]** Replaced all `alert()` calls with inline error UI (`showError()`), button-level feedback, or `console.warn` fallbacks.
+
 ### Documentation
 - **[README]** Added flashcard self-study mode to features list, project structure, dev ports, Docker URLs, and a dedicated "Flashcard Self-Study Mode" section with Leitner algorithm table.
 
