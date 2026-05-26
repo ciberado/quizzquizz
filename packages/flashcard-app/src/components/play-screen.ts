@@ -50,18 +50,22 @@ export class FlashcardPlayScreen extends BaseComponent {
     const style = document.createElement('style');
     style.id = 'flashcard-play-styles';
     style.textContent = `
-      /* Full-viewport layout — buttons always stay at the bottom */
+      /* Full-viewport layout — pinned to viewport, works on all screen sizes */
       .fc-play-screen {
+        position: fixed;
+        inset: 0;
         display: flex;
         flex-direction: column;
-        height: 100dvh;
-        height: 100vh;
-        max-width: 1000px;
-        width: 100%;
-        margin: 0 auto;
+        background: var(--color-bg-secondary);
         padding: var(--spacing-sm);
         box-sizing: border-box;
         overflow: hidden;
+        /* Wide layout: centered, capped at 1000px — fills screen on phones */
+        max-width: 1000px;
+        width: 100%;
+        margin: 0 auto;
+        left: 50%;
+        transform: translateX(-50%);
       }
 
       /* ── Progress bar ─────────────────────────────── */
