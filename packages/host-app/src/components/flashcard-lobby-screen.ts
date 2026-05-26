@@ -62,7 +62,7 @@ export class FlashcardLobbyScreen extends BaseComponent {
             <button type="button" id="play-now-btn" class="primary">
               Play Now
             </button>
-            <button type="button" id="back-btn" class="danger">
+            <button type="button" id="back-btn" class="primary">
               Cancel Session
             </button>
           </div>
@@ -201,18 +201,6 @@ export class FlashcardLobbyScreen extends BaseComponent {
       .lobby-controls button.primary:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
-      }
-
-      .lobby-controls button.danger {
-        background: var(--color-bg-alt, #151932);
-        color: var(--color-error);
-        border: 2px solid var(--color-error);
-      }
-
-      .lobby-controls button.danger:hover {
-        background: var(--color-error);
-        color: white;
-        transform: translateY(-2px);
       }
 
       .share-row {
