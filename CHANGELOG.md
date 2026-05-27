@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-05-27
+
+### Added
+- **[host-app]** Hierarchical topic tree filter in the question preview screen: collapsible Topics panel (collapsed by default), all tree levels pre-rendered in DOM, direct DOM toggling (no scroll reset on expand), compact 24px row height with `overflow: hidden` to prevent triangle character bleed causing wrong-node expansion.
+- **[host-app]** Full-stack engineering question bank (`question-banks/full-stack-engineering.md`): 66 questions across 5 root topics, 30 leaf topics, 3-level colon-separated hierarchy.
+- **[host-app]** Expanded test suite from 30 → 50 tests, including deep-hierarchy fixtures, parent/child count validation, indeterminate state, DOM-identity toggle regression test.
+- **[config]** `docker:push` npm script for building and pushing Docker images to Docker Hub.
+
+### Fixed
+- **[host-app]** Topic tree node expand bug: clicking node X was expanding the next sibling Y due to triangle character (`▶`/`▼`) overflowing its 16px container into adjacent rows. Fixed with `overflow: hidden` on both the row div and button, plus `data-children-id` direct ID lookup replacing fragile DOM traversal.
+
+### Documentation
+- **[config]** Added "Bug Fixes" section to `AGENTS.md`: write a failing test before fixing any bug.
+
 ## [0.10.2] — 2026-05-26
 
 ### Changed
