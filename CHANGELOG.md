@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-05-27
+
+### Fixed
+- **[host-app]** Event delegation: replaced per-render `attachEventListeners()` / `bindEvents()` calls with a single delegated handler in `onMount()` — morphdom reuses DOM nodes so re-attaching listeners after each patch stacked duplicates that cancelled each other out (topic toggle, tree expand, filters).
+- **[host-app]** Restored missing `div.screen > div.container > div.card` wrappers in question-preview `render()` that were accidentally removed, causing full-width layout.
+- **[host-app]** Clipboard copy fallback: `navigator.clipboard` is unavailable over HTTP; added `document.execCommand('copy')` fallback and visible outline feedback on the lobby PIN banner. Also migrated lobby to event delegation.
+- **[player-app]** CORS/network error when accessed via Tailscale or any remote hostname: changed API base URL from hardcoded `http://localhost:3000` to relative `''` so requests route through the dev-proxy like all other apps.
+
 ## [0.12.0] — 2026-05-27
 
 ### Changed
