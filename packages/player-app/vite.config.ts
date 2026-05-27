@@ -6,5 +6,8 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: 'all',
     hmr: { clientPort: 3000, path: '/__hmr' },
+    proxy: {
+      '/api': 'http://localhost:3010',
+    },
   },
 });

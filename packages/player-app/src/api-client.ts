@@ -334,12 +334,12 @@ class ApiClient {
  * Get API base URL based on environment
  */
 function getApiBaseUrl(): string {
-  // In development, API runs on port 3000
+  // Use relative URLs so requests go through the dev proxy (port 3000 → 3010)
+  // or through Caddy in production. Never hardcode localhost:3000, which breaks
+  // when the app is accessed via a remote hostname (Tailscale, tunnels, etc.).
   if (import.meta.env?.DEV) {
-    return 'http://localhost:3000';
+    return '';
   }
-  
-  // In production, API is served from same origin
   return window.location.origin;
 }
 
