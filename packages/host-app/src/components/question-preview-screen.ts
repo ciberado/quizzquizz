@@ -39,6 +39,13 @@ interface QuestionPreviewResponse {
   };
 }
 
+interface TopicNode {
+  label: string;
+  path: string;
+  questionIds: Set<string>;
+  children: Map<string, TopicNode>;
+}
+
 /**
  * Question Preview & Configuration Screen
  * Allows host to preview questions, apply filters, and configure session options
@@ -60,6 +67,8 @@ export class QuestionPreviewScreen extends BaseComponent {
   // Filter state
   private selectedDifficulties = new Set<Difficulty>();
   private selectedTopics = new Set<string>();
+  private expandedTopicNodes = new Set<string>();
+  private topicsExpanded = false;
   
   // Pagination state
   private currentPage = 1;
@@ -127,17 +136,7 @@ export class QuestionPreviewScreen extends BaseComponent {
         qParams.difficulty = Array.from(this.selectedDifficulties).join(',');
       }
       if (this.selectedTopics.size > 0) {
-        // Expand the "Others" pseudo-topic into its underlying real topics
-        const realTopics: string[] = [];
-        const othersTopics = this.getOthersTopics();
-        for (const t of this.selectedTopics) {
-          if (t === 'Others') {
-            realTopics.push(...othersTopics);
-          } else {
-            realTopics.push(t);
-          }
-        }
-        qParams.topic = realTopics.join(',');
+        qParams.topic = Array.from(this.selectedTopics).join(',');
       }
 
       this.preview = await api.getQuestionBankQuestions(this.bankId, qParams) as QuestionPreviewResponse;
@@ -161,6 +160,134 @@ export class QuestionPreviewScreen extends BaseComponent {
   }
 
   /**
+   * Build a topic tree from the difficulty-filtered bank questions.
+   * Topics use colon-separated hierarchy (e.g. "architecture:ha:multi-az-design").
+   * Each node tracks the set of unique question IDs at or below it.
+   * Selected topics that have 0 matching questions (due to the difficulty filter)
+   * are still inserted into the tree so they remain visible and checked.
+   */
+  private buildTopicTree(): Map<string, TopicNode> {
+    const filtered = this.allBankQuestions.filter(
+      q => this.selectedDifficulties.size === 0 || this.selectedDifficulties.has(q.difficulty),
+    );
+
+    const root = new Map<string, TopicNode>();
+
+    const insertPath = (topicPath: string, questionId?: string) => {
+      const parts = topicPath.split(':');
+      let current = root;
+      let pathSoFar = '';
+      for (const part of parts) {
+        pathSoFar = pathSoFar ? `${pathSoFar}:${part}` : part;
+        if (!current.has(part)) {
+          current.set(part, { label: part, path: pathSoFar, questionIds: new Set(), children: new Map() });
+        }
+        const node = current.get(part)!;
+        if (questionId) node.questionIds.add(questionId);
+        current = node.children;
+      }
+    };
+
+    for (const q of filtered) {
+      for (const topic of q.topics) {
+        insertPath(topic, q.id);
+      }
+    }
+
+    // Keep selected topics visible even when the difficulty filter gives them 0 questions
+    for (const topic of this.selectedTopics) {
+      insertPath(topic);
+    }
+
+    return root;
+  }
+
+  /** Collect all leaf topic paths under a node. */
+  private getLeafTopics(node: TopicNode): string[] {
+    if (node.children.size === 0) return [node.path];
+    return Array.from(node.children.values()).flatMap(child => this.getLeafTopics(child));
+  }
+
+  /** Walk the tree and return the node at the given colon-separated path, or null. */
+  private findTreeNode(root: Map<string, TopicNode>, path: string): TopicNode | null {
+    const parts = path.split(':');
+    let current = root;
+    let found: TopicNode | null = null;
+    for (const part of parts) {
+      found = current.get(part) ?? null;
+      if (!found) return null;
+      current = found.children;
+    }
+    return found;
+  }
+
+  /** Render the full topic tree (entry point called from render()). */
+  private renderTopicTree(): string {
+    const tree = this.buildTopicTree();
+    if (tree.size === 0) {
+      return '<span style="color: var(--color-text-muted);">No topics available</span>';
+    }
+    return this.renderTopicTreeNodes(tree, 0);
+  }
+
+  /** Recursively render tree nodes with indentation. All levels are always in the DOM; visibility is toggled via the `hidden` attribute. */
+  private renderTopicTreeNodes(nodes: Map<string, TopicNode>, depth: number): string {
+    const indent = depth * 14;
+    return Array.from(nodes.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, node]) => {
+        const hasChildren = node.children.size > 0;
+        const isExpanded = this.expandedTopicNodes.has(node.path);
+        const leafTopics = this.getLeafTopics(node);
+        const selectedLeaves = leafTopics.filter(t => this.selectedTopics.has(t));
+        const allSelected = selectedLeaves.length > 0 && selectedLeaves.length === leafTopics.length;
+        const someSelected = selectedLeaves.length > 0 && !allSelected;
+        const count = node.questionIds.size;
+        const label = node.label.replace(/-/g, ' ');
+
+        // Safe ID: replace characters that are invalid in HTML id attributes
+        const safeId = `tnc-${node.path.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+        return `
+          <div data-tree-node style="line-height: 1;">
+            <div style="display: flex; align-items: center; gap: 2px; padding-left: ${indent + 2}px; height: 24px; overflow: hidden;">
+              <button
+                data-action="toggle-tree-node"
+                data-node-path="${this.escapeHtml(node.path)}"
+                data-children-id="${hasChildren ? safeId : ''}"
+                style="
+                  background: none; border: none; flex-shrink: 0;
+                  width: 16px; height: 16px; padding: 0; overflow: hidden;
+                  display: flex; align-items: center; justify-content: center;
+                  color: var(--color-text-muted); font-size: 11px; line-height: 1;
+                  cursor: ${hasChildren ? 'pointer' : 'default'};
+                "
+                ${!hasChildren ? 'disabled' : ''}
+              >${hasChildren ? `<span data-tree-arrow style="line-height: 1; display: block;">${isExpanded ? '▼' : '▶'}</span>` : ''}</button>
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; flex: 1; min-width: 0; user-select: none;">
+                <input
+                  type="checkbox"
+                  data-filter="topic-node"
+                  data-node-path="${this.escapeHtml(node.path)}"
+                  ${allSelected ? 'checked' : ''}
+                  data-indeterminate="${someSelected}"
+                  style="flex-shrink: 0; width: 11px; height: 11px; margin: 0;"
+                />
+                <span style="
+                  font-size: var(--font-size-base); text-transform: capitalize;
+                  font-weight: ${depth === 0 ? '600' : '400'};
+                  ${count === 0 ? 'color: var(--color-text-muted);' : ''}
+                ">${this.escapeHtml(label)}</span>
+                <small style="color: var(--color-text-muted); flex-shrink: 0; font-size: var(--font-size-sm);">(${count})</small>
+              </label>
+            </div>
+            ${hasChildren ? `<div id="${safeId}" data-tree-children="${this.escapeHtml(node.path)}" ${!isExpanded ? 'hidden' : ''}>${this.renderTopicTreeNodes(node.children, depth + 1)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+  }
+
+  /**
    * Count questions per difficulty level, respecting no filters (shows raw totals).
    */
   private computeDifficultyCounts(): Map<string, number> {
@@ -169,91 +296,6 @@ export class QuestionPreviewScreen extends BaseComponent {
       counts.set(q.difficulty, (counts.get(q.difficulty) ?? 0) + 1);
     }
     return counts;
-  }
-
-  /**
-   * Compute topic counts from the actual questions in the bank.
-   *
-   * When no topics are selected the count is the total number of
-   * difficulty-filtered questions for that topic.
-   *
-   * When some topics ARE selected, the count for each *unselected* topic
-   * shows how many **additional** questions it would add to the set already
-   * covered by the selected topics — avoiding the "3 + 2 = 4" confusion
-   * caused by overlapping questions.
-   *
-   * Selected topics always show their own total (difficulty-filtered).
-   *
-   * Topics with fewer than 2 questions are merged into an "Others" bucket.
-   */
-  private computeTopicCounts(): Map<string, number> {
-    const othersTopics = this.getOthersTopics();
-
-    // Difficulty-filtered questions
-    const filtered = this.allBankQuestions.filter(
-      q => this.selectedDifficulties.size === 0 || this.selectedDifficulties.has(q.difficulty),
-    );
-
-    // Build the set of question IDs already covered by selected topics
-    const coveredIds = new Set<string>();
-    if (this.selectedTopics.size > 0) {
-      for (const q of filtered) {
-        const qTopics = q.topics.map(t => othersTopics.has(t) ? 'Others' : t);
-        if (qTopics.some(t => this.selectedTopics.has(t))) {
-          coveredIds.add(q.id);
-        }
-      }
-    }
-
-    // Raw per-topic counts (total for selected, additional for unselected)
-    const raw = new Map<string, number>();
-    for (const q of filtered) {
-      for (const topic of q.topics) {
-        const displayTopic = othersTopics.has(topic) ? 'Others' : topic;
-        if (this.selectedTopics.has(displayTopic)) {
-          // Selected topic → always show its full total
-          raw.set(displayTopic, (raw.get(displayTopic) ?? 0) + 1);
-        } else if (!coveredIds.has(q.id)) {
-          // Unselected topic → only count questions not already covered
-          raw.set(displayTopic, (raw.get(displayTopic) ?? 0) + 1);
-        }
-      }
-    }
-
-    // Group topics with fewer than 2 questions into "Others"
-    // (only for topics not already mapped to Others by getOthersTopics)
-    const grouped = new Map<string, number>();
-    for (const [topic, count] of raw) {
-      if (topic === 'Others') {
-        grouped.set('Others', (grouped.get('Others') ?? 0) + count);
-      } else {
-        grouped.set(topic, count);
-      }
-    }
-    return grouped;
-  }
-
-  /**
-   * Return the set of original (raw) topic values that were merged into
-   * the "Others" bucket so we can map the UI checkbox back to real topics.
-   */
-  private getOthersTopics(): Set<string> {
-    const others = new Set<string>();
-    const raw = new Map<string, number>();
-    for (const q of this.allBankQuestions) {
-      if (this.selectedDifficulties.size > 0 && !this.selectedDifficulties.has(q.difficulty)) {
-        continue;
-      }
-      for (const topic of q.topics) {
-        raw.set(topic, (raw.get(topic) ?? 0) + 1);
-      }
-    }
-    for (const [topic, count] of raw) {
-      if (count < 2) {
-        others.add(topic);
-      }
-    }
-    return others;
   }
 
   protected render(): void {
@@ -316,50 +358,22 @@ export class QuestionPreviewScreen extends BaseComponent {
 
                 <!-- Topic Filter -->
                 <div>
-                  <label style="display: block; font-weight: 600; margin-bottom: var(--spacing-sm);">
+                  <button
+                    data-action="toggle-topics-panel"
+                    style="
+                      display: flex; align-items: center; gap: 6px; width: 100%;
+                      background: none; border: none; cursor: pointer; padding: 2px 4px;
+                      font-weight: 600; font-size: var(--font-size-base);
+                      color: var(--color-text); text-align: left;
+                      margin-bottom: ${this.topicsExpanded ? 'var(--spacing-sm)' : '0'};
+                    "
+                  >
+                    <span data-topics-arrow>${this.topicsExpanded ? '▼' : '▶'}</span>
                     Topics
-                  </label>
-                  <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
-                    ${(() => {
-                      const topicCounts = this.computeTopicCounts();
-                      // Merge: all topics with a count + any currently-selected display topics (count may be 0)
-                      const othersTopics = this.getOthersTopics();
-                      // Build display set: grouped topics + any selected that aren't visible yet
-                      const displayTopics = new Set([...topicCounts.keys()]);
-                      // If user had selected individual topics that are now under "Others", keep "Others" visible
-                      for (const t of this.selectedTopics) {
-                        if (!displayTopics.has(t) && !othersTopics.has(t)) {
-                          displayTopics.add(t);
-                        }
-                      }
-                      if (this.selectedTopics.has('Others')) displayTopics.add('Others');
-
-                      if (displayTopics.size === 0) {
-                        return '<span style="color: var(--color-text-muted);">No topics available</span>';
-                      }
-                      return Array.from(displayTopics).sort((a, b) => {
-                        if (a === 'Others') return 1;
-                        if (b === 'Others') return -1;
-                        return a.localeCompare(b);
-                      }).map(topic => {
-                        const count = topicCounts.get(topic) ?? 0;
-                        const isChecked = this.selectedTopics.has(topic);
-                        // Show "+" prefix for unselected topics when other topics are selected
-                        // to signal the count is "additional questions", not total
-                        const prefix = !isChecked && this.selectedTopics.size > 0 ? '+' : '';
-                        return `
-                          <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
-                            <input 
-                              type="checkbox" 
-                              data-filter="topic" 
-                              value="${this.escapeHtml(topic)}"
-                              ${isChecked ? 'checked' : ''}
-                            />
-                            <span style="${count === 0 && !isChecked ? 'color: var(--color-text-muted);' : ''}">${this.escapeHtml(topic)} <small>(${prefix}${count})</small></span>
-                          </label>
-                        `;
-                      }).join('');
-                    })()}
+                    ${this.selectedTopics.size > 0 ? `<span style="font-size: 11px; font-weight: 400; color: var(--color-text-muted);">(${this.selectedTopics.size} selected)</span>` : ''}
+                  </button>
+                  <div data-topics-panel ${!this.topicsExpanded ? 'hidden' : ''} style="max-height: 220px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--border-radius); padding: 6px 8px; background: var(--color-bg);">
+                    ${this.renderTopicTree()}
                   </div>
                 </div>
               </div>
@@ -747,19 +761,59 @@ export class QuestionPreviewScreen extends BaseComponent {
       });
     });
 
-    this.qsa('[data-filter="topic"]').forEach(checkbox => {
-      checkbox.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        const topic = target.value;
-        
-        if (target.checked) {
-          this.selectedTopics.add(topic);
+    this.qsa('[data-filter="topic-node"]').forEach(checkbox => {
+      const cb = checkbox as HTMLInputElement;
+      cb.indeterminate = cb.dataset['indeterminate'] === 'true';
+
+      cb.addEventListener('change', () => {
+        const nodePath = cb.dataset['nodePath'] ?? '';
+        const tree = this.buildTopicTree();
+        const node = this.findTreeNode(tree, nodePath);
+        if (!node) return;
+
+        const leaves = this.getLeafTopics(node);
+        if (cb.checked) {
+          leaves.forEach(t => this.selectedTopics.add(t));
         } else {
-          this.selectedTopics.delete(topic);
+          leaves.forEach(t => this.selectedTopics.delete(t));
         }
-        
-        this.currentPage = 1; // Reset to first page
+
+        this.currentPage = 1;
         this.loadQuestions();
+      });
+    });
+
+    // Topics panel expand / collapse — direct DOM toggle, no re-render
+    const topicsToggle = this.qs('[data-action="toggle-topics-panel"]');
+    if (topicsToggle) {
+      topicsToggle.addEventListener('click', () => {
+        this.topicsExpanded = !this.topicsExpanded;
+        const panel = this.qs('[data-topics-panel]');
+        const arrow = this.qs('[data-topics-arrow]');
+        if (panel) panel.toggleAttribute('hidden', !this.topicsExpanded);
+        if (arrow) arrow.textContent = this.topicsExpanded ? '▼' : '▶';
+        (topicsToggle as HTMLElement).style.marginBottom = this.topicsExpanded ? 'var(--spacing-sm)' : '0';
+      });
+    }
+
+    // Tree expand / collapse — direct DOM toggle, no re-render
+    this.qsa('[data-action="toggle-tree-node"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nodePath = (btn as HTMLElement).dataset['nodePath'] ?? '';
+        const childrenId = (btn as HTMLElement).dataset['childrenId'] ?? '';
+        const isNowExpanded = !this.expandedTopicNodes.has(nodePath);
+        if (isNowExpanded) {
+          this.expandedTopicNodes.add(nodePath);
+        } else {
+          this.expandedTopicNodes.delete(nodePath);
+        }
+        // Direct ID lookup — unambiguous regardless of nesting or selector quirks
+        const children = childrenId ? document.getElementById(childrenId) : null;
+        const arrow = btn.querySelector('[data-tree-arrow]');
+        if (children) children.toggleAttribute('hidden', !isNowExpanded);
+        if (arrow) arrow.textContent = isNowExpanded ? '▼' : '▶';
       });
     });
 
@@ -995,16 +1049,7 @@ export class QuestionPreviewScreen extends BaseComponent {
         qParams.difficulty = Array.from(this.selectedDifficulties).join(',');
       }
       if (this.selectedTopics.size > 0) {
-        const realTopics: string[] = [];
-        const othersTopics = this.getOthersTopics();
-        for (const t of this.selectedTopics) {
-          if (t === 'Others') {
-            realTopics.push(...othersTopics);
-          } else {
-            realTopics.push(t);
-          }
-        }
-        qParams.topic = realTopics.join(',');
+        qParams.topic = Array.from(this.selectedTopics).join(',');
       }
 
       const allData = await api.getQuestionBankQuestions(this.bankId, qParams) as QuestionPreviewResponse;

@@ -8,8 +8,10 @@
  * - Counts always reflect totals (difficulty-filtered), regardless of
  *   select-all vs manual selection mode.
  * - Difficulty filters narrow the counted population.
- * - Topics with fewer than 2 questions are merged into an "Others" bucket.
+ * - All topics appear as leaf nodes — there is never an "Others" bucket.
  * - Selected topics whose count drops to 0 remain visible (dimmed).
+ * - The topics panel is collapsed by default; clicking the header toggles it.
+ * - Tree node expansion/collapse uses direct DOM toggling (no full re-render).
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -166,23 +168,41 @@ function hydrate(
   (el as any).render();
 }
 
-/** Return an array of {topic, count, checked, dimmed, isAdditional} from the rendered DOM. */
+/**
+ * Read all visible topic-node checkboxes from the rendered tree.
+ * Returns { path, label, count, checked, indeterminate } for each visible node.
+ * Nodes inside a `hidden` ancestor are excluded (collapsed subtrees).
+ */
 function readTopicCheckboxes(el: HTMLElement) {
-  const labels = el.querySelectorAll('input[data-filter="topic"]');
-  return Array.from(labels).map(input => {
-    const inp = input as HTMLInputElement;
-    const span = inp.closest('label')?.querySelector('span');
-    const text = span?.textContent?.trim() ?? '';
-    // Text is like "Networking (3)" or "Networking (+2)"
-    const match = text.match(/^(.+?)\s*\((\+?)(\d+)\)$/);
-    return {
-      topic: match ? match[1]!.trim() : text,
-      count: match ? parseInt(match[3]!, 10) : -1,
-      isAdditional: match ? match[2] === '+' : false,
-      checked: inp.checked,
-      dimmed: span?.style.color?.includes('muted') ?? false,
-    };
-  });
+  const checkboxes = el.querySelectorAll('input[data-filter="topic-node"]');
+  return Array.from(checkboxes)
+    .filter(input => {
+      // Exclude nodes whose closest [data-tree-children] ancestor is hidden
+      let ancestor = input.parentElement;
+      while (ancestor && ancestor !== el) {
+        if (ancestor.hasAttribute('data-tree-children') && ancestor.hasAttribute('hidden')) {
+          return false;
+        }
+        ancestor = ancestor.parentElement;
+      }
+      return true;
+    })
+    .map(input => {
+      const inp = input as HTMLInputElement;
+      const label = inp.closest('label');
+      const span = label?.querySelector('span');
+      const small = label?.querySelector('small');
+      const labelText = span?.textContent?.trim() ?? '';
+      const countMatch = small?.textContent?.trim().match(/\((\d+)\)/);
+      const count = countMatch ? parseInt(countMatch[1]!, 10) : -1;
+      return {
+        topic: labelText,
+        path: inp.dataset['nodePath'] ?? '',
+        count,
+        checked: inp.checked,
+        indeterminate: inp.dataset['indeterminate'] === 'true',
+      };
+    });
 }
 
 /** Return an array of {difficulty, count} from the rendered DOM. */
@@ -217,9 +237,9 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
     document.body.innerHTML = '';
   });
 
-  // ── computeTopicCounts core logic ────────────────────────────────────────
+  // ── Topic tree node counts ────────────────────────────────────────────────
 
-  describe('computeTopicCounts()', () => {
+  describe('Topic tree node counts', () => {
     it('counts all topics from actual questions, not bank metadata', async () => {
       const el = await mountPreview();
       hydrate(el);
@@ -262,40 +282,25 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       const topics = readTopicCheckboxes(el);
       const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
 
-      // Counts are totals when no topic filters active
+      // Tree always shows absolute totals regardless of selection mode
       expect(byName['Networking']?.count).toBe(3);
       expect(byName['Security']?.count).toBe(3);
       expect(byName['IAM']?.count).toBe(2);
       expect(byName['Compute']?.count).toBe(2);
     });
 
-    it('shows additional counts for unselected topics when a topic is selected', async () => {
+    it('always shows absolute counts (no + prefix) even when topics are selected', async () => {
       const el = await mountPreview();
-      // Select "Networking" (covers q1, q2, q5)
       hydrate(el, { selectedTopics: ['Networking'] });
 
       const topics = readTopicCheckboxes(el);
       const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
 
-      // Networking is selected → shows its own total
+      // All counts are absolute — the tree does not subtract "already covered" questions
       expect(byName['Networking']?.count).toBe(3);
-      expect(byName['Networking']?.isAdditional).toBe(false);
-
-      // Security: q1(covered), q3(new), q6(new) → +2 additional
-      expect(byName['Security']?.count).toBe(2);
-      expect(byName['Security']?.isAdditional).toBe(true);
-
-      // IAM: q3(new), q7(new) → +2 additional
+      expect(byName['Security']?.count).toBe(3);
       expect(byName['IAM']?.count).toBe(2);
-      expect(byName['IAM']?.isAdditional).toBe(true);
-
-      // Compute: q4(new), q5(covered) → +1 additional
-      // Compute has only 1 additional question → <2 → Others
-      // Actually Compute raw is 2 (q4, q5), but q5 is covered → only q4 is new = 1 additional
-      // That 1 goes to Others? No — Others grouping is based on getOthersTopics which uses raw totals
-      // Compute has 2 total questions → not in Others. So Compute shows +1.
-      expect(byName['Compute']?.count).toBe(1);
-      expect(byName['Compute']?.isAdditional).toBe(true);
+      expect(byName['Compute']?.count).toBe(2);
     });
 
     it('filters counts by active difficulty', async () => {
@@ -310,13 +315,13 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
       // Only easy questions: q1 (Networking, Security), q2 (Networking)
       expect(byName['Networking']?.count).toBe(2);
-      // Security has only 1 easy question (q1) → grouped into Others
-      expect(byName['Security']).toBeUndefined();
-      // Others should include Security(1)
-      expect(byName['Others']?.count).toBe(1);
+      // Security has 1 easy question (q1) — it still appears as a leaf node
+      expect(byName['Security']?.count).toBe(1);
+      // No "Others" bucket in the tree
+      expect(byName['Others']).toBeUndefined();
     });
 
-    it('returns empty map when allBankQuestions is empty', async () => {
+    it('returns empty tree when allBankQuestions is empty', async () => {
       const el = await mountPreview();
       hydrate(el, { questions: [] });
 
@@ -340,9 +345,9 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(byName['A']?.count).toBe(2); // x1, x3
       expect(byName['B']?.count).toBe(2); // x1, x2
       expect(byName['C']?.count).toBe(2); // x1, x2
-      // D has only 1 question → grouped into Others
-      expect(byName['D']).toBeUndefined();
-      expect(byName['Others']?.count).toBe(1);
+      // D has only 1 question — it still appears as a leaf node (no Others merging)
+      expect(byName['D']?.count).toBe(1);
+      expect(byName['Others']).toBeUndefined();
     });
 
     it('handles questions with no topics', async () => {
@@ -362,30 +367,29 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
   // ── Topic filter rendering ────────────────────────────────────────────────
 
   describe('Topic filter rendering', () => {
-    it('renders a checkbox for each grouped topic', async () => {
+    it('renders a node for each root-level topic', async () => {
       const el = await mountPreview();
       hydrate(el);
 
-      const checkboxes = el.querySelectorAll('input[data-filter="topic"]');
-      // 4 unique topics: Networking(3), Security(3), IAM(2), Compute(2) — all ≥2
+      // 4 flat topics (no colons): Compute, IAM, Networking, Security
+      const checkboxes = el.querySelectorAll('input[data-filter="topic-node"]');
       expect(checkboxes).toHaveLength(4);
     });
 
-    it('renders topics in sorted alphabetical order with Others last', async () => {
+    it('renders topics in sorted alphabetical order', async () => {
       const el = await mountPreview();
-      // Force an Others bucket by having a 1-question topic
       const qs = [
         makeQuestion({ id: 'a1', topics: ['Zeta'] }),
         makeQuestion({ id: 'a2', topics: ['Zeta'] }),
         makeQuestion({ id: 'a3', topics: ['Alpha'] }),
         makeQuestion({ id: 'a4', topics: ['Alpha'] }),
-        makeQuestion({ id: 'a5', topics: ['Rare'] }), // < 2 → Others
+        makeQuestion({ id: 'a5', topics: ['Rare'] }), // 1 question — still a leaf node, no Others
       ];
       hydrate(el, { questions: qs });
 
       const topics = readTopicCheckboxes(el);
       const names = topics.map(t => t.topic);
-      expect(names).toEqual(['Alpha', 'Zeta', 'Others']);
+      expect(names).toEqual(['Alpha', 'Rare', 'Zeta']);
     });
 
     it('preserves checked state for selected topics', async () => {
@@ -404,7 +408,6 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
     it('keeps selected topics visible even when count is 0', async () => {
       const el = await mountPreview();
       // Only easy questions, but "IAM" is selected (no easy IAM questions → count 0)
-      // IAM normally has 2 questions, but with easy filter it has 0
       hydrate(el, {
         selectAllMode: true,
         selectedDifficulties: ['easy'],
@@ -430,12 +433,12 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       const scripts = el.querySelectorAll('script');
       expect(scripts).toHaveLength(0);
 
-      const checkbox = el.querySelector('input[data-filter="topic"]') as HTMLInputElement;
+      const checkbox = el.querySelector('input[data-filter="topic-node"]') as HTMLInputElement;
       expect(checkbox).not.toBeNull();
-      expect(checkbox.value).toContain('script');
+      expect(checkbox.dataset['nodePath']).toContain('script');
     });
 
-    it('handles topics with colons (hierarchical names)', async () => {
+    it('renders hierarchical topics as a collapsed tree — only root node visible initially', async () => {
       const el = await mountPreview();
       const colonQuestions = [
         makeQuestion({ id: 'c1', topics: ['architecture:ha:multi-region'] }),
@@ -445,11 +448,53 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       ];
       hydrate(el, { questions: colonQuestions, selectAllMode: true });
 
+      // Only the root "architecture" node is visible (children collapsed by default)
       const topics = readTopicCheckboxes(el);
-      const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
+      expect(topics).toHaveLength(1);
+      expect(topics[0]!.topic).toBe('architecture');
+      expect(topics[0]!.count).toBe(4); // all 4 questions under this root
+    });
 
-      expect(byName['architecture:ha:multi-region']?.count).toBe(2);
-      expect(byName['architecture:serverless']?.count).toBe(2);
+    it('shows child nodes when a parent is expanded', async () => {
+      const el = await mountPreview();
+      const colonQuestions = [
+        makeQuestion({ id: 'c1', topics: ['architecture:ha:multi-region'] }),
+        makeQuestion({ id: 'c2', topics: ['architecture:ha:multi-region'] }),
+        makeQuestion({ id: 'c3', topics: ['architecture:serverless'] }),
+        makeQuestion({ id: 'c4', topics: ['architecture:serverless'] }),
+      ];
+      hydrate(el, { questions: colonQuestions, selectAllMode: true });
+      // Manually expand the root node
+      (el as any).expandedTopicNodes = new Set(['architecture']);
+      (el as any).render();
+
+      const topics = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(topics.map(t => [t.path, t]));
+
+      // Root + two children visible
+      expect(byPath['architecture']?.count).toBe(4);
+      expect(byPath['architecture:ha']?.count).toBe(2);
+      expect(byPath['architecture:serverless']?.count).toBe(2);
+    });
+
+    it('shows indeterminate state when only some children are selected', async () => {
+      const el = await mountPreview();
+      const colonQuestions = [
+        makeQuestion({ id: 'c1', topics: ['arch:ha'] }),
+        makeQuestion({ id: 'c2', topics: ['arch:ha'] }),
+        makeQuestion({ id: 'c3', topics: ['arch:dr'] }),
+        makeQuestion({ id: 'c4', topics: ['arch:dr'] }),
+      ];
+      hydrate(el, { questions: colonQuestions, selectedTopics: ['arch:ha'] });
+      (el as any).expandedTopicNodes = new Set(['arch']);
+      (el as any).render();
+
+      const topics = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(topics.map(t => [t.path, t]));
+
+      expect(byPath['arch']?.indeterminate).toBe(true);
+      expect(byPath['arch:ha']?.checked).toBe(true);
+      expect(byPath['arch:dr']?.checked).toBe(false);
     });
   });
 
@@ -464,7 +509,7 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       let net = topics.find(t => t.topic === 'Networking');
       expect(net?.count).toBe(3); // q1, q2, q5
 
-      // Select q1 and q2 → re-render — counts are totals, unchanged
+      // Select q1 and q2 → re-render — counts are absolute totals, unchanged
       hydrate(el, { selectAllMode: false, selectedQuestionIds: ['q1', 'q2'] });
 
       topics = readTopicCheckboxes(el);
@@ -472,21 +517,18 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       expect(net?.count).toBe(3); // still totals
     });
 
-    it('unselected topic counts decrease when a topic with overlap is selected', async () => {
+    it('counts always show absolute totals regardless of which topics are selected', async () => {
       const el = await mountPreview();
-      // No topics selected → show totals
       hydrate(el);
       let topics = readTopicCheckboxes(el);
       let sec = topics.find(t => t.topic === 'Security');
       expect(sec?.count).toBe(3); // q1, q3, q6
 
-      // Select Networking (q1, q2, q5) → q1 overlaps with Security
+      // Select Networking — Security count stays at its absolute total
       hydrate(el, { selectedTopics: ['Networking'] });
       topics = readTopicCheckboxes(el);
       sec = topics.find(t => t.topic === 'Security');
-      // Security additional = q3, q6 (q1 already covered) → +2
-      expect(sec?.count).toBe(2);
-      expect(sec?.isAdditional).toBe(true);
+      expect(sec?.count).toBe(3); // still 3 — tree shows absolutes
     });
 
     it('counts update when difficulty filter changes', async () => {
@@ -497,15 +539,13 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       let net = topics.find(t => t.topic === 'Networking');
       expect(net?.count).toBe(3); // all difficulties
 
-      // Restrict to hard — Networking: only q5
+      // Restrict to hard — only q5(Networking), q6(Security) remain
       hydrate(el, { selectAllMode: true, selectedDifficulties: ['hard'] });
       topics = readTopicCheckboxes(el);
-      // Networking(1), Security(1), Compute(1) → all < 2, all go to Others
-      const others = topics.find(t => t.topic === 'Others');
-      expect(others).toBeDefined();
-      expect(others!.count).toBe(3); // Net(1) + Sec(1) + Compute(1)
       net = topics.find(t => t.topic === 'Networking');
-      expect(net).toBeUndefined(); // merged into Others
+      expect(net?.count).toBe(1); // only q5
+      const compute = topics.find(t => t.topic === 'Compute');
+      expect(compute?.count).toBe(1); // only q5
     });
   });
 
@@ -590,12 +630,12 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
       // Wait for render
       await vi.waitFor(() => {
-        expect(el.querySelectorAll('input[data-filter="topic"]').length).toBeGreaterThan(0);
+        expect(el.querySelectorAll('input[data-filter="topic-node"]').length).toBeGreaterThan(0);
       });
 
       const topics = readTopicCheckboxes(el);
       const names = topics.map(t => t.topic).sort();
-      // All 4 topics have ≥2 questions: Networking(3), Security(3), IAM(2), Compute(2)
+      // All 4 flat topics appear as leaf nodes
       expect(names).toEqual(['Compute', 'IAM', 'Networking', 'Security']);
 
       // Metadata topic should not appear
@@ -606,15 +646,15 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
   // ── Edge cases ────────────────────────────────────────────────────────────
 
   describe('Edge cases', () => {
-    it('single question bank groups its topic into Others', async () => {
+    it('single question bank shows its topic as a leaf node (no Others merging)', async () => {
       const el = await mountPreview();
       const singleQ = [makeQuestion({ id: 'solo', topics: ['Only-Topic'], difficulty: 'easy' })];
       hydrate(el, { questions: singleQ, selectAllMode: true });
 
       const topics = readTopicCheckboxes(el);
-      // Only-Topic has 1 question → merged into Others
+      // In the tree, single-question topics appear as leaf nodes — no Others bucket
       expect(topics).toHaveLength(1);
-      expect(topics[0]!.topic).toBe('Others');
+      expect(topics[0]!.topic).toBe('Only Topic');
       expect(topics[0]!.count).toBe(1);
     });
 
@@ -630,7 +670,6 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       hydrate(el, { questions: manyQs, selectAllMode: true });
 
       const topics = readTopicCheckboxes(el);
-      // Each of the 5 topics has 20 questions (≥2), so all are shown individually
       expect(topics).toHaveLength(5);
       const total = topics.reduce((sum, t) => sum + t.count, 0);
       expect(total).toBe(100);
@@ -646,8 +685,8 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
 
       const topics = readTopicCheckboxes(el);
       const same = topics.find(t => t.topic === 'Same');
-      // 2 questions × 2 topic entries each = 4 (verbatim iteration), but ≥2 so kept
-      expect(same?.count).toBe(4);
+      // Tree uses a Set of questionIds — each question is counted once regardless of duplicates
+      expect(same?.count).toBe(2);
     });
 
     it('works with multiple difficulty filters active', async () => {
@@ -663,12 +702,12 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       // easy: q1(Net,Sec), q2(Net) | hard: q5(Net,Compute), q6(Sec)
       expect(byName['Networking']?.count).toBe(3); // q1, q2, q5
       expect(byName['Security']?.count).toBe(2);   // q1, q6
-      // Compute: q5 only → 1 → grouped into Others
-      expect(byName['Compute']).toBeUndefined();
-      expect(byName['Others']?.count).toBe(1);
+      // Compute has q5 only (1 question) — still appears as a leaf node in the tree
+      expect(byName['Compute']?.count).toBe(1);
+      expect(byName['Others']).toBeUndefined();
     });
 
-    it('Others bucket aggregates multiple small topics', async () => {
+    it('single-question topics appear as leaf nodes (no Others bucket)', async () => {
       const el = await mountPreview();
       const qs = [
         makeQuestion({ id: 'a1', topics: ['Big'] }),
@@ -682,19 +721,464 @@ describe('QuestionPreviewScreen — Topic Filter Counts', () => {
       const byName = Object.fromEntries(topics.map(t => [t.topic, t]));
 
       expect(byName['Big']?.count).toBe(2);
-      expect(byName['Tiny1']).toBeUndefined();
-      expect(byName['Tiny2']).toBeUndefined();
-      // Others = Tiny1(1) + Tiny2(1)
-      expect(byName['Others']?.count).toBe(2);
+      // Tiny1 and Tiny2 appear as leaf nodes with count=1 each — no Others
+      expect(byName['Tiny1']?.count).toBe(1);
+      expect(byName['Tiny2']?.count).toBe(1);
+      expect(byName['Others']).toBeUndefined();
     });
 
-    it('no Others bucket when all topics have ≥2 questions', async () => {
+    it('no Others bucket ever — all topics always appear as leaf nodes', async () => {
       const el = await mountPreview();
-      hydrate(el); // default QUESTIONS — all 4 topics have ≥2 questions
+      hydrate(el); // default QUESTIONS
 
       const topics = readTopicCheckboxes(el);
       const others = topics.find(t => t.topic === 'Others');
       expect(others).toBeUndefined();
+    });
+  });
+
+  // ── Hierarchical tree — deep structure ────────────────────────────────────
+  //
+  // These tests use a fixture that mirrors the full-stack-engineering.md bank
+  // topic structure: 5 root nodes each with 2 children each with 2–3 leaf nodes.
+  // The fixture is intentionally smaller (hand-crafted questions) so each test
+  // remains fast and deterministic.
+
+  describe('Hierarchical tree — deep structure', () => {
+    /**
+     * A mini replica of the full-stack-engineering bank topology:
+     *
+     *   frontend
+     *     react
+     *       hooks        (fe-hooks-1, fe-hooks-2)
+     *       state        (fe-state-1)
+     *     css
+     *       layout       (fe-layout-1, fe-layout-2)
+     *   backend
+     *     nodejs
+     *       event-loop   (be-el-1, be-el-2)
+     *       streams      (be-st-1)
+     *     api
+     *       rest         (be-rest-1, be-rest-2)
+     *       graphql      (be-gql-1)
+     *   database
+     *     relational
+     *       indexing     (db-idx-1, db-idx-2)
+     *       normalization(db-nrm-1)
+     *     nosql
+     *       document     (db-doc-1, db-doc-2)
+     *   security
+     *     web
+     *       xss          (sec-xss-1, sec-xss-2)
+     *       csrf         (sec-csrf-1)
+     *     crypto
+     *       symmetric    (sec-sym-1)
+     *       asymmetric   (sec-asym-1)
+     *
+     * Cross-topic questions:
+     *   fe-hooks-2 also tagged security:web:xss  (tests cross-root aggregation)
+     *   be-rest-1  also tagged backend:api:graphql (tests sibling leaf sharing)
+     */
+    const DEEP_QUESTIONS: Question[] = [
+      // frontend:react:hooks
+      makeQuestion({ id: 'fe-hooks-1', difficulty: 'easy',   topics: ['frontend:react:hooks'] }),
+      makeQuestion({ id: 'fe-hooks-2', difficulty: 'medium', topics: ['frontend:react:hooks', 'security:web:xss'] }),
+      // frontend:react:state-management
+      makeQuestion({ id: 'fe-state-1', difficulty: 'hard',   topics: ['frontend:react:state-management'] }),
+      // frontend:css:layout
+      makeQuestion({ id: 'fe-layout-1', difficulty: 'easy',  topics: ['frontend:css:layout'] }),
+      makeQuestion({ id: 'fe-layout-2', difficulty: 'medium',topics: ['frontend:css:layout'] }),
+      // backend:nodejs:event-loop
+      makeQuestion({ id: 'be-el-1', difficulty: 'easy',      topics: ['backend:nodejs:event-loop'] }),
+      makeQuestion({ id: 'be-el-2', difficulty: 'hard',      topics: ['backend:nodejs:event-loop'] }),
+      // backend:nodejs:streams
+      makeQuestion({ id: 'be-st-1', difficulty: 'medium',    topics: ['backend:nodejs:streams'] }),
+      // backend:api:rest (also counts toward backend:api:graphql via cross-topic)
+      makeQuestion({ id: 'be-rest-1', difficulty: 'medium',  topics: ['backend:api:rest', 'backend:api:graphql'] }),
+      makeQuestion({ id: 'be-rest-2', difficulty: 'hard',    topics: ['backend:api:rest'] }),
+      // backend:api:graphql (exclusive)
+      makeQuestion({ id: 'be-gql-1', difficulty: 'hard',     topics: ['backend:api:graphql'] }),
+      // database:relational:indexing
+      makeQuestion({ id: 'db-idx-1', difficulty: 'easy',     topics: ['database:relational:indexing'] }),
+      makeQuestion({ id: 'db-idx-2', difficulty: 'medium',   topics: ['database:relational:indexing'] }),
+      // database:relational:normalization
+      makeQuestion({ id: 'db-nrm-1', difficulty: 'hard',     topics: ['database:relational:normalization'] }),
+      // database:nosql:document
+      makeQuestion({ id: 'db-doc-1', difficulty: 'easy',     topics: ['database:nosql:document'] }),
+      makeQuestion({ id: 'db-doc-2', difficulty: 'medium',   topics: ['database:nosql:document'] }),
+      // security:web:xss (fe-hooks-2 also contributes)
+      makeQuestion({ id: 'sec-xss-1', difficulty: 'easy',    topics: ['security:web:xss'] }),
+      makeQuestion({ id: 'sec-xss-2', difficulty: 'medium',  topics: ['security:web:xss'] }),
+      // security:web:csrf
+      makeQuestion({ id: 'sec-csrf-1', difficulty: 'hard',   topics: ['security:web:csrf'] }),
+      // security:crypto:symmetric
+      makeQuestion({ id: 'sec-sym-1', difficulty: 'easy',    topics: ['security:crypto:symmetric'] }),
+      // security:crypto:asymmetric
+      makeQuestion({ id: 'sec-asym-1', difficulty: 'medium', topics: ['security:crypto:asymmetric'] }),
+    ];
+
+    it('shows only root nodes when all nodes are collapsed', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+
+      const visible = readTopicCheckboxes(el);
+      const paths = visible.map(t => t.path).sort();
+      // Only 3 roots: backend, database, frontend, security
+      expect(paths).toEqual(['backend', 'database', 'frontend', 'security']);
+    });
+
+    it('parent node count = union of all descendant question IDs', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      // frontend: fe-hooks-1, fe-hooks-2, fe-state-1, fe-layout-1, fe-layout-2 = 5
+      expect(byPath['frontend']?.count).toBe(5);
+      // backend: be-el-1, be-el-2, be-st-1, be-rest-1, be-rest-2, be-gql-1 = 6
+      expect(byPath['backend']?.count).toBe(6);
+      // database: db-idx-1, db-idx-2, db-nrm-1, db-doc-1, db-doc-2 = 5
+      expect(byPath['database']?.count).toBe(5);
+      // security: sec-xss-1, sec-xss-2, sec-csrf-1, fe-hooks-2 (cross-topic), sec-sym-1, sec-asym-1 = 6
+      expect(byPath['security']?.count).toBe(6);
+    });
+
+    it('expanding one root reveals its children but not grandchildren', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+      (el as any).expandedTopicNodes = new Set(['frontend']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const paths = visible.map(t => t.path);
+
+      // Root nodes + frontend's children visible; grandchildren still hidden
+      expect(paths).toContain('frontend');
+      expect(paths).toContain('frontend:react');
+      expect(paths).toContain('frontend:css');
+      // Grandchildren NOT visible
+      expect(paths).not.toContain('frontend:react:hooks');
+      expect(paths).not.toContain('frontend:react:state-management');
+      expect(paths).not.toContain('frontend:css:layout');
+      // Other roots still present
+      expect(paths).toContain('backend');
+      expect(paths).toContain('database');
+      expect(paths).toContain('security');
+    });
+
+    it('expanding root and child reveals grandchildren (leaf nodes)', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+      (el as any).expandedTopicNodes = new Set(['frontend', 'frontend:react']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      expect(byPath['frontend']?.count).toBe(5);
+      expect(byPath['frontend:react']?.count).toBe(3); // fe-hooks-1, fe-hooks-2, fe-state-1
+      expect(byPath['frontend:react:hooks']?.count).toBe(2);
+      expect(byPath['frontend:react:state-management']?.count).toBe(1); // fe-state-1 (topic is state-management but label matches)
+      // css branch still collapsed at grandchild level
+      expect(byPath['frontend:css']).toBeDefined();
+      expect(byPath['frontend:css:layout']).toBeUndefined();
+    });
+
+    it('cross-topic question is counted in both parent branches', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+      // Expand all roots and their children so leaves are visible
+      (el as any).expandedTopicNodes = new Set([
+        'frontend', 'frontend:react', 'frontend:css',
+        'security', 'security:web',
+      ]);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      // fe-hooks-2 has topics: frontend:react:hooks AND security:web:xss
+      // So security:web:xss count = sec-xss-1 + sec-xss-2 + fe-hooks-2 = 3
+      expect(byPath['security:web']?.count).toBe(4); // sec-xss-1, sec-xss-2, sec-csrf-1, fe-hooks-2
+    });
+
+    it('intermediate node count is deduplicated (Set semantics)', async () => {
+      const el = await mountPreview();
+      // be-rest-1 has BOTH backend:api:rest AND backend:api:graphql
+      // backend:api should count it only once
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+      (el as any).expandedTopicNodes = new Set(['backend', 'backend:api']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      // backend:api:rest = be-rest-1, be-rest-2 (2)
+      // backend:api:graphql = be-rest-1, be-gql-1 (2, be-rest-1 shared)
+      // backend:api (parent) = be-rest-1 + be-rest-2 + be-gql-1 = 3 (deduplicated)
+      expect(byPath['backend:api']?.count).toBe(3);
+    });
+
+    it('selecting a leaf topic marks only that leaf as checked', async () => {
+      const el = await mountPreview();
+      hydrate(el, {
+        questions: DEEP_QUESTIONS,
+        selectedTopics: ['frontend:react:hooks'],
+      });
+      (el as any).expandedTopicNodes = new Set(['frontend', 'frontend:react']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      expect(byPath['frontend:react:hooks']?.checked).toBe(true);
+      expect(byPath['frontend:react:state-management']?.checked).toBe(false);
+      expect(byPath['frontend:css']?.checked).toBe(false);
+    });
+
+    it('parent is indeterminate when only some children are selected', async () => {
+      const el = await mountPreview();
+      // Only hooks selected out of [hooks, state-management]
+      hydrate(el, {
+        questions: DEEP_QUESTIONS,
+        selectedTopics: ['frontend:react:hooks'],
+      });
+      (el as any).expandedTopicNodes = new Set(['frontend', 'frontend:react']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      expect(byPath['frontend:react']?.indeterminate).toBe(true);
+      expect(byPath['frontend:react']?.checked).toBe(false);
+    });
+
+    it('root is indeterminate when a descendant but not all leaves are selected', async () => {
+      const el = await mountPreview();
+      hydrate(el, {
+        questions: DEEP_QUESTIONS,
+        selectedTopics: ['frontend:react:hooks'],
+      });
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      // frontend has 3 leaf topics; only 1 selected → indeterminate
+      expect(byPath['frontend']?.indeterminate).toBe(true);
+      expect(byPath['frontend']?.checked).toBe(false);
+    });
+
+    it('parent is checked (not indeterminate) when ALL its leaves are selected', async () => {
+      const el = await mountPreview();
+      // Select all three leaves under frontend:react
+      hydrate(el, {
+        questions: DEEP_QUESTIONS,
+        selectedTopics: ['frontend:react:hooks', 'frontend:react:state-management'],
+      });
+      (el as any).expandedTopicNodes = new Set(['frontend', 'frontend:react']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      expect(byPath['frontend:react']?.checked).toBe(true);
+      expect(byPath['frontend:react']?.indeterminate).toBe(false);
+    });
+
+    it('difficulty filter narrows leaf counts but does not remove nodes with selections', async () => {
+      const el = await mountPreview();
+      // backend:nodejs:streams has only 1 medium question (be-st-1)
+      // With hard filter active it has 0, but we select it — must stay visible
+      hydrate(el, {
+        questions: DEEP_QUESTIONS,
+        selectAllMode: true,
+        selectedDifficulties: ['hard'],
+        selectedTopics: ['backend:nodejs:streams'],
+      });
+      (el as any).expandedTopicNodes = new Set(['backend', 'backend:nodejs']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      const byPath = Object.fromEntries(visible.map(t => [t.path, t]));
+
+      expect(byPath['backend:nodejs:streams']).toBeDefined();
+      expect(byPath['backend:nodejs:streams']?.count).toBe(0);
+      expect(byPath['backend:nodejs:streams']?.checked).toBe(true);
+      // event-loop has 1 hard question (be-el-2) → count 1
+      expect(byPath['backend:nodejs:event-loop']?.count).toBe(1);
+    });
+
+    it('topics panel is collapsed by default (topicsExpanded = false)', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      const panel = el.querySelector('[data-topics-panel]');
+      expect(panel).not.toBeNull();
+      expect(panel!.hasAttribute('hidden')).toBe(true);
+
+      expect((el as any).topicsExpanded).toBe(false);
+    });
+
+    it('topics panel toggle button shows collapsed arrow by default', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      const arrow = el.querySelector('[data-topics-arrow]');
+      expect(arrow).not.toBeNull();
+      expect(arrow!.textContent).toBe('▶');
+    });
+
+    it('clicking the topics toggle button expands the panel without re-rendering the whole page', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      const btn = el.querySelector('[data-action="toggle-topics-panel"]') as HTMLElement;
+      expect(btn).not.toBeNull();
+
+      // Capture references to DOM nodes before click
+      const panelBefore = el.querySelector('[data-topics-panel]');
+      btn.click();
+
+      // Same element should still be in the DOM (no full re-render)
+      const panelAfter = el.querySelector('[data-topics-panel]');
+      expect(panelAfter).toBe(panelBefore); // identity equality = same node
+      expect(panelAfter!.hasAttribute('hidden')).toBe(false);
+
+      const arrow = el.querySelector('[data-topics-arrow]');
+      expect(arrow!.textContent).toBe('▼');
+
+      expect((el as any).topicsExpanded).toBe(true);
+    });
+
+    it('clicking the topics toggle again collapses the panel', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS });
+      (el as any).topicsExpanded = true;
+      (el as any).render();
+
+      const btn = el.querySelector('[data-action="toggle-topics-panel"]') as HTMLElement;
+      btn.click();
+
+      const panel = el.querySelector('[data-topics-panel]');
+      expect(panel!.hasAttribute('hidden')).toBe(true);
+      expect((el as any).topicsExpanded).toBe(false);
+    });
+
+    it('expanding a tree node toggles its children without replacing the panel DOM', async () => {
+      const el = await mountPreview();
+      // Open the topics panel so children are queryable
+      (el as any).topicsExpanded = true;
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      // Capture reference to the toggle button for 'frontend'
+      const toggleBtn = el.querySelector('[data-action="toggle-tree-node"][data-node-path="frontend"]') as HTMLElement;
+      expect(toggleBtn).not.toBeNull();
+
+      const childrenContainerBefore = el.querySelector('[data-tree-children="frontend"]');
+      expect(childrenContainerBefore).not.toBeNull();
+      expect(childrenContainerBefore!.hasAttribute('hidden')).toBe(true);
+
+      toggleBtn.click();
+
+      // Same container — no full re-render
+      const childrenContainerAfter = el.querySelector('[data-tree-children="frontend"]');
+      expect(childrenContainerAfter).toBe(childrenContainerBefore);
+      expect(childrenContainerAfter!.hasAttribute('hidden')).toBe(false);
+
+      expect((el as any).expandedTopicNodes.has('frontend')).toBe(true);
+    });
+
+    it('collapsing a tree node hides its children subtree', async () => {
+      const el = await mountPreview();
+      (el as any).topicsExpanded = true;
+      (el as any).expandedTopicNodes = new Set(['frontend']);
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      const toggleBtn = el.querySelector('[data-action="toggle-tree-node"][data-node-path="frontend"]') as HTMLElement;
+      toggleBtn.click();
+
+      const childrenContainer = el.querySelector('[data-tree-children="frontend"]');
+      expect(childrenContainer!.hasAttribute('hidden')).toBe(true);
+      expect((el as any).expandedTopicNodes.has('frontend')).toBe(false);
+    });
+
+    it('expanding two separate roots keeps each expansion independent', async () => {
+      const el = await mountPreview();
+      (el as any).topicsExpanded = true;
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      const frontendBtn = el.querySelector('[data-action="toggle-tree-node"][data-node-path="frontend"]') as HTMLElement;
+      const backendBtn  = el.querySelector('[data-action="toggle-tree-node"][data-node-path="backend"]')  as HTMLElement;
+      frontendBtn.click();
+      backendBtn.click();
+
+      expect(el.querySelector('[data-tree-children="frontend"]')!.hasAttribute('hidden')).toBe(false);
+      expect(el.querySelector('[data-tree-children="backend"]')!.hasAttribute('hidden')).toBe(false);
+      // database still collapsed
+      expect(el.querySelector('[data-tree-children="database"]')!.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('sorting is alphabetical at every depth level', async () => {
+      const el = await mountPreview();
+      hydrate(el, { questions: DEEP_QUESTIONS, selectAllMode: true });
+      (el as any).expandedTopicNodes = new Set(['backend', 'backend:api', 'backend:nodejs']);
+      (el as any).render();
+
+      const visible = readTopicCheckboxes(el);
+      // Extract just the backend subtree paths in DOM order
+      const backendPaths = visible
+        .map(t => t.path)
+        .filter(p => p.startsWith('backend'));
+
+      expect(backendPaths).toEqual([
+        'backend',
+        'backend:api',
+        'backend:api:graphql',
+        'backend:api:rest',
+        'backend:nodejs',
+        'backend:nodejs:event-loop',
+        'backend:nodejs:streams',
+      ]);
+    });
+
+    /**
+     * Regression test: clicking node X's toggle must reveal X's children only.
+     * Previously, clicking node A revealed the NEXT SIBLING's (node B's) children
+     * instead of A's own children.
+     */
+    it('clicking a node reveals ITS OWN children, not a sibling (regression)', async () => {
+      const el = await mountPreview();
+      (el as any).topicsExpanded = true;
+      hydrate(el, { questions: DEEP_QUESTIONS });
+
+      // All root nodes in alphabetical order: backend, database, frontend, security
+      const roots = ['backend', 'database', 'frontend', 'security'];
+
+      // For each root: click its toggle and assert that ONLY that root's children
+      // become visible — all other roots must remain collapsed.
+      for (const root of roots) {
+        // Reset to all-collapsed before each check
+        (el as any).expandedTopicNodes = new Set();
+        (el as any).render();
+
+        const btn = el.querySelector(
+          `[data-action="toggle-tree-node"][data-node-path="${root}"]`,
+        ) as HTMLElement;
+        expect(btn).not.toBeNull();
+        btn.click();
+
+        for (const other of roots) {
+          const container = el.querySelector(`[data-tree-children="${other}"]`);
+          expect(container).not.toBeNull();
+          if (other === root) {
+            expect(container!.hasAttribute('hidden')).toBe(false);
+          } else {
+            expect(container!.hasAttribute('hidden')).toBe(true);
+          }
+        }
+      }
     });
   });
 });
