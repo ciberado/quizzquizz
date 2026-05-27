@@ -41,6 +41,20 @@ export class LobbyScreen extends BaseComponent {
     // Re-render with loaded state
     this.render();
 
+    // Delegated event handling — registered once so polling patchRender() calls
+    // don't stack duplicate listeners on the same morphdom-reused nodes.
+    this.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('#pin-display')) {
+        void this.copyJoinLinkToClipboard();
+        return;
+      }
+      const btn = target.closest('button');
+      if (!btn) return;
+      if (btn.id === 'start-button' && !btn.disabled) { this.handleStart(); return; }
+      if (btn.id === 'cancel-button') { this.handleCancel(); return; }
+    });
+
     // Start polling for players
     this.startPolling();
   }
@@ -54,7 +68,6 @@ export class LobbyScreen extends BaseComponent {
     const html = this.buildHtml();
     this.setContent(html);
     this.injectStyles();
-    this.setupEventListeners();
   }
 
   /**
@@ -65,7 +78,6 @@ export class LobbyScreen extends BaseComponent {
     const html = this.buildHtml();
     this.patchContent(html);
     this.injectStyles();
-    this.setupEventListeners();
   }
 
   private buildHtml(): string {
@@ -382,30 +394,6 @@ export class LobbyScreen extends BaseComponent {
     }
   }
 
-  private setupEventListeners(): void {
-    const startButton = this.qs<HTMLButtonElement>('#start-button');
-    const cancelButton = this.qs<HTMLButtonElement>('#cancel-button');
-    const pinDisplay = this.qs<HTMLDivElement>('#pin-display');
-
-    if (startButton && !startButton.disabled) {
-      startButton.addEventListener('click', () => {
-        this.handleStart();
-      });
-    }
-
-    if (cancelButton) {
-      cancelButton.addEventListener('click', () => {
-        this.handleCancel();
-      });
-    }
-
-    if (pinDisplay) {
-      pinDisplay.addEventListener('click', () => {
-        this.copyJoinLinkToClipboard();
-      });
-    }
-  }
-
   private startPolling(): void {
     // Poll immediately
     this.pollPlayers();
@@ -527,26 +515,47 @@ export class LobbyScreen extends BaseComponent {
     const playerUrl = this.getPlayerUrl();
     const playerUrlWithPin = `${playerUrl}/#/nickname?pin=${this.pin}`;
 
-    try {
-      await navigator.clipboard.writeText(playerUrlWithPin);
-      
-      // Show feedback to user
+    const showFeedback = (success: boolean) => {
       const pinDisplay = this.qs<HTMLDivElement>('#pin-display');
-      if (pinDisplay) {
-        const originalTitle = pinDisplay.title;
-        pinDisplay.title = '✅ Copied to clipboard!';
-        
-        setTimeout(() => {
-          pinDisplay.title = originalTitle;
-        }, 2000);
-      }
+      if (!pinDisplay) return;
+      const originalTitle = pinDisplay.title;
+      pinDisplay.title = success ? '✅ Copied to clipboard!' : '⚠️ Copy failed — check URL bar';
+      pinDisplay.style.outline = success ? '2px solid var(--color-success, #4caf50)' : '2px solid var(--color-error, #f44336)';
+      setTimeout(() => {
+        pinDisplay.title = originalTitle;
+        pinDisplay.style.outline = '';
+      }, 2000);
+    };
 
-      console.log('✅ Join link copied to clipboard:', playerUrlWithPin);
+    // navigator.clipboard requires a secure context (HTTPS / localhost)
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(playerUrlWithPin);
+        showFeedback(true);
+        console.log('✅ Join link copied to clipboard:', playerUrlWithPin);
+        return;
+      } catch {
+        // fall through to execCommand fallback
+      }
+    }
+
+    // Fallback: create a temporary textarea and use execCommand
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = playerUrlWithPin;
+      textarea.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showFeedback(ok);
+      if (ok) console.log('✅ Join link copied (execCommand):', playerUrlWithPin);
+      else console.warn('execCommand copy returned false. Link:', playerUrlWithPin);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
-      
-      // Fallback: log to console
-      console.warn('Clipboard unavailable. Join link:', playerUrlWithPin);
+      console.warn('Join link:', playerUrlWithPin);
+      showFeedback(false);
     }
   }
 
