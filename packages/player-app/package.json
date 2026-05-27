@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/player-app",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Player web application",
   "type": "module",
   "scripts": {
@@ -12,12 +12,13 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "@quizzquizz/common": "*"
+    "@quizzquizz/common": "*",
+    "morphdom": "^2.7.8"
   },
   "devDependencies": {
+    "happy-dom": "^20.8.3",
     "typescript": "^5.3.3",
     "vite": "^6.4.1",
-    "vitest": "^3.2.4",
-    "happy-dom": "^20.8.3"
+    "vitest": "^3.2.4"
   }
 }
