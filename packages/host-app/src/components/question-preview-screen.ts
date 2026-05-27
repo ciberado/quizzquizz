@@ -498,6 +498,10 @@ export class QuestionPreviewScreen extends BaseComponent {
     }
 
     this.patchContent(`
+      <div class="screen">
+        <div class="container" style="max-width: 1200px;">
+          <div class="card">
+            <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
               <div>
                 <h1>${this.escapeHtml(this.bank.name)}</h1>
