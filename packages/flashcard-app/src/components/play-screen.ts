@@ -404,7 +404,7 @@ export class FlashcardPlayScreen extends BaseComponent {
     const revealed = this.phase === 'answer';
     const isSingle = this.shuffledAnswers.length === 1;
 
-    this.setContent(`
+    this.patchContent(`
       <div class="fc-play-screen">
         ${this.renderProgressBar(dist, total)}
 

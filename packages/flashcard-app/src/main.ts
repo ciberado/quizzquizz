@@ -7,10 +7,20 @@ import './components/join-screen';
 import './components/play-screen';
 import './components/summary-screen';
 
+// Track the currently mounted screen tag to avoid unnecessary remounts
+let currentScreenTag = '';
+
 function showScreen(tag: string): void {
   const app = document.getElementById('app');
   if (!app) return;
-  app.innerHTML = `<${tag}></${tag}>`;
+
+  // If the same screen type is already mounted, skip remounting.
+  if (currentScreenTag === tag && app.firstElementChild) {
+    return;
+  }
+
+  currentScreenTag = tag;
+  app.innerHTML = `<${tag} class="route-enter"></${tag}>`;
 }
 
 // Routes
