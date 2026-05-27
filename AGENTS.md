@@ -105,6 +105,10 @@ protected attachEventListeners(): void { /* querySelector + addEventListener */ 
 - If asked to commit, use Conventional Commits.
 - Update [`CHANGELOG.md`](CHANGELOG.md) under `## [Unreleased]` for every commit.
 
+## Bug Fixes
+
+**Always write a failing test before fixing a bug.** Reproduce the exact failure in a test first, confirm the test fails, then fix the code until the test passes. Never attempt a fix without a test that proves the bug exists — blind fixes are unverifiable and often miss the actual root cause.
+
 ## Common Pitfalls
 
 - Do not replace polling with sockets unless the user explicitly requests an architectural change.
