@@ -30,6 +30,10 @@ export class BankBrowser extends BaseComponent {
   /** Authenticated user (null = anonymous) */
   private authUser: { id: string; email: string; username: string } | null = null;
 
+  private hashChangeHandler = (): void => {
+    this.onHashChange();
+  };
+
   constructor() {
     super();
     // Re-render when auth state changes (login / logout)
@@ -37,6 +41,8 @@ export class BankBrowser extends BaseComponent {
   }
 
   protected async onMount(): Promise<void> {
+    // Listen for hash changes to handle folder navigation without remounting
+    window.addEventListener('hashchange', this.hashChangeHandler);
     // Register the modal listener immediately — before the tree loads — so
     // clicking "Upload Quiz" works even if auth resolves before loadTree().
     this.addEventListener('open-upload-modal', () => {
@@ -46,6 +52,20 @@ export class BankBrowser extends BaseComponent {
     // authUser set — prevents the raw user-ID flash.
     await this.checkAuth();
     await this.loadTree();
+  }
+
+  protected onUnmount(): void {
+    window.removeEventListener('hashchange', this.hashChangeHandler);
+  }
+
+  /** Handle hash changes for in-place folder navigation */
+  private onHashChange(): void {
+    if (!this.rootTree) return;
+    const newPath = this.validatedPath(this.readPathFromHash());
+    if (newPath.join('/') !== this.currentPath.join('/')) {
+      this.currentPath = newPath;
+      this.render();
+    }
   }
 
   private async checkAuth(): Promise<void> {
@@ -167,11 +187,16 @@ export class BankBrowser extends BaseComponent {
 
     const hasFolders = this.rootTree.folders.length > 0;
 
-    this.setContent(`
-      ${hasFolders ? this.renderBreadcrumb() : ''}
-      ${this.renderFolder(folder, hasFolders)}
-      <qz-upload-quiz-modal></qz-upload-quiz-modal>
-    `);
+    const html = `
+      <div class="bank-browser-content">
+        ${hasFolders ? this.renderBreadcrumb() : ''}
+        ${this.renderFolder(folder, hasFolders)}
+        <qz-upload-quiz-modal></qz-upload-quiz-modal>
+      </div>
+    `;
+
+    // Use patchContent for smooth in-place updates (folder navigation)
+    this.patchContent(html);
 
     this.bindEvents();
   }

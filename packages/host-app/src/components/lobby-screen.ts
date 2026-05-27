@@ -51,6 +51,24 @@ export class LobbyScreen extends BaseComponent {
   }
 
   protected render(): void {
+    const html = this.buildHtml();
+    this.setContent(html);
+    this.injectStyles();
+    this.setupEventListeners();
+  }
+
+  /**
+   * Patch-render: update DOM in-place without destroying/recreating elements.
+   * Used for polling updates to avoid visual flash and lost state.
+   */
+  private patchRender(): void {
+    const html = this.buildHtml();
+    this.patchContent(html);
+    this.injectStyles();
+    this.setupEventListeners();
+  }
+
+  private buildHtml(): string {
     const canStart = this.players.length > 0;
 
     console.log('🎨 Rendering lobby:', {
@@ -65,7 +83,7 @@ export class LobbyScreen extends BaseComponent {
     const playerUrlWithPin = `${playerUrl}/#/nickname?pin=${this.pin}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(playerUrlWithPin)}`;
 
-    this.setContent(`
+    return `
       <div class="screen">
         <div class="container">
           <!-- Large PIN Display with QR Code -->
@@ -132,9 +150,10 @@ export class LobbyScreen extends BaseComponent {
           ` : ''}
         </div>
       </div>
-    `);
+    `;
+  }
 
-    // Add inline styles for lobby-specific components
+  private injectStyles(): void {
     if (!document.getElementById('lobby-styles')) {
       const style = document.createElement('style');
       style.id = 'lobby-styles';
@@ -361,9 +380,6 @@ export class LobbyScreen extends BaseComponent {
       `;
       document.head.appendChild(style);
     }
-
-    // Set up event listeners
-    this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
@@ -424,7 +440,7 @@ export class LobbyScreen extends BaseComponent {
       if (playerCountChanged || playerListChanged) {
         this.players = players;
         this.previousPlayerCount = newPlayerCount;
-        this.render();
+        this.patchRender();
 
         // Log new players joining
         if (playerCountChanged && newPlayerCount > this.previousPlayerCount) {

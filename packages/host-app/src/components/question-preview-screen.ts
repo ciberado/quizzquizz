@@ -125,7 +125,10 @@ export class QuestionPreviewScreen extends BaseComponent {
   private async loadQuestions(): Promise<void> {
     if (!this.bankId) return;
 
-    this.showLoading('Loading questions...');
+    // Only show full loading screen on initial load (no existing content)
+    if (!this.preview) {
+      this.showLoading('Loading questions...');
+    }
 
     try {
       const qParams: { page?: number; limit?: number; difficulty?: string; topic?: string } = {
@@ -310,7 +313,7 @@ export class QuestionPreviewScreen extends BaseComponent {
       selectedCount = this.maxQuestions;
     }
 
-    this.setContent(`
+    this.patchContent(`
       <div class="screen">
         <div class="container" style="max-width: 1200px;">
           <div class="card">

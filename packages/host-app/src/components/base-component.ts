@@ -1,3 +1,5 @@
+import morphdom from 'morphdom';
+
 /**
  * Base component class for host app web components
  * Provides common functionality for all screen components
@@ -47,10 +49,60 @@ export abstract class BaseComponent extends HTMLElement {
   }
 
   /**
-   * Set the component's HTML content
+   * Set the component's HTML content (full replace — use for initial render)
    */
   protected setContent(html: string): void {
     this.innerHTML = html;
+  }
+
+  /**
+   * Patch the component's DOM in-place using morphdom.
+   * Only elements that actually changed are updated, preserving focus,
+   * scroll position, and CSS animations on unchanged nodes.
+   */
+  protected patchContent(html: string): void {
+    if (!this.firstElementChild) {
+      // No existing DOM to diff against — fall back to full replace
+      this.innerHTML = html;
+      return;
+    }
+
+    // Wrap incoming HTML in a temporary container for morphdom
+    const template = document.createElement('div');
+    template.innerHTML = html;
+
+    // If single root element, morph it directly
+    if (template.children.length === 1 && this.children.length === 1) {
+      morphdom(this.firstElementChild, template.firstElementChild!, {
+        onBeforeElUpdated(fromEl, toEl) {
+          // Preserve focused elements to avoid losing user input
+          if (fromEl === document.activeElement) {
+            if (fromEl.tagName === 'INPUT' || fromEl.tagName === 'TEXTAREA' || fromEl.tagName === 'SELECT') {
+              return false;
+            }
+          }
+          // Skip elements with CSS animations in progress
+          if (fromEl.getAnimations && fromEl.getAnimations().length > 0) {
+            // Still update data attributes and text if changed
+            return true;
+          }
+          return !fromEl.isEqualNode(toEl);
+        },
+      });
+    } else {
+      // Multiple root elements — morph the container itself
+      morphdom(this, template, {
+        childrenOnly: true,
+        onBeforeElUpdated(fromEl, toEl) {
+          if (fromEl === document.activeElement) {
+            if (fromEl.tagName === 'INPUT' || fromEl.tagName === 'TEXTAREA' || fromEl.tagName === 'SELECT') {
+              return false;
+            }
+          }
+          return !fromEl.isEqualNode(toEl);
+        },
+      });
+    }
   }
 
   /**

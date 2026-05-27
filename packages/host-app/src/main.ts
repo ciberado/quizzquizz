@@ -79,15 +79,27 @@ router.on('/flashcard-lobby/:sessionId', () => {
 });
 
 // Helper function to show a screen
+// Track the currently mounted screen tag to avoid unnecessary remounts
+let currentScreenTag = '';
+
 function showScreen(componentTag: string): void {
   const app = document.getElementById('app');
   if (!app) return;
 
+  // If the same screen type is already mounted, skip remounting.
+  // This prevents fade/flash when only query params change (e.g. folder navigation).
+  if (currentScreenTag === componentTag && app.firstElementChild) {
+    return;
+  }
+
+  currentScreenTag = componentTag;
+
   // Clear existing content
   app.innerHTML = '';
 
-  // Create and append component
+  // Create and append component with route-enter class for fade animation
   const component = document.createElement(componentTag);
+  component.classList.add('route-enter');
   app.appendChild(component);
 }
 

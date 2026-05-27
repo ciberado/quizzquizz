@@ -58,7 +58,7 @@ export class LoginScreen extends BaseComponent {
   }
 
   render() {
-    this.innerHTML = `
+    const html = `
       <div class="screen">
         <div class="login-card">
           <h1 style="color: var(--color-primary); margin-bottom: 0.5rem; text-align: center; font-size: var(--font-size-large);">
@@ -118,6 +118,8 @@ export class LoginScreen extends BaseComponent {
         </div>
       </div>
     `;
+
+    this.patchContent(html);
 
     // Attach event listeners
     const form = this.querySelector('.auth-form') as HTMLFormElement;

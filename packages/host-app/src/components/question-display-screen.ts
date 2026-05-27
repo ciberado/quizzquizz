@@ -7,6 +7,7 @@
 import { router } from '../router';
 import { state } from '../state';
 import { api, cancelAllRequests } from '../api-client';
+import morphdom from 'morphdom';
 
 // Local interface for game state (matches API response)
 interface HostGameState {
@@ -365,7 +366,7 @@ export class QuestionDisplayScreen extends HTMLElement {
     const questionNumber = this.currentGameState.currentQuestionIndex + 1;
     const totalQuestions = this.currentGameState.totalQuestions;
 
-    this.innerHTML = `
+    const html = `
       <div class="screen question-display-screen">
         <div class="question-header">
           <div class="question-number">
@@ -442,6 +443,17 @@ export class QuestionDisplayScreen extends HTMLElement {
         </div>
       </div>
     `;
+
+    // Use morphdom for in-place patching if DOM already exists
+    if (this.firstElementChild && this.querySelector('.question-display-screen')) {
+      const template = document.createElement('div');
+      template.innerHTML = html;
+      if (template.firstElementChild) {
+        morphdom(this.firstElementChild, template.firstElementChild);
+      }
+    } else {
+      this.innerHTML = html;
+    }
 
     // Add event listeners
     const nextButton = this.querySelector('#next-button');

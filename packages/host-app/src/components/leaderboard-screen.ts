@@ -7,6 +7,7 @@
 import { router } from '../router';
 import { state } from '../state';
 import { api, cancelAllRequests } from '../api-client';
+import morphdom from 'morphdom';
 
 interface LeaderboardEntry {
   rank: number;
@@ -216,7 +217,7 @@ export class LeaderboardScreen extends HTMLElement {
     const hasMoreQuestions = this.currentQuestionIndex < this.totalQuestions - 1;
     const showNextButton = this.sessionStatus === 'playing' && hasMoreQuestions;
 
-    this.innerHTML = `
+    const html = `
       <div class="leaderboard-screen">
         <div class="leaderboard-header">
           <h1>🏆 Leaderboard</h1>
@@ -259,6 +260,17 @@ export class LeaderboardScreen extends HTMLElement {
         </div>
       </div>
     `;
+
+    // Use morphdom for in-place patching if DOM already exists
+    if (this.firstElementChild) {
+      const template = document.createElement('div');
+      template.innerHTML = html;
+      if (template.firstElementChild) {
+        morphdom(this.firstElementChild, template.firstElementChild);
+      }
+    } else {
+      this.innerHTML = html;
+    }
 
     // Add event listeners
     this.querySelector('[data-action="next"]')?.addEventListener('click', () => {
