@@ -200,9 +200,20 @@ fix(api-server): validate question IDs before scoring
 chore(release): bump version 0.7.0 → 0.8.0
 ```
 
+### 6. Tag the Release (if a version bump was performed)
+
+After the version-bump commit, create an annotated git tag and push it:
+
+```bash
+git tag v<NEXT> <bump-commit-sha>
+git push --tags
+```
+
+Use the exact version from the bump (e.g. `v0.12.1`). Always tag the **bump commit itself**, not any subsequent commit.
+
 ---
 
-### 6. Final Check
+### 7. Final Check
 
 After all commits:
 
