@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-05-27
+
+### Changed
+- **[host-app]** Replace `innerHTML` screen refreshes with morphdom-based in-place DOM patching: add `patchContent()` to `BaseComponent`, migrate lobby, leaderboard, question-display, question-preview, login, and bank-browser screens to use it.
+- **[player-app]** Add `patchContent()` to `BaseComponent` and update router to skip remounting the same screen on query-param-only hash changes.
+- **[flashcard-app]** Add `patchContent()` to `BaseComponent`, migrate play-screen card transitions to use it, and update router to avoid unnecessary remounts.
+- **[analytics-ui]** Add `patchDOM()` utility (`src/patch.ts`) using morphdom for future in-place DOM updates.
+- **[host-app]** Scope `.screen` CSS `fadeIn` animation to route-level transitions only (`.route-enter` class), preventing flash on polling updates and filter interactions.
+- **[host-app]** Bank-browser folder navigation now handled in-place via `hashchange` listener without remounting the parent screen.
+- **[host-app]** Question-preview filter changes no longer show a full loading spinner; existing content stays in the DOM while the API request is in flight.
+
 ## [0.11.0] — 2026-05-27
 
 ### Added
