@@ -48,6 +48,33 @@ export class BankBrowser extends BaseComponent {
     this.addEventListener('open-upload-modal', () => {
       this.qs<UploadQuizModal>('qz-upload-quiz-modal')?.open();
     });
+    // Handle quiz upload completion — delegated so it fires regardless of morphdom patches
+    this.addEventListener('quiz-uploaded', async () => {
+      clearBankTreeCache();
+      await this.loadTree(true);
+    });
+    // Delegated click handler — registered once, survives morphdom in-place patches
+    this.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const breadcrumb = target.closest<HTMLButtonElement>('.breadcrumb-link');
+      if (breadcrumb) {
+        const depth = parseInt(breadcrumb.dataset['depth'] ?? '0', 10);
+        this.navigateTo(depth);
+        return;
+      }
+      const folder = target.closest<HTMLElement>('.bank-browser-folder-card');
+      if (folder) {
+        const name = folder.dataset['folderName'];
+        if (name) this.enterFolder(name);
+        return;
+      }
+      const bank = target.closest<HTMLElement>('[data-bank-id]');
+      if (bank) {
+        const id = bank.dataset['bankId'];
+        if (id) this.selectBank(id);
+        return;
+      }
+    });
     // Auth must complete before loadTree so the first render already has
     // authUser set — prevents the raw user-ID flash.
     await this.checkAuth();
@@ -197,8 +224,6 @@ export class BankBrowser extends BaseComponent {
 
     // Use patchContent for smooth in-place updates (folder navigation)
     this.patchContent(html);
-
-    this.bindEvents();
   }
 
   private renderBreadcrumb(): string {
@@ -277,38 +302,7 @@ export class BankBrowser extends BaseComponent {
   }
 
   // ─── Event binding ─────────────────────────────────────────────────────────
-
-  private bindEvents(): void {
-    // Breadcrumb navigation
-    this.qsa<HTMLButtonElement>('.breadcrumb-link').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const depth = parseInt(btn.dataset['depth'] ?? '0', 10);
-        this.navigateTo(depth);
-      });
-    });
-
-    // Folder cards
-    this.qsa<HTMLElement>('.bank-browser-folder-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        const name = card.dataset['folderName'];
-        if (name) this.enterFolder(name);
-      });
-    });
-
-    // Bank cards
-    this.qsa<HTMLElement>('[data-bank-id]').forEach((card) => {
-      card.addEventListener('click', () => {
-        const id = card.dataset['bankId'];
-        if (id) this.selectBank(id);
-      });
-    });
-
-    // After successful upload → refresh tree
-    this.qs('qz-upload-quiz-modal')?.addEventListener('quiz-uploaded', async () => {
-      clearBankTreeCache();
-      await this.loadTree(true);
-    });
-  }
+  // All click events handled via delegation in onMount() — no per-render binding needed.
 }
 
 customElements.define('qz-bank-browser', BankBrowser);

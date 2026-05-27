@@ -98,8 +98,192 @@ export class QuestionPreviewScreen extends BaseComponent {
       return;
     }
 
+    // Register delegated event handlers once — morphdom reuses DOM nodes so
+    // re-attaching per-render listeners would stack duplicates on the same nodes.
+    this.setupDelegatedEvents();
+
     await this.loadBank();
     await this.loadQuestions();
+  }
+
+  /** Set up a single delegated click/change/input handler on the host element. */
+  private setupDelegatedEvents(): void {
+    this.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+
+      // Backdrop: close only when the translucent overlay itself is clicked
+      if (target.dataset['action'] === 'close-set-picker-backdrop') {
+        this.showingSetPicker = false;
+        this.render();
+        return;
+      }
+
+      const actionEl = target.closest<HTMLElement>('[data-action]');
+      if (!actionEl) return;
+      const action = actionEl.dataset['action'];
+
+      switch (action) {
+        case 'back':
+          router.navigate('/create');
+          break;
+        case 'toggle-topics-panel': {
+          this.topicsExpanded = !this.topicsExpanded;
+          const panel = this.qs('[data-topics-panel]');
+          const arrow = this.qs('[data-topics-arrow]');
+          if (panel) panel.toggleAttribute('hidden', !this.topicsExpanded);
+          if (arrow) arrow.textContent = this.topicsExpanded ? '▼' : '▶';
+          (actionEl as HTMLElement).style.marginBottom = this.topicsExpanded ? 'var(--spacing-sm)' : '0';
+          break;
+        }
+        case 'toggle-tree-node': {
+          e.preventDefault();
+          e.stopPropagation();
+          const nodePath = actionEl.dataset['nodePath'] ?? '';
+          const childrenId = actionEl.dataset['childrenId'] ?? '';
+          const isNowExpanded = !this.expandedTopicNodes.has(nodePath);
+          if (isNowExpanded) this.expandedTopicNodes.add(nodePath);
+          else this.expandedTopicNodes.delete(nodePath);
+          const children = childrenId ? document.getElementById(childrenId) : null;
+          const arrow = actionEl.querySelector('[data-tree-arrow]');
+          if (children) children.toggleAttribute('hidden', !isNowExpanded);
+          if (arrow) arrow.textContent = isNowExpanded ? '▼' : '▶';
+          break;
+        }
+        case 'clear-filters':
+          this.selectedDifficulties.clear();
+          this.selectedTopics.clear();
+          this.currentPage = 1;
+          void this.loadQuestions();
+          break;
+        case 'toggle-answers': {
+          const questionId = actionEl.dataset['questionId'];
+          if (questionId) {
+            if (this.expandedQuestions.has(questionId)) this.expandedQuestions.delete(questionId);
+            else this.expandedQuestions.add(questionId);
+            this.render();
+          }
+          break;
+        }
+        case 'prev-page':
+          this.currentPage--;
+          void this.loadQuestions();
+          break;
+        case 'next-page':
+          this.currentPage++;
+          void this.loadQuestions();
+          break;
+        case 'download':
+          void this.downloadFilteredBank();
+          break;
+        case 'create-flashcard':
+          void this.openSetPicker();
+          break;
+        case 'select-set':
+          this.selectedSetIndex = parseInt(actionEl.dataset['setIndex'] ?? '0', 10);
+          this.render();
+          break;
+        case 'cancel-set-picker':
+          this.showingSetPicker = false;
+          this.render();
+          break;
+        case 'reset-progress':
+          if (this.bankId) {
+            resetProgress(this.bankId);
+            this.bankProgress = getOrBuildProgress(this.bankId, this.allBankQuestions.map((q) => q.id));
+            this.selectedSetIndex = 0;
+            saveProgress(this.bankId, this.bankProgress);
+            this.render();
+          }
+          break;
+        case 'launch-set':
+          void this.launchWithSelectedSet();
+          break;
+        case 'create':
+          this.createSession();
+          break;
+      }
+    });
+
+    this.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+
+      if (target.dataset['filter'] === 'difficulty') {
+        const difficulty = target.value as Difficulty;
+        if (target.checked) this.selectedDifficulties.add(difficulty);
+        else this.selectedDifficulties.delete(difficulty);
+        this.currentPage = 1;
+        void this.loadQuestions();
+        return;
+      }
+
+      if (target.dataset['filter'] === 'topic-node') {
+        const nodePath = target.dataset['nodePath'] ?? '';
+        target.indeterminate = false;
+        const tree = this.buildTopicTree();
+        const node = this.findTreeNode(tree, nodePath);
+        if (!node) return;
+        const leaves = this.getLeafTopics(node);
+        if (target.checked) leaves.forEach(t => this.selectedTopics.add(t));
+        else leaves.forEach(t => this.selectedTopics.delete(t));
+        this.currentPage = 1;
+        void this.loadQuestions();
+        return;
+      }
+
+      if (target.name === 'pace' && target.checked) {
+        this.pace = target.value as 'normal' | 'calm' | 'manual';
+        this.render();
+        return;
+      }
+
+      if (target.classList.contains('question-checkbox') && !this.selectAllMode) {
+        const questionId = target.dataset['questionId'];
+        if (!questionId) return;
+        if (target.checked) this.selectedQuestionIds.add(questionId);
+        else this.selectedQuestionIds.delete(questionId);
+        this.maxQuestions = this.selectedQuestionIds.size > 0 ? this.selectedQuestionIds.size : null;
+        this.render();
+        return;
+      }
+
+      const actionEl = target.closest<HTMLElement>('[data-action]');
+      const action = actionEl?.dataset['action'];
+      switch (action) {
+        case 'toggle-select-all':
+          this.selectAllMode = target.checked;
+          if (this.selectAllMode) {
+            this.preview?.questions.forEach(q => this.selectedQuestionIds.add(q.id));
+          } else {
+            this.selectedQuestionIds.clear();
+            this.maxQuestions = null;
+          }
+          this.render();
+          break;
+        case 'toggle-random':
+          this.randomOrder = target.checked;
+          break;
+        case 'toggle-shuffle-answers':
+          this.shuffleAnswers = target.checked;
+          break;
+        case 'toggle-auto-time':
+          this.autoQuestionTime = target.checked;
+          break;
+      }
+    });
+
+    this.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.id !== 'max-questions-input') return;
+      const value = target.value.trim();
+      const maxAvailable = this.preview?.pagination.totalQuestions || 999;
+      this.maxQuestions = value === '' ? null : Math.min(maxAvailable, Math.max(1, parseInt(value, 10) || 1));
+      const rawCount = this.selectAllMode
+        ? (this.preview?.pagination.totalQuestions ?? 0)
+        : this.selectedQuestionIds.size;
+      const effective = this.maxQuestions !== null && rawCount > this.maxQuestions ? this.maxQuestions : rawCount;
+      const createBtn = this.qs('[data-action="create"]');
+      if (createBtn) createBtn.textContent = `Create Quiz with ${effective} Question${effective === 1 ? '' : 's'}`;
+    });
   }
 
   private async loadBank(): Promise<void> {
@@ -314,10 +498,6 @@ export class QuestionPreviewScreen extends BaseComponent {
     }
 
     this.patchContent(`
-      <div class="screen">
-        <div class="container" style="max-width: 1200px;">
-          <div class="card">
-            <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
               <div>
                 <h1>${this.escapeHtml(this.bank.name)}</h1>
@@ -530,8 +710,6 @@ export class QuestionPreviewScreen extends BaseComponent {
       </div>
       ${this.renderSetPickerModal()}
     `);
-
-    this.attachEventListeners();
   }
 
   private renderQuestion(question: Question, index: number): string {
@@ -692,7 +870,6 @@ export class QuestionPreviewScreen extends BaseComponent {
             padding: var(--spacing-lg); max-width: 900px; width: 100%;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
           "
-          onclick="event.stopPropagation();"
         >
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
             <div>
@@ -741,299 +918,6 @@ export class QuestionPreviewScreen extends BaseComponent {
     `;
   }
 
-  private attachEventListeners(): void {
-    // Back button
-    this.qsa('[data-action="back"]').forEach(btn => {
-      btn.addEventListener('click', () => router.navigate('/create'));
-    });
-
-    // Filter checkboxes
-    this.qsa('[data-filter="difficulty"]').forEach(checkbox => {
-      checkbox.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        const difficulty = target.value as Difficulty;
-        
-        if (target.checked) {
-          this.selectedDifficulties.add(difficulty);
-        } else {
-          this.selectedDifficulties.delete(difficulty);
-        }
-        
-        this.currentPage = 1; // Reset to first page
-        this.loadQuestions();
-      });
-    });
-
-    this.qsa('[data-filter="topic-node"]').forEach(checkbox => {
-      const cb = checkbox as HTMLInputElement;
-      cb.indeterminate = cb.dataset['indeterminate'] === 'true';
-
-      cb.addEventListener('change', () => {
-        const nodePath = cb.dataset['nodePath'] ?? '';
-        const tree = this.buildTopicTree();
-        const node = this.findTreeNode(tree, nodePath);
-        if (!node) return;
-
-        const leaves = this.getLeafTopics(node);
-        if (cb.checked) {
-          leaves.forEach(t => this.selectedTopics.add(t));
-        } else {
-          leaves.forEach(t => this.selectedTopics.delete(t));
-        }
-
-        this.currentPage = 1;
-        this.loadQuestions();
-      });
-    });
-
-    // Topics panel expand / collapse — direct DOM toggle, no re-render
-    const topicsToggle = this.qs('[data-action="toggle-topics-panel"]');
-    if (topicsToggle) {
-      topicsToggle.addEventListener('click', () => {
-        this.topicsExpanded = !this.topicsExpanded;
-        const panel = this.qs('[data-topics-panel]');
-        const arrow = this.qs('[data-topics-arrow]');
-        if (panel) panel.toggleAttribute('hidden', !this.topicsExpanded);
-        if (arrow) arrow.textContent = this.topicsExpanded ? '▼' : '▶';
-        (topicsToggle as HTMLElement).style.marginBottom = this.topicsExpanded ? 'var(--spacing-sm)' : '0';
-      });
-    }
-
-    // Tree expand / collapse — direct DOM toggle, no re-render
-    this.qsa('[data-action="toggle-tree-node"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const nodePath = (btn as HTMLElement).dataset['nodePath'] ?? '';
-        const childrenId = (btn as HTMLElement).dataset['childrenId'] ?? '';
-        const isNowExpanded = !this.expandedTopicNodes.has(nodePath);
-        if (isNowExpanded) {
-          this.expandedTopicNodes.add(nodePath);
-        } else {
-          this.expandedTopicNodes.delete(nodePath);
-        }
-        // Direct ID lookup — unambiguous regardless of nesting or selector quirks
-        const children = childrenId ? document.getElementById(childrenId) : null;
-        const arrow = btn.querySelector('[data-tree-arrow]');
-        if (children) children.toggleAttribute('hidden', !isNowExpanded);
-        if (arrow) arrow.textContent = isNowExpanded ? '▼' : '▶';
-      });
-    });
-
-    // Clear filters
-    const clearBtn = this.qs('[data-action="clear-filters"]');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        this.selectedDifficulties.clear();
-        this.selectedTopics.clear();
-        this.currentPage = 1;
-        this.loadQuestions();
-      });
-    }
-
-    // Toggle select all mode
-    const selectAllCheckbox = this.qs('[data-action="toggle-select-all"]') as HTMLInputElement;
-    if (selectAllCheckbox) {
-      selectAllCheckbox.addEventListener('change', () => {
-        this.selectAllMode = selectAllCheckbox.checked;
-        
-        if (this.selectAllMode) {
-          // Select all visible questions
-          this.preview?.questions.forEach(q => this.selectedQuestionIds.add(q.id));
-        } else {
-          // Clear selections when switching to manual mode
-          this.selectedQuestionIds.clear();
-          // Reset maxQuestions when switching to manual mode with no selections
-          this.maxQuestions = null;
-        }
-        
-        this.render();
-      });
-    }
-
-    // Toggle random order
-    const randomCheckbox = this.qs('[data-action="toggle-random"]') as HTMLInputElement;
-    if (randomCheckbox) {
-      randomCheckbox.addEventListener('change', () => {
-        this.randomOrder = randomCheckbox.checked;
-      });
-    }
-
-    // Toggle shuffle answers
-    const shuffleAnswersCheckbox = this.qs('[data-action="toggle-shuffle-answers"]') as HTMLInputElement;
-    if (shuffleAnswersCheckbox) {
-      shuffleAnswersCheckbox.addEventListener('change', () => {
-        this.shuffleAnswers = shuffleAnswersCheckbox.checked;
-      });
-    }
-
-    // Pace radio buttons
-    this.qsa('input[name="pace"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        if (target.checked) {
-          this.pace = target.value as 'normal' | 'calm' | 'manual';
-          this.render(); // Re-render to update description text
-        }
-      });
-    });
-
-    // Toggle automatic question time
-    const autoTimeCheckbox = this.qs('[data-action="toggle-auto-time"]') as HTMLInputElement;
-    if (autoTimeCheckbox) {
-      autoTimeCheckbox.addEventListener('change', () => {
-        this.autoQuestionTime = autoTimeCheckbox.checked;
-      });
-    }
-
-    // Max questions input
-    const maxQuestionsInput = this.qs('#max-questions-input') as HTMLInputElement;
-    if (maxQuestionsInput) {
-      maxQuestionsInput.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        const value = target.value.trim();
-        const maxAvailable = this.preview?.pagination.totalQuestions || 999;
-        this.maxQuestions = value === '' ? null : Math.min(maxAvailable, Math.max(1, parseInt(value, 10) || 1));
-        
-        // Update button text dynamically
-        const createBtn = this.qs('[data-action="create"]');
-        if (createBtn && this.preview) {
-          let count = this.selectAllMode 
-            ? this.preview.pagination.totalQuestions 
-            : this.selectedQuestionIds.size;
-          if (this.maxQuestions !== null && count > this.maxQuestions) {
-            count = this.maxQuestions;
-          }
-          createBtn.textContent = `Create Quiz with ${count} Question${count === 1 ? '' : 's'}`;
-        }
-      });
-    }
-
-    // Individual question checkboxes
-    if (!this.selectAllMode) {
-      this.qsa('.question-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-          const target = e.target as HTMLInputElement;
-          const questionId = target.getAttribute('data-question-id');
-          
-          if (!questionId) return;
-          
-          if (target.checked) {
-            this.selectedQuestionIds.add(questionId);
-          } else {
-            this.selectedQuestionIds.delete(questionId);
-          }
-          
-          // Auto-update maxQuestions to match selected count in manual mode
-          this.maxQuestions = this.selectedQuestionIds.size > 0 ? this.selectedQuestionIds.size : null;
-          
-          this.render();
-        });
-      });
-    }
-
-    // Toggle answer visibility
-    this.qsa('[data-action="toggle-answers"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const questionId = target.getAttribute('data-question-id');
-        
-        if (!questionId) return;
-        
-        if (this.expandedQuestions.has(questionId)) {
-          this.expandedQuestions.delete(questionId);
-        } else {
-          this.expandedQuestions.add(questionId);
-        }
-        
-        this.render();
-      });
-    });
-
-    // Pagination
-    const prevBtn = this.qs('[data-action="prev-page"]');
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        this.currentPage--;
-        this.loadQuestions();
-      });
-    }
-
-    const nextBtn = this.qs('[data-action="next-page"]');
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        this.currentPage++;
-        this.loadQuestions();
-      });
-    }
-
-    // Download button
-    const downloadBtn = this.qs('[data-action="download"]');
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', () => {
-        this.downloadFilteredBank();
-      });
-    }
-
-    // Launch flashcard session button — opens set picker first
-    const flashcardBtn = this.qs('[data-action="create-flashcard"]');
-    if (flashcardBtn) {
-      flashcardBtn.addEventListener('click', () => {
-        this.openSetPicker();
-      });
-    }
-
-    // Set picker modal interactions
-    const backdrop = this.qs('[data-action="close-set-picker-backdrop"]');
-    if (backdrop) {
-      backdrop.addEventListener('click', () => {
-        this.showingSetPicker = false;
-        this.render();
-      });
-    }
-
-    this.qsa('[data-action="select-set"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        this.selectedSetIndex = parseInt((btn as HTMLElement).dataset['setIndex'] ?? '0', 10);
-        this.render();
-      });
-    });
-
-    this.qsa('[data-action="cancel-set-picker"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        this.showingSetPicker = false;
-        this.render();
-      });
-    });
-
-    const resetBtn = this.qs('[data-action="reset-progress"]');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        if (!this.bankId) return;
-        resetProgress(this.bankId);
-        // Rebuild fresh progress
-        this.bankProgress = getOrBuildProgress(this.bankId, this.allBankQuestions.map((q) => q.id));
-        this.selectedSetIndex = 0;
-        saveProgress(this.bankId, this.bankProgress);
-        this.render();
-      });
-    }
-
-    const launchSetBtn = this.qs('[data-action="launch-set"]');
-    if (launchSetBtn) {
-      launchSetBtn.addEventListener('click', () => {
-        void this.launchWithSelectedSet();
-      });
-    }
-
-    // Create session button
-    const createBtn = this.qs('[data-action="create"]');
-    if (createBtn) {
-      createBtn.addEventListener('click', () => {
-        this.createSession();
-      });
-    }
-  }
 
   private async downloadFilteredBank(): Promise<void> {
     if (!this.bank || !this.preview) return;
