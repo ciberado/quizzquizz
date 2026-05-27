@@ -1,3 +1,5 @@
+import morphdom from 'morphdom';
+
 /**
  * Base class for Web Components with lifecycle helpers
  */
@@ -65,10 +67,50 @@ export abstract class BaseComponent extends HTMLElement {
   protected abstract render(): void;
 
   /**
-   * Helper to update DOM content
+   * Helper to update DOM content (full replace — use for initial render)
    */
   protected setContent(html: string): void {
     this.innerHTML = html;
+  }
+
+  /**
+   * Patch the component's DOM in-place using morphdom.
+   * Only elements that actually changed are updated, preserving focus,
+   * scroll position, and CSS animations on unchanged nodes.
+   */
+  protected patchContent(html: string): void {
+    if (!this.firstElementChild) {
+      this.innerHTML = html;
+      return;
+    }
+
+    const template = document.createElement('div');
+    template.innerHTML = html;
+
+    if (template.children.length === 1 && this.children.length === 1) {
+      morphdom(this.firstElementChild, template.firstElementChild!, {
+        onBeforeElUpdated(fromEl, toEl) {
+          if (fromEl === document.activeElement) {
+            if (fromEl.tagName === 'INPUT' || fromEl.tagName === 'TEXTAREA' || fromEl.tagName === 'SELECT') {
+              return false;
+            }
+          }
+          return !fromEl.isEqualNode(toEl);
+        },
+      });
+    } else {
+      morphdom(this, template, {
+        childrenOnly: true,
+        onBeforeElUpdated(fromEl, toEl) {
+          if (fromEl === document.activeElement) {
+            if (fromEl.tagName === 'INPUT' || fromEl.tagName === 'TEXTAREA' || fromEl.tagName === 'SELECT') {
+              return false;
+            }
+          }
+          return !fromEl.isEqualNode(toEl);
+        },
+      });
+    }
   }
 
   /**

@@ -266,6 +266,11 @@ auth-header {
   justify-content: center;
   padding: var(--spacing-md);
   text-align: center;
+}
+
+/* Apply fade only on route-level transitions (class added by router) */
+.route-enter .screen,
+.route-enter.screen {
   animation: fadeIn 0.3s ease-in-out;
 }
 

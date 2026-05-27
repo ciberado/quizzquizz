@@ -74,6 +74,9 @@ router.on('/login', () => {
   showScreen('login-screen');
 });
 
+// Track the currently mounted screen tag to avoid unnecessary remounts
+let currentScreenTag = '';
+
 /**
  * Screen switcher - mounts Web Components
  */
@@ -81,8 +84,16 @@ function showScreen(componentTag: string): void {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Mount Web Component
-  app.innerHTML = `<${componentTag}></${componentTag}>`;
+  // If the same screen type is already mounted, skip remounting.
+  // This prevents fade/flash when only query params change.
+  if (currentScreenTag === componentTag && app.firstElementChild) {
+    return;
+  }
+
+  currentScreenTag = componentTag;
+
+  // Mount Web Component with route-enter class for fade animation
+  app.innerHTML = `<${componentTag} class="route-enter"></${componentTag}>`;
 }
 
 console.log('QuizzQuizz Player App initialized');
