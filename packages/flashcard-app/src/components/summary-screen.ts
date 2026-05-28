@@ -21,6 +21,8 @@ export class FlashcardSummaryScreen extends BaseComponent {
   private sortDir: SortDir = 'asc';
 
   protected onMount(): void {
+    this.injectStyles();
+
     try {
       const raw = sessionStorage.getItem('qz-flashcard-stats');
       if (raw) this.stats = JSON.parse(raw) as LeitnerStats;
@@ -39,6 +41,89 @@ export class FlashcardSummaryScreen extends BaseComponent {
     } catch { /* ignore */ }
 
     this.render();
+  }
+
+  private injectStyles(): void {
+    if (document.getElementById('fc-summary-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'fc-summary-styles';
+    style.textContent = `
+      .fc-summary-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+      }
+
+      .fc-summary-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+      }
+
+      /* Table card: must not overflow the screen */
+      .fc-summary-table-card {
+        margin-bottom: var(--spacing-md);
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .fc-summary-table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Subtle hint that the table is scrollable */
+        border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
+      }
+
+      .fc-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--font-size-sm);
+      }
+
+      .fc-summary-table td,
+      .fc-summary-table th {
+        padding: var(--spacing-xs);
+      }
+
+      /* Shrink question column on narrow screens; let other cols be compact */
+      .fc-summary-table .col-question {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 480px) {
+        .fc-summary-stats {
+          grid-template-columns: 1fr 1fr;  /* keep 2-col but allow stat cards to shrink */
+        }
+
+        .fc-summary-stats .card {
+          padding: var(--spacing-sm) !important;
+        }
+
+        .fc-summary-stats .card > div:first-child {
+          font-size: 1.5rem !important;
+        }
+
+        .fc-summary-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .fc-summary-table .col-question {
+          max-width: 120px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .fc-summary-stats {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   protected render(): void {
@@ -66,7 +151,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
           </div>
 
           <!-- Summary Stats -->
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+          <div class="fc-summary-stats">
             <div class="card text-center" style="padding: var(--spacing-md);">
               <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);">${s.graduated}</div>
               <div class="text-secondary" style="font-size: var(--font-size-sm);">Cards Mastered</div>
@@ -87,44 +172,44 @@ export class FlashcardSummaryScreen extends BaseComponent {
           </div>
 
           <!-- Per-Card Details -->
-          <div class="card" style="margin-bottom: var(--spacing-md);">
+          <div class="card fc-summary-table-card">
             <h2 style="margin-bottom: var(--spacing-md);">Card Details</h2>
-            <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-sm);">
-              <thead>
-                <tr style="border-bottom: 2px solid var(--color-border);">
-                  ${this.renderTh('question', 'Question', 'left')}
-                  ${this.renderTh('yes', '✓ Yes', 'center')}
-                  ${this.renderTh('no', '✗ No', 'center')}
-                  ${this.renderTh('firstTry', 'First Try', 'center')}
-                  ${this.renderTh('status', 'Status', 'center')}
-                </tr>
-              </thead>
-              <tbody>
-                ${this.sortedRows(s)
-                  .map(
-                    (d) => `
-                  <tr style="border-bottom: 1px solid var(--color-border);">
-                    <td style="padding: var(--spacing-xs); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeHtml(d.card.text)}">${this.escapeHtml(d.card.text)}</td>
-                    <td style="text-align: center; padding: var(--spacing-xs); color: var(--color-success);">${d.yesCount}</td>
-                    <td style="text-align: center; padding: var(--spacing-xs); color: var(--color-error);">${d.noCount}</td>
-                    <td style="text-align: center; padding: var(--spacing-xs);">
-                      ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
-                    </td>
-                    <td style="text-align: center; padding: var(--spacing-xs);">
-                      ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
-                    </td>
+            <div class="fc-summary-table-scroll">
+              <table class="fc-summary-table">
+                <thead>
+                  <tr style="border-bottom: 2px solid var(--color-border);">
+                    ${this.renderTh('question', 'Question', 'left')}
+                    ${this.renderTh('yes', '✓ Yes', 'center')}
+                    ${this.renderTh('no', '✗ No', 'center')}
+                    ${this.renderTh('firstTry', 'First Try', 'center')}
+                    ${this.renderTh('status', 'Status', 'center')}
                   </tr>
-                `
-                  )
-                  .join('')}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  ${this.sortedRows(s)
+                    .map(
+                      (d) => `
+                    <tr style="border-bottom: 1px solid var(--color-border);">
+                      <td class="col-question" title="${this.escapeHtml(d.card.text)}">${this.escapeHtml(d.card.text)}</td>
+                      <td style="text-align: center; color: var(--color-success);">${d.yesCount}</td>
+                      <td style="text-align: center; color: var(--color-error);">${d.noCount}</td>
+                      <td style="text-align: center;">
+                        ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
+                      </td>
+                      <td style="text-align: center;">
+                        ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
+                      </td>
+                    </tr>
+                  `
+                    )
+                    .join('')}
+                </tbody>
+              </table>
             </div>
           </div>
 
           <!-- Action Buttons -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+          <div class="fc-summary-actions">
             <button id="download-json-btn" class="btn-secondary" style="padding: var(--spacing-md);">Download JSON</button>
             <button id="download-csv-btn" class="btn-secondary" style="padding: var(--spacing-md);">Download CSV</button>
           </div>

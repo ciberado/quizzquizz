@@ -329,6 +329,26 @@ export class FlashcardPlayScreen extends BaseComponent {
       }));
 
       this.engine = new LeitnerEngine(flashCards);
+
+      // Resume from server-saved progress if the player has an existing session
+      const playerId = state.playerId;
+      if (playerId) {
+        try {
+          const saved = await api.getProgress(this.sessionId, playerId);
+          for (const card of saved.cards) {
+            this.engine.restoreCardState(card.cardId, {
+              box: card.box,
+              yesCount: card.yesCount,
+              noCount: card.noCount,
+              graduated: card.graduated,
+              firstTrySuccess: card.firstTrySuccess,
+            });
+          }
+        } catch {
+          // Progress fetch failure is non-fatal — start fresh
+        }
+      }
+
       this.advance();
     } catch {
       this.error = 'Failed to load flashcard session. Please check the URL and try again.';
@@ -434,10 +454,12 @@ export class FlashcardPlayScreen extends BaseComponent {
     if (revealed) {
       this.qs('#yes-btn')?.addEventListener('click', () => {
         this.engine?.markCard(card.id, true);
+        this.syncAnswer(card.id, true);
         this.advance();
       });
       this.qs('#no-btn')?.addEventListener('click', () => {
         this.engine?.markCard(card.id, false);
+        this.syncAnswer(card.id, false);
         this.advance();
       });
     } else {
@@ -446,6 +468,36 @@ export class FlashcardPlayScreen extends BaseComponent {
         this.render();
       });
     }
+  }
+
+  /**
+   * Fire-and-forget: send the current card state to the server after the engine has
+   * already processed the answer locally.  Errors are silently swallowed so that a
+   * network hiccup never blocks the player's study flow.
+   */
+  private syncAnswer(cardId: string, known: boolean): void {
+    const playerId = state.playerId;
+    if (!playerId || !this.engine) return;
+
+    // Read the post-markCard state directly from the engine's stats
+    const stats = this.engine.getStats();
+    const detail = stats.cardDetails.find((d) => d.card.id === cardId);
+    if (!detail) return;
+
+    api
+      .recordAnswer(this.sessionId, {
+        playerId,
+        cardId,
+        known,
+        box: detail.box,
+        yesCount: detail.yesCount,
+        noCount: detail.noCount,
+        graduated: detail.graduated,
+        firstTrySuccess: detail.firstTrySuccess,
+      })
+      .catch(() => {
+        // Non-blocking — local engine state is the source of truth during play
+      });
   }
 
   private renderAnswerCard(

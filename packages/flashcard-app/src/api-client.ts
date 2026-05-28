@@ -66,6 +66,32 @@ export interface JoinResponse {
   mode: string;
 }
 
+export interface CardProgressState {
+  cardId: string;
+  box: 1 | 2 | 3;
+  yesCount: number;
+  noCount: number;
+  graduated: boolean;
+  firstTrySuccess: boolean | null;
+}
+
+export interface FlashcardProgressResponse {
+  playerId: string;
+  sessionId: string;
+  cards: CardProgressState[];
+}
+
+export interface RecordAnswerPayload {
+  playerId: string;
+  cardId: string;
+  known: boolean;
+  box: 1 | 2 | 3;
+  yesCount: number;
+  noCount: number;
+  graduated: boolean;
+  firstTrySuccess: boolean | null;
+}
+
 export const api = {
   /** Join a flashcard session via PIN */
   async joinSession(pin: string, nickname: string): Promise<JoinResponse> {
@@ -78,5 +104,20 @@ export const api = {
   /** Get all questions for a flashcard session */
   async getFlashcardState(sessionId: string): Promise<FlashcardSessionState> {
     return apiRequest<FlashcardSessionState>(`/api/sessions/${sessionId}/flashcard-state`);
+  },
+
+  /** Record a single card answer on the server and receive updated aggregate progress */
+  async recordAnswer(sessionId: string, payload: RecordAnswerPayload): Promise<void> {
+    await apiRequest<{ ok: boolean }>(`/api/sessions/${sessionId}/flashcard-answer`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** Fetch all previously saved card states for a player (used to resume a session) */
+  async getProgress(sessionId: string, playerId: string): Promise<FlashcardProgressResponse> {
+    return apiRequest<FlashcardProgressResponse>(
+      `/api/sessions/${sessionId}/flashcard-progress?playerId=${encodeURIComponent(playerId)}`,
+    );
   },
 };

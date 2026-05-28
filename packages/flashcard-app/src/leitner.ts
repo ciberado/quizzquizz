@@ -216,6 +216,32 @@ export class LeitnerEngine {
     return count;
   }
 
+  /**
+   * Restore a card's state from previously saved server-side progress.
+   * Call this after construction (before any getNextCard / markCard calls)
+   * to resume a session that was interrupted.
+   */
+  restoreCardState(
+    cardId: string,
+    saved: {
+      box: Box;
+      yesCount: number;
+      noCount: number;
+      graduated: boolean;
+      firstTrySuccess: boolean | null;
+    },
+  ): void {
+    const state = this.cards.get(cardId);
+    if (!state) return;
+    state.box = saved.box;
+    state.yesCount = saved.yesCount;
+    state.noCount = saved.noCount;
+    state.graduated = saved.graduated;
+    state.firstTrySuccess = saved.firstTrySuccess;
+    // Mark as seen long ago so it becomes eligible immediately
+    state.lastSeenAt = -BOX_SPACING[saved.box] - 1;
+  }
+
   /** Distribution of cards across boxes and graduated */
   getBoxDistribution(): { box1: number; box2: number; box3: number; graduated: number } {
     const dist = { box1: 0, box2: 0, box3: 0, graduated: 0 };
