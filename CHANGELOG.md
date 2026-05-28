@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[e2e]** `e2e/yjs-resilience.spec.ts` — 7 new E2E tests covering Yjs reconnection (player timer re-sync after network loss, game-start transition not missed while offline), late-join rejection (API + UI + navigation back), and host reconnection (re-sync via page reload, correct navigation from lobby to question screen mid-game).
+
 ### Fixed
 - **[host-app]** Host lobby-screen was not navigating to the question screen when `status=playing` arrived via Yjs (e.g. after a browser refresh mid-game). Now detects the playing state in the Yjs observer and redirects immediately.
 
