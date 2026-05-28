@@ -62,6 +62,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
     let currentQuestion = null;
     let questionStartedAt = null;
     let timeLimit = null;
+    let timerPaused = false;
     
     if (session.status === 'playing' && session.currentQuestionIndex >= 0) {
       currentQuestion = questions[session.currentQuestionIndex];
@@ -69,8 +70,10 @@ gameRoutes.get('/:sessionId/state', async (c) => {
       if (currentQuestion) {
         const questionBank = questionBanks.get(session.questionBankId);
         
-        // Calculate time limit based on session configuration
-        if (session.pace === 'manual') {
+        // Use host override if available, otherwise calculate
+        if (session.timeLimitOverride !== null) {
+          timeLimit = session.timeLimitOverride;
+        } else if (session.pace === 'manual') {
           // Manual pace: no automatic timer — host advances manually
           timeLimit = null;
         } else if (session.autoQuestionTime) {
@@ -87,6 +90,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
         }
         
         questionStartedAt = session.questionStartedAt ? session.questionStartedAt.getTime() : null;
+        timerPaused = session.timerPausedAt !== null;
       }
     }
 
@@ -101,6 +105,8 @@ gameRoutes.get('/:sessionId/state', async (c) => {
       } : null,
       questionStartedAt,
       timeLimit,
+      timerPaused,
+      timerPausedAt: session.timerPausedAt ? session.timerPausedAt.getTime() : null,
       totalQuestions: questions.length,
       currentQuestionNumber: session.currentQuestionIndex + 1,
       serverTime: Date.now(), // Add server's current time for clock synchronization

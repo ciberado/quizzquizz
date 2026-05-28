@@ -103,6 +103,8 @@ model QuizSession {
   status               String    @default("lobby") // 'lobby' | 'playing' | 'finished' | 'abandoned'
   currentQuestionIndex Int       @default(-1) @map("current_question_index")
   questionStartedAt    DateTime? @map("question_started_at") // timestamp
+  timeLimitOverride    Int?      @map("time_limit_override") // Host-adjusted time limit for current question (null = use computed)
+  timerPausedAt        DateTime? @map("timer_paused_at") // When host paused the timer (null = running)
   createdAt            DateTime  @default(now()) @map("created_at")
   expiresAt            DateTime? @map("expires_at") // null = never expires
 

@@ -138,8 +138,10 @@ sessionRoutes.get('/:id', async (c) => {
       if (currentQ) {
         const questionBank = questionBanks.get(session.questionBankId);
         
-        // Calculate time limit based on session configuration
-        if (session.autoQuestionTime) {
+        // Use host override if available, otherwise calculate
+        if (session.timeLimitOverride !== null) {
+          currentQuestionTimeLimit = session.timeLimitOverride;
+        } else if (session.autoQuestionTime) {
           currentQuestionTimeLimit = calculateAutoQuestionTime(
             currentQ.text,
             currentQ.answers,
@@ -178,6 +180,7 @@ sessionRoutes.get('/:id', async (c) => {
       createdAt: session.createdAt.getTime(),
       questionStartedAt: session.questionStartedAt ? session.questionStartedAt.getTime() : null,
       expiresAt: session.expiresAt ? session.expiresAt.getTime() : null,
+      timerPausedAt: session.timerPausedAt ? session.timerPausedAt.getTime() : null,
       currentQuestionTimeLimit, // Add computed time limit for timer sync
       allPlayersAnswered, // Flag to indicate if all players have answered (for auto-advance)
       questions, // Include questions from question bank
@@ -331,6 +334,8 @@ sessionRoutes.post('/:id/next', async (c) => {
       data: {
         currentQuestionIndex: nextIndex,
         questionStartedAt: new Date(),
+        timeLimitOverride: null, // Reset host timer adjustments
+        timerPausedAt: null,     // Reset pause state
       },
     });
 
@@ -341,6 +346,137 @@ sessionRoutes.post('/:id/next', async (c) => {
   } catch (error) {
     console.error('Error moving to next question:', error);
     return c.json({ error: 'Failed to move to next question' }, 500);
+  }
+});
+
+// Adjust timer for current question (requires host token)
+const AdjustTimerSchema = z.object({
+  action: z.enum(['add', 'remove', 'end', 'pause', 'resume']),
+  seconds: z.number().int().positive().optional(), // Required for add/remove
+});
+
+sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), async (c) => {
+  const sessionId = c.req.param('id');
+  const hostToken = c.req.header('X-Host-Token');
+
+  if (!hostToken) {
+    return c.json({ error: 'Host token required' }, 401);
+  }
+
+  try {
+    const session = await getPrisma().quizSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    if (session.hostToken !== hostToken) {
+      return c.json({ error: 'Invalid host token' }, 403);
+    }
+
+    if (session.status !== 'playing' || session.currentQuestionIndex < 0) {
+      return c.json({ error: 'No active question' }, 400);
+    }
+
+    const { action, seconds } = c.req.valid('json');
+
+    // Compute current effective time limit
+    const questions = getSessionQuestions(session);
+    const currentQ = questions[session.currentQuestionIndex];
+    if (!currentQ) {
+      return c.json({ error: 'Current question not found' }, 404);
+    }
+
+    const questionBank = questionBanks.get(session.questionBankId);
+    let baseTimeLimit: number;
+    if (session.autoQuestionTime) {
+      baseTimeLimit = calculateAutoQuestionTime(
+        currentQ.text,
+        currentQ.answers,
+        currentQ.difficulty,
+        1.5
+      );
+    } else {
+      baseTimeLimit = currentQ.timeLimit || questionBank?.metadata.defaultTimeLimit || 20;
+    }
+    const currentTimeLimit = session.timeLimitOverride ?? baseTimeLimit;
+
+    const now = new Date();
+
+    if (action === 'pause') {
+      if (session.timerPausedAt) {
+        return c.json({ error: 'Timer is already paused' }, 400);
+      }
+      await getPrisma().quizSession.update({
+        where: { id: sessionId },
+        data: { timerPausedAt: now },
+      });
+      return c.json({ message: 'Timer paused', timerPausedAt: now.getTime() });
+    }
+
+    if (action === 'resume') {
+      if (!session.timerPausedAt) {
+        return c.json({ error: 'Timer is not paused' }, 400);
+      }
+      // Shift questionStartedAt forward by the paused duration so elapsed time stays correct
+      const pausedDurationMs = now.getTime() - session.timerPausedAt.getTime();
+      const newStartedAt = new Date(
+        (session.questionStartedAt?.getTime() ?? now.getTime()) + pausedDurationMs
+      );
+      await getPrisma().quizSession.update({
+        where: { id: sessionId },
+        data: {
+          timerPausedAt: null,
+          questionStartedAt: newStartedAt,
+        },
+      });
+      return c.json({ message: 'Timer resumed' });
+    }
+
+    if (action === 'end') {
+      // Set the time limit to make remaining = 0 based on current elapsed
+      const elapsed = session.questionStartedAt
+        ? Math.ceil((now.getTime() - session.questionStartedAt.getTime()) / 1000)
+        : 0;
+      await getPrisma().quizSession.update({
+        where: { id: sessionId },
+        data: {
+          timeLimitOverride: elapsed, // remaining becomes 0
+          timerPausedAt: null,
+        },
+      });
+      return c.json({ message: 'Timer ended', timeLimitOverride: elapsed });
+    }
+
+    // add or remove seconds
+    if (!seconds) {
+      return c.json({ error: 'seconds is required for add/remove' }, 400);
+    }
+
+    let newTimeLimit: number;
+    if (action === 'add') {
+      newTimeLimit = currentTimeLimit + seconds;
+    } else {
+      // For remove: ensure we don't go below elapsed time (would make remaining < 0)
+      const elapsed = session.questionStartedAt
+        ? Math.ceil((now.getTime() - session.questionStartedAt.getTime()) / 1000)
+        : 0;
+      newTimeLimit = Math.max(elapsed, currentTimeLimit - seconds);
+    }
+
+    await getPrisma().quizSession.update({
+      where: { id: sessionId },
+      data: {
+        timeLimitOverride: newTimeLimit,
+        timerPausedAt: null, // Unpause if adjusting while paused
+      },
+    });
+    return c.json({ message: `Timer adjusted`, timeLimitOverride: newTimeLimit });
+  } catch (error) {
+    console.error('Error adjusting timer:', error);
+    return c.json({ error: 'Failed to adjust timer' }, 500);
   }
 });
 

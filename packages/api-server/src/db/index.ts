@@ -148,6 +148,8 @@ export async function initDatabase() {
         status TEXT NOT NULL DEFAULT 'lobby',
         current_question_index INTEGER NOT NULL DEFAULT -1,
         question_started_at BIGINT,
+        time_limit_override INTEGER,
+        timer_paused_at BIGINT,
         expires_at BIGINT,
         created_at BIGINT NOT NULL,
         question_ids TEXT,
