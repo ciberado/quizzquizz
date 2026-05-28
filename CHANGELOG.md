@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Changed
+- **[api-server, player-app, host-app]** Replace REST polling with Yjs + y-websocket real-time sync. All screen components now observe a shared Yjs doc per session instead of using `setInterval`. REST endpoints remain for all mutations; the server writes to the Yjs doc after each DB change. Polling intervals (1.5–2 s) are eliminated in favour of immediate push updates.
+
+### Added
+- **[api-server]** `packages/api-server/src/session-doc-manager.ts` — in-memory Yjs doc registry (`getOrCreateSession`, `updateDoc`, `destroySession`).
+- **[api-server]** `packages/api-server/src/ws-handler.ts` — WebSocket upgrade handler implementing the y-websocket sync protocol; validates player/host credentials on connect.
+- **[api-server]** All mutation routes (`sessions.ts`, `players.ts`, `game.ts`) now call `updateDoc` after each DB write to push state changes instantly to connected clients.
+- **[api-server]** 5-second server heartbeat updates `serverTime` in all active session docs.
+- **[player-app]** `packages/player-app/src/yjs-provider.ts` — `connectToSession()` helper wrapping `WebsocketProvider`.
+- **[host-app]** `packages/host-app/src/yjs-provider.ts` — host variant using `hostToken` auth query param.
+- **[Caddyfile]** WebSocket proxy rules for `/ws/*` path.
+- **[player-app, host-app]** Vite dev proxy `/ws` entry with `ws: true` targeting the API server.
+- **[api-server]** Unit tests for `session-doc-manager` (13 tests) and `ws-handler` auth/sync (9 tests).
+- **[api-server]** Integration tests verifying Yjs doc updates after timer adjustments, answer submissions, and player joins.
+
+### Fixed
+- **[api-server]** WebSocket handler (`ws-handler.ts`): refactored async connection handler so all errors are caught and do not propagate as unhandled promise rejections (which crashed the server process).
+- **[api-server]** `sendFullState` now uses a valid empty state vector (`Y.encodeStateVector(new Y.Doc())`) instead of a completely empty `Uint8Array`, preventing an "Unexpected end of array" decode error on the first WebSocket connection per session.
+
 ## [0.12.3] — 2026-05-28
 
 ### Fixed
