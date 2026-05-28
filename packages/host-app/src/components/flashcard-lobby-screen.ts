@@ -265,6 +265,7 @@ export class FlashcardLobbyScreen extends BaseComponent {
 
         .lobby-controls button {
           min-width: unset;
+          width: 100%;
         }
 
         .benefits-list {

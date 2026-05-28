@@ -388,7 +388,74 @@ export class LobbyScreen extends BaseComponent {
 
         .players-card[data-player-count^="3"] {
           transform: scale(0.70);
-        }}
+        }
+
+        @media (max-width: 768px) {
+          .pin-content {
+            flex-direction: column;
+            flex-wrap: wrap;
+            text-align: center;
+            gap: var(--spacing-sm);
+          }
+
+          .pin-url-section,
+          .pin-center-section,
+          .qr-section {
+            width: 100%;
+            flex: none;
+            min-width: unset;
+          }
+
+          .pin-url-section .pin-label {
+            font-size: var(--font-size-sm);
+          }
+
+          .player-url {
+            font-size: var(--font-size-base);
+          }
+
+          .pin-code {
+            font-size: 2.8em;
+          }
+
+          .pin-display {
+            padding: var(--spacing-sm);
+          }
+
+          .qr-code {
+            width: 100px;
+            height: 100px;
+          }
+
+          .lobby-controls {
+            flex-direction: column;
+          }
+
+          .lobby-controls button {
+            max-width: none;
+          }
+
+          .waiting-icon {
+            font-size: 48px;
+          }
+
+          .players-grid {
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: var(--spacing-sm);
+          }
+
+          .player-card {
+            padding: var(--spacing-sm);
+          }
+
+          .player-avatar {
+            font-size: 28px;
+          }
+
+          .player-name {
+            font-size: var(--font-size-small);
+          }
+        }
       `;
       document.head.appendChild(style);
     }

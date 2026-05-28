@@ -610,14 +610,22 @@ button.loading::after {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   :root {
-    --font-size-base: 16px;
-    --font-size-large: 22px;
-    --font-size-xlarge: 28px;
-    --font-size-pin: 80px;
+    --font-size-small: 13px;
+    --font-size-base: 15px;
+    --font-size-large: 18px;
+    --font-size-xlarge: 22px;
+    --font-size-question: 24px;
+    --font-size-pin: 64px;
+    --spacing-xs: 6px;
+    --spacing-sm: 10px;
+    --spacing-md: 14px;
+    --spacing-lg: 20px;
+    --spacing-xl: 28px;
+    --border-radius: 10px;
   }
 
   .container {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
   }
 
   .question-banks-grid {
@@ -1957,4 +1965,191 @@ body:has(question-display-screen) #app {
   height: 100vh;
   min-height: 0;
   overflow: hidden;
+}
+
+/* ========================================
+   Mobile Responsive — Host App
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Top bar compact */
+  .top-bar {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .top-bar-brand a { font-size: 16px; }
+  .top-bar-label { display: none; }
+  .top-bar-actions { gap: 8px; }
+  .top-bar-btn { padding: 4px 10px; font-size: 12px; }
+
+  /* Hide floating theme toggle — already in top bar */
+  theme-toggle { display: none !important; }
+
+  /* Use nearly full width, thin margins */
+  .container { padding: 0; }
+  .screen { padding: 0; }
+
+  /* Smaller buttons */
+  button {
+    min-height: 42px;
+    font-size: var(--font-size-small);
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  .btn-primary {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-small);
+  }
+
+  /* Lobby / PIN */
+  .pin-code { font-size: 56px; letter-spacing: 8px; }
+  .pin-display { padding: var(--spacing-sm); margin: var(--spacing-sm) 0; }
+  .pin-label { font-size: var(--font-size-small); letter-spacing: 1px; }
+
+  /* Leaderboard */
+  .leaderboard-screen { padding: var(--spacing-sm); }
+  .leaderboard-header h1 { font-size: 24px; }
+  .leaderboard-body { flex-direction: column; }
+  .leaderboard-actions {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-xs);
+  }
+  .leaderboard-actions .btn-action { height: auto; min-height: 40px; font-size: 14px; }
+  .leaderboard-entry {
+    grid-template-columns: 44px 1fr 72px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+  .entry-rank .medal { font-size: 22px; }
+  .entry-rank .rank-number { font-size: 16px; }
+  .entry-nickname { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .entry-score { font-size: 15px; }
+
+  /* Final Results */
+  .final-results-screen { padding: var(--spacing-sm); }
+  .results-header h1 { font-size: 30px; }
+  .trophy { font-size: 56px; }
+  .winner-name { font-size: 24px; overflow-wrap: break-word; }
+  .winner-subtitle { font-size: 18px; }
+  .winner-score { font-size: 24px; }
+  .winner-announcement { padding: var(--spacing-sm); margin: var(--spacing-sm) 0; }
+  .final-leaderboard h2 { font-size: 20px; }
+  .session-summary { padding: var(--spacing-sm); }
+  .session-summary h3 { font-size: 18px; }
+  .summary-stats { gap: var(--spacing-sm); }
+  .stat-value { font-size: 22px; }
+
+  /* Question stats table — horizontal scroll */
+  .question-stats-table { padding: var(--spacing-xs); overflow-x: auto; }
+  .stats-table { min-width: 560px; }
+  .stats-header { flex-direction: column; align-items: flex-start; gap: var(--spacing-xs); }
+  .sort-controls { flex-wrap: wrap; }
+
+  /* Question display (host phone control) */
+  .question-display-screen { padding: var(--spacing-sm); }
+  .question-content { padding: var(--spacing-sm); }
+  .answer-card { min-height: 64px; padding: var(--spacing-xs) var(--spacing-sm); }
+  .answer-label { width: 28px; height: 28px; font-size: 16px; top: var(--spacing-xs); left: var(--spacing-xs); }
+  .answer-text { padding-left: 40px; font-size: 15px; overflow-wrap: break-word; }
+  .correct-indicator { width: 32px; height: 32px; font-size: 20px; }
+  .timer-value { font-size: 32px; }
+  .controls { flex-wrap: wrap; gap: var(--spacing-xs); }
+  .controls button { flex: 1; min-width: 100px; }
+
+  /* Question banks grid full width */
+  .question-banks-grid { grid-template-columns: 1fr; gap: var(--spacing-sm); }
+  .question-bank-card { padding: var(--spacing-sm); }
+  .question-bank-card h3 { font-size: var(--font-size-base); }
+
+  /* Prevent text overflow globally */
+  h1, h2, h3, p, .question-text, .answer-text, .entry-nickname, .winner-name {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Login card compact */
+  .login-card { padding: var(--spacing-md); }
+
+  /* Create session screen — card header wraps on mobile */
+  .card {
+    padding: var(--spacing-sm);
+    box-shadow: var(--shadow-sm);
+    border-radius: 0;
+  }
+  .card:hover { transform: none; box-shadow: var(--shadow-sm); }
+  .card h1 { font-size: 20px; margin: 0 0 var(--spacing-xs) 0; }
+  .card > div:first-child {
+    flex-wrap: wrap !important;
+    gap: var(--spacing-xs) !important;
+    margin-bottom: var(--spacing-sm) !important;
+  }
+  .card > div:first-child h1 { font-size: 20px; }
+  .card .btn-secondary {
+    padding: var(--spacing-xs) var(--spacing-sm) !important;
+    font-size: 13px;
+    min-height: 36px;
+  }
+  .card p.text-center {
+    font-size: var(--font-size-base) !important;
+    margin-bottom: var(--spacing-sm) !important;
+  }
+
+  /* Filter panel compact on mobile */
+  .filter-panel {
+    padding: var(--spacing-sm) !important;
+    border-radius: 0 !important;
+  }
+  .filter-panel > div > div:first-child > div[style*="display: flex"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Disable hover animations on touch */
+  .question-bank-card:hover { transform: none; box-shadow: none; }
+  button:not(:disabled):hover { transform: none; box-shadow: none; }
+
+  /* Question preview screen — stack action buttons, selection options, filter grid */
+  .filter-panel > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Question preview card — question text size */
+  .question-preview-card h4 {
+    font-size: 14px !important;
+  }
+  .question-preview-card {
+    padding: var(--spacing-xs) !important;
+  }
+
+  /* Stack action buttons vertically */
+  .card > div[style*="justify-content: flex-end"] {
+    flex-direction: column !important;
+    gap: var(--spacing-xs) !important;
+    padding: var(--spacing-sm) !important;
+  }
+  .card > div[style*="justify-content: flex-end"] button {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Selection options — stack columns */
+  .card > div[style*="background"] > div[style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    gap: var(--spacing-sm) !important;
+  }
+}
+
+/* Extra small phones */
+@media (max-width: 400px) {
+  .container { padding: var(--spacing-xs); }
+  .pin-code { font-size: 40px; letter-spacing: 4px; }
+  .leaderboard-entry { grid-template-columns: 32px 1fr 56px; }
+  .entry-nickname { font-size: 13px; }
+  .entry-score { font-size: 13px; }
+  .winner-name { font-size: 20px; }
+  .results-header h1 { font-size: 24px; }
+  .trophy { font-size: 40px; }
+  .question-bank-card h3 { font-size: 14px; }
+  button { min-height: 38px; padding: 0.4rem 0.6rem; font-size: 13px; }
 }
