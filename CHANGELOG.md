@@ -4,14 +4,15 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-05-28
+
 ### Added
 - **[e2e]** `e2e/yjs-resilience.spec.ts` — 7 new E2E tests covering Yjs reconnection (player timer re-sync after network loss, game-start transition not missed while offline), late-join rejection (API + UI + navigation back), and host reconnection (re-sync via page reload, correct navigation from lobby to question screen mid-game).
+- **[host-app, player-app]** Structured console logging for all Yjs WebSocket events (`[HOST/PLAYER][Yjs] WS status`, `sync`, `connection-close`, `connection-error`, per-update doc snapshots) and phase transitions (`[HOST/PLAYER][Lobby/Question/Leaderboard/Waiting]`) to aid live game debugging in DevTools.
 
 ### Fixed
 - **[host-app]** Host lobby-screen was not navigating to the question screen when `status=playing` arrived via Yjs (e.g. after a browser refresh mid-game). Now detects the playing state in the Yjs observer and redirects immediately.
 
-### Added
-- **[host-app, player-app]** Structured console logging for all Yjs WebSocket events (`[HOST/PLAYER][Yjs] WS status`, `sync`, `connection-close`, `connection-error`, per-update doc snapshots) and phase transitions (`[HOST/PLAYER][Lobby/Question/Leaderboard/Waiting]`) to aid live game debugging in DevTools.
 
 ### Changed
 - **[api-server, player-app, host-app]** Replace REST polling with Yjs + y-websocket real-time sync. All screen components now observe a shared Yjs doc per session instead of using `setInterval`. REST endpoints remain for all mutations; the server writes to the Yjs doc after each DB change. Polling intervals (1.5–2 s) are eliminated in favour of immediate push updates.
