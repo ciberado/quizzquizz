@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
 import gameRoutes from '../routes/game';
 import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
+import { getOrCreateSession, destroySession } from '../session-doc-manager';
 
 const app = new Hono();
 app.route('/api/sessions', gameRoutes);
@@ -527,5 +528,110 @@ describe('Game Routes', () => {
 
       delete process.env.AUTO_QUESTION_TIME_MULTIPLIER;
     });
+  });
+});
+
+/**
+ * Yjs doc synchronization tests for answer submission.
+ *
+ * After a player submits an answer, the route updates the Yjs doc with
+ * answeredCount, allPlayersAnswered, leaderboard, and players arrays.
+ * These tests verify those fields directly from the in-memory doc.
+ */
+describe('Yjs doc updates — answer submission', () => {
+  const DOC_SESSION = 'yjs-game-doc-session';
+  const HOST_TOKEN = 'yjs-game-host';
+
+  afterEach(() => {
+    destroySession(DOC_SESSION);
+  });
+
+  async function setupPlayingSession(playerCount: number) {
+    await getPrisma().player.deleteMany({ where: { sessionId: DOC_SESSION } });
+    await getPrisma().quizSession.deleteMany({ where: { id: DOC_SESSION } });
+
+    const now = new Date();
+    await getPrisma().quizSession.create({
+      data: {
+        id: DOC_SESSION,
+        pin: '001122',
+        hostToken: HOST_TOKEN,
+        questionBankId: 'test-bank',
+        status: 'playing',
+        currentQuestionIndex: 0,
+        questionStartedAt: new Date(now.getTime() - 2000),
+        createdAt: now,
+        expiresAt: new Date(now.getTime() + 3600000),
+      },
+    });
+
+    const players: string[] = [];
+    for (let i = 0; i < playerCount; i++) {
+      const pid = `yjs-game-player-${i}`;
+      await getPrisma().player.create({
+        data: { id: pid, sessionId: DOC_SESSION, nickname: `Player${i}`, score: 0, joinedAt: now },
+      });
+      players.push(pid);
+    }
+    return players;
+  }
+
+  it('answeredCount increments in Yjs doc after each answer', async () => {
+    const [p1, p2] = await setupPlayingSession(2);
+
+    await request(`/api/sessions/${DOC_SESSION}/answer`, {
+      method: 'POST',
+      headers: { 'X-Player-Id': p1, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: 'q1', selectedAnswerIds: ['a2'] }),
+    });
+
+    let stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('answeredCount')).toBe(1);
+    expect(stateMap.get('allPlayersAnswered')).toBe(false);
+
+    await request(`/api/sessions/${DOC_SESSION}/answer`, {
+      method: 'POST',
+      headers: { 'X-Player-Id': p2, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: 'q1', selectedAnswerIds: ['a2'] }),
+    });
+
+    stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('answeredCount')).toBe(2);
+    expect(stateMap.get('allPlayersAnswered')).toBe(true);
+  });
+
+  it('leaderboard in Yjs doc reflects updated scores', async () => {
+    const [p1] = await setupPlayingSession(1);
+
+    await request(`/api/sessions/${DOC_SESSION}/answer`, {
+      method: 'POST',
+      headers: { 'X-Player-Id': p1, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: 'q1', selectedAnswerIds: ['a2'] }),
+    });
+
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const leaderboard = stateMap.get('leaderboard') as Array<{ playerId: string; score: number; rank: number }>;
+    expect(Array.isArray(leaderboard)).toBe(true);
+    expect(leaderboard.length).toBe(1);
+    expect(leaderboard[0]!.playerId).toBe(p1);
+    expect(leaderboard[0]!.score).toBeGreaterThan(0); // correct answer
+    expect(leaderboard[0]!.rank).toBe(1);
+  });
+
+  it('players array in Yjs doc is updated after answer', async () => {
+    const [p1] = await setupPlayingSession(1);
+
+    await request(`/api/sessions/${DOC_SESSION}/answer`, {
+      method: 'POST',
+      headers: { 'X-Player-Id': p1, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: 'q1', selectedAnswerIds: ['a2'] }),
+    });
+
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const players = stateMap.get('players') as Array<{ id: string; score: number }>;
+    expect(Array.isArray(players)).toBe(true);
+    const player = players.find(p => p.id === p1);
+    expect(player).toBeDefined();
+    expect(player!.score).toBeGreaterThan(0);
   });
 });

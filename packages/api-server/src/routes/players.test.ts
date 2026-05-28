@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from '../routes/sessions';
 import playerRoutes from '../routes/players';
@@ -6,6 +6,7 @@ import gameRoutes from '../routes/game';
 import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
+import { getOrCreateSession, destroySession } from '../session-doc-manager';
 
 const app = new Hono();
 app.route('/api/sessions', sessionRoutes);
@@ -306,5 +307,56 @@ describe('Player Routes', () => {
       playersData = await playersRes.json();
       expect(playersData.players.every((p: any) => p.hasAnswered === false)).toBe(true);
     });
+  });
+});
+
+/**
+ * Yjs doc synchronization tests for the join route.
+ *
+ * After a player joins, the route updates the Yjs doc with the current
+ * players[] and leaderboard[] arrays. These tests verify the doc state.
+ */
+describe('Yjs doc updates — player join', () => {
+  afterEach(() => {
+    // Clean up any docs created for this describe block
+    destroySession('yjs-join-session');
+  });
+
+  it('players[] in Yjs doc reflects joining players', async () => {
+    const session = await request('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionBankId: 'test-bank' }),
+    }).then(r => r.json()) as any;
+
+    const sessionId: string = session.id;
+
+    // Join a player
+    const join1 = await request('/api/sessions/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: session.pin, nickname: 'YjsJoiner1' }),
+    });
+    expect(join1.status).toBe(201);
+
+    let stateMap = getOrCreateSession(sessionId).doc.getMap<unknown>('state');
+    const players1 = stateMap.get('players') as Array<{ id: string; nickname: string }>;
+    expect(Array.isArray(players1)).toBe(true);
+    expect(players1.length).toBe(1);
+    expect(players1[0]!.nickname).toBe('YjsJoiner1');
+
+    // Join a second player
+    await request('/api/sessions/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: session.pin, nickname: 'YjsJoiner2' }),
+    });
+
+    stateMap = getOrCreateSession(sessionId).doc.getMap<unknown>('state');
+    const players2 = stateMap.get('players') as Array<{ id: string; nickname: string }>;
+    expect(players2.length).toBe(2);
+    expect(players2.map(p => p.nickname).sort()).toEqual(['YjsJoiner1', 'YjsJoiner2']);
+
+    destroySession(sessionId);
   });
 });

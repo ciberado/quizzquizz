@@ -7,6 +7,7 @@ import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
 import { authMiddleware } from '../auth/middleware.js';
 import { recordSessionStats } from '../session-stats.js';
+import { updateDoc, destroySession } from '../session-doc-manager.js';
 
 // Extend Hono with user context
 type Variables = {
@@ -85,6 +86,31 @@ sessionRoutes.post('/', zValidator('json', CreateSessionSchema), async (c) => {
         // createdAt uses @default(now()) in schema
         expiresAt,
       },
+    });
+
+    // Pre-load the session questions count for the doc
+    const questionBank = questionBanks.get(questionBankId);
+    const questions = questionBank?.questions ?? [];
+
+    // Initialize Yjs session doc so clients can connect immediately
+    updateDoc(sessionId, {
+      status: initialStatus,
+      automaticPace: effectiveAutomaticPace,
+      pace: pace || 'normal',
+      totalQuestions: questions.length,
+      mode: mode || 'quiz',
+      currentQuestionIndex: -1,
+      currentQuestionNumber: 0,
+      currentQuestion: null,
+      questionStartedAt: null,
+      timeLimit: null,
+      timerPaused: false,
+      timerPausedAt: null,
+      allPlayersAnswered: false,
+      answeredCount: 0,
+      serverTime: Date.now(),
+      players: [],
+      leaderboard: [],
     });
 
     return c.json(
@@ -216,6 +242,9 @@ sessionRoutes.delete('/:id', async (c) => {
 
     await getPrisma().quizSession.delete({ where: { id: sessionId } });
 
+    // Notify connected clients that the session is gone, then clean up the doc
+    destroySession(sessionId);
+
     return c.json({ message: 'Session deleted' });
   } catch (error) {
     console.error('Error deleting session:', error);
@@ -255,14 +284,41 @@ sessionRoutes.post('/:id/start', async (c) => {
       return c.json({ error: 'Question bank has no questions' }, 400);
     }
 
+    const now = new Date();
     // Start quiz: move to first question
     await getPrisma().quizSession.update({
       where: { id: sessionId },
       data: {
         status: 'playing',
         currentQuestionIndex: 0,
-        questionStartedAt: new Date(),
+        questionStartedAt: now,
       },
+    });
+
+    // Build session questions to get the first question for the doc
+    const startedSession = { ...session, currentQuestionIndex: 0 };
+    const questions = getSessionQuestions(startedSession);
+    const firstQ = questions[0] ?? null;
+    const timeLimit = firstQ
+      ? (session.autoQuestionTime
+          ? calculateAutoQuestionTime(firstQ.text, firstQ.answers, firstQ.difficulty, getAutoTimeMuliplier())
+          : firstQ.timeLimit || questionBank.metadata.defaultTimeLimit || 20)
+      : null;
+
+    updateDoc(sessionId, {
+      status: 'playing',
+      currentQuestionIndex: 0,
+      currentQuestionNumber: 1,
+      currentQuestion: firstQ
+        ? { id: firstQ.id, text: firstQ.text, answers: firstQ.answers, difficulty: firstQ.difficulty, timeLimit }
+        : null,
+      questionStartedAt: now.getTime(),
+      timeLimit,
+      timerPaused: false,
+      timerPausedAt: null,
+      allPlayersAnswered: false,
+      answeredCount: 0,
+      serverTime: Date.now(),
     });
 
     return c.json({ message: 'Quiz started', currentQuestionIndex: 0 });
@@ -322,6 +378,17 @@ sessionRoutes.post('/:id/next', async (c) => {
       // Record post-game statistics (non-blocking)
       void recordSessionStats(sessionId);
 
+      updateDoc(sessionId, {
+        status: 'finished',
+        currentQuestionIndex: -1,
+        currentQuestionNumber: questions.length,
+        currentQuestion: null,
+        questionStartedAt: null,
+        timerPaused: false,
+        timerPausedAt: null,
+        serverTime: Date.now(),
+      });
+
       return c.json({
         message: 'Quiz finished',
         status: 'finished',
@@ -329,14 +396,44 @@ sessionRoutes.post('/:id/next', async (c) => {
     }
 
     // Move to next question
+    const now = new Date();
     await getPrisma().quizSession.update({
       where: { id: sessionId },
       data: {
         currentQuestionIndex: nextIndex,
-        questionStartedAt: new Date(),
+        questionStartedAt: now,
         timeLimitOverride: null, // Reset host timer adjustments
         timerPausedAt: null,     // Reset pause state
       },
+    });
+
+    const nextQ = questions[nextIndex];
+    const qBank = questionBanks.get(session.questionBankId);
+    const nextTimeLimit = nextQ
+      ? (session.autoQuestionTime
+          ? calculateAutoQuestionTime(nextQ.text, nextQ.answers, nextQ.difficulty, getAutoTimeMuliplier())
+          : session.pace === 'manual'
+            ? null
+            : nextQ.timeLimit || qBank?.metadata.defaultTimeLimit || 20)
+      : null;
+
+    // Count answers for the new question (should be 0, but reset in doc)
+    const playerCount = await getPrisma().player.count({ where: { sessionId } });
+
+    updateDoc(sessionId, {
+      status: 'playing',
+      currentQuestionIndex: nextIndex,
+      currentQuestionNumber: nextIndex + 1,
+      currentQuestion: nextQ
+        ? { id: nextQ.id, text: nextQ.text, answers: nextQ.answers, difficulty: nextQ.difficulty, timeLimit: nextTimeLimit }
+        : null,
+      questionStartedAt: now.getTime(),
+      timeLimit: nextTimeLimit,
+      timerPaused: false,
+      timerPausedAt: null,
+      allPlayersAnswered: playerCount === 0,
+      answeredCount: 0,
+      serverTime: Date.now(),
     });
 
     return c.json({
@@ -413,6 +510,7 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
         where: { id: sessionId },
         data: { timerPausedAt: now },
       });
+      updateDoc(sessionId, { timerPaused: true, timerPausedAt: now.getTime(), serverTime: Date.now() });
       return c.json({ message: 'Timer paused', timerPausedAt: now.getTime() });
     }
 
@@ -432,6 +530,12 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
           questionStartedAt: newStartedAt,
         },
       });
+      updateDoc(sessionId, {
+        timerPaused: false,
+        timerPausedAt: null,
+        questionStartedAt: newStartedAt.getTime(),
+        serverTime: Date.now(),
+      });
       return c.json({ message: 'Timer resumed' });
     }
 
@@ -447,6 +551,7 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
           timerPausedAt: null,
         },
       });
+      updateDoc(sessionId, { timeLimit: elapsed, timerPaused: false, timerPausedAt: null, serverTime: Date.now() });
       return c.json({ message: 'Timer ended', timeLimitOverride: elapsed });
     }
 
@@ -473,6 +578,7 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
         timerPausedAt: null, // Unpause if adjusting while paused
       },
     });
+    updateDoc(sessionId, { timeLimit: newTimeLimit, timerPaused: false, timerPausedAt: null, serverTime: Date.now() });
     return c.json({ message: `Timer adjusted`, timeLimitOverride: newTimeLimit });
   } catch (error) {
     console.error('Error adjusting timer:', error);
@@ -518,6 +624,16 @@ sessionRoutes.post('/:id/end', async (c) => {
 
     // Record post-game statistics (non-blocking)
     void recordSessionStats(sessionId);
+
+    updateDoc(sessionId, {
+      status: 'finished',
+      currentQuestionIndex: -1,
+      currentQuestion: null,
+      questionStartedAt: null,
+      timerPaused: false,
+      timerPausedAt: null,
+      serverTime: Date.now(),
+    });
 
     return c.json({ message: 'Quiz ended' });
   } catch (error) {

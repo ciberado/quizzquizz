@@ -10,6 +10,7 @@ import {
 } from '@quizzquizz/common';
 import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
+import { updateDoc } from '../session-doc-manager.js';
 
 /** Read the global question-time multiplier from env (default 1.5 = 50% more than original). */
 function getAutoTimeMuliplier(): number {
@@ -237,6 +238,40 @@ gameRoutes.post('/:sessionId/answer', zValidator('json', SubmitAnswerRequestSche
     await getPrisma().player.update({
       where: { id: playerId },
       data: { score: newScore },
+    });
+
+    // Update Yjs doc with new answer count, leaderboard, and allPlayersAnswered flag
+    const allPlayers = await getPrisma().player.findMany({
+      where: { sessionId },
+      orderBy: [{ score: 'desc' }, { joinedAt: 'asc' }],
+    });
+    const answersForQuestion = await getPrisma().playerAnswer.findMany({
+      where: {
+        questionId: currentQuestion.id,
+        playerId: { in: allPlayers.map((p) => p.id) },
+      },
+      select: { playerId: true },
+    });
+    const answeredCount = answersForQuestion.length;
+    const allPlayersAnswered = answeredCount >= allPlayers.length;
+
+    updateDoc(sessionId, {
+      answeredCount,
+      allPlayersAnswered,
+      leaderboard: allPlayers.map((p, i) => ({
+        playerId: p.id,
+        nickname: p.nickname,
+        // Use updated score for the answering player
+        score: p.id === playerId ? newScore : p.score,
+        rank: i + 1,
+      })),
+      players: allPlayers.map((p) => ({
+        id: p.id,
+        nickname: p.nickname,
+        score: p.id === playerId ? newScore : p.score,
+        joinedAt: Number(p.joinedAt),
+      })),
+      serverTime: Date.now(),
     });
 
     return c.json({

@@ -14,6 +14,8 @@ import userRoutes from './routes/users.js';
 import analyticsRoutes from './routes/analytics.js';
 import userBankRoutes from './routes/user-banks.js';
 import { startCleanupJob } from './session-cleanup.js';
+import { createWsServer } from './ws-handler.js';
+import { updateDoc, getActiveSessionIds } from './session-doc-manager.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -131,11 +133,33 @@ if (process.env.NODE_ENV !== 'test') {
 
     console.log(`🚀 QuizzQuizz API Server starting on http://${hostname}:${port}...`);
 
-    serve({
+    const httpServer = serve({
       fetch: app.fetch,
       port,
       hostname,
     });
+
+    // -- Yjs WebSocket server --
+    const wss = createWsServer();
+
+    httpServer.on('upgrade', (req, socket, head) => {
+      const url = req.url ?? '';
+      if (url.startsWith('/ws/')) {
+        wss.handleUpgrade(req, socket, head, (ws) => {
+          wss.emit('connection', ws, req);
+        });
+      } else {
+        socket.destroy();
+      }
+    });
+
+    // -- Heartbeat: update serverTime in every active session doc every 5 s --
+    setInterval(() => {
+      const now = Date.now();
+      for (const sessionId of getActiveSessionIds()) {
+        updateDoc(sessionId, { serverTime: now });
+      }
+    }, 5000);
   }).catch(error => {
     console.error('❌ Failed to initialize server:', error);
     process.exit(1);

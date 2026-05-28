@@ -5,6 +5,7 @@ import { getPrisma } from '../db/index.js';
 import { generateId } from '@quizzquizz/common';
 import { getSessionQuestions } from '../session-utils.js';
 import { authMiddleware } from '../auth/middleware.js';
+import { updateDoc } from '../session-doc-manager.js';
 
 // Extend Hono with user context from authMiddleware
 type Variables = {
@@ -72,6 +73,27 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
         score: 0,
         // joinedAt uses @default(now()) in schema
       },
+    });
+
+    // Push updated players list into the Yjs doc
+    const allPlayers = await getPrisma().player.findMany({
+      where: { sessionId: session.id },
+      orderBy: [{ score: 'desc' }, { joinedAt: 'asc' }],
+    });
+    updateDoc(session.id, {
+      players: allPlayers.map((p) => ({
+        id: p.id,
+        nickname: p.nickname,
+        score: p.score,
+        joinedAt: Number(p.joinedAt),
+      })),
+      leaderboard: allPlayers.map((p, i) => ({
+        playerId: p.id,
+        nickname: p.nickname,
+        score: p.score,
+        rank: i + 1,
+      })),
+      serverTime: Date.now(),
     });
 
     return c.json(

@@ -11,4 +11,10 @@ export default defineConfig({
     // Run tests sequentially to avoid database race conditions with shared in-memory SQLite
     fileParallelism: false,
   },
+  // lib0 and y-protocols ship native ESM with binary ArrayBuffer initialization that
+  // fails under vite-node's transform pipeline. Exclude them so Node loads them natively.
+  ssr: {
+    noExternal: [],
+    external: ['lib0', 'y-protocols', 'yjs', 'ws'],
+  },
 });

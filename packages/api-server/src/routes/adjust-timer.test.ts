@@ -5,13 +5,14 @@
  * and reflected in the game state endpoint that players poll.
  */
 
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
 import sessionRoutes from './sessions';
 import gameRoutes from './game';
 import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
+import { getOrCreateSession, destroySession } from '../session-doc-manager';
 
 const app = new Hono();
 app.route('/api/sessions', sessionRoutes);
@@ -225,5 +226,127 @@ describe('POST /api/sessions/:id/adjust-timer', () => {
       body: JSON.stringify({ action: 'add' }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+/**
+ * Yjs doc synchronization tests for timer-related routes.
+ *
+ * After each REST mutation the route calls updateDoc() so that connected
+ * WebSocket clients receive push updates. These tests inspect the Yjs doc
+ * directly to verify the correct fields are written.
+ */
+describe('Yjs doc updates — timer sync', () => {
+  const DOC_SESSION = 'yjs-timer-doc-session';
+  const DOC_HOST_TOKEN = 'yjs-timer-host';
+  const DOC_PLAYER = 'yjs-timer-player';
+
+  afterEach(() => {
+    destroySession(DOC_SESSION);
+  });
+
+  async function setupPlayingSession() {
+    const now = new Date();
+    await getPrisma().quizSession.deleteMany({ where: { id: DOC_SESSION } });
+    await getPrisma().player.deleteMany({ where: { sessionId: DOC_SESSION } });
+    await getPrisma().quizSession.create({
+      data: {
+        id: DOC_SESSION,
+        pin: '000222',
+        hostToken: DOC_HOST_TOKEN,
+        questionBankId: 'timer-bank',
+        status: 'playing',
+        currentQuestionIndex: 0,
+        questionStartedAt: new Date(now.getTime() - 5000),
+        createdAt: now,
+      },
+    });
+    await getPrisma().player.create({
+      data: { id: DOC_PLAYER, sessionId: DOC_SESSION, nickname: 'DocPlayer', score: 0, joinedAt: now },
+    });
+  }
+
+  it('pause — sets timerPaused=true and timerPausedAt in Yjs doc', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timerPaused')).toBe(true);
+    expect(typeof stateMap.get('timerPausedAt')).toBe('number');
+    expect(stateMap.get('timerPausedAt')).toBeGreaterThan(0);
+  });
+
+  it('resume — sets timerPaused=false and timerPausedAt=null in Yjs doc', async () => {
+    await setupPlayingSession();
+    // Pause first
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    // Resume
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'resume' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timerPaused')).toBe(false);
+    expect(stateMap.get('timerPausedAt')).toBeNull();
+    expect(typeof stateMap.get('questionStartedAt')).toBe('number');
+  });
+
+  it('add — sets updated timeLimit in Yjs doc', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'add', seconds: 10 }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timeLimit')).toBe(40); // 30 + 10
+    expect(stateMap.get('timerPaused')).toBe(false);
+  });
+
+  it('remove — sets reduced timeLimit in Yjs doc', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'remove', seconds: 10 }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timeLimit')).toBe(20); // 30 - 10
+  });
+
+  it('end — sets timeLimit ≈ elapsed in Yjs doc', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'end' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const tl = stateMap.get('timeLimit') as number;
+    expect(tl).toBeGreaterThanOrEqual(5);
+    expect(tl).toBeLessThanOrEqual(7);
+  });
+
+  it('serverTime field is a recent timestamp in all adjust-timer responses', async () => {
+    await setupPlayingSession();
+    const before = Date.now();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'add', seconds: 5 }),
+    });
+    const after = Date.now();
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const serverTime = stateMap.get('serverTime') as number;
+    expect(serverTime).toBeGreaterThanOrEqual(before);
+    expect(serverTime).toBeLessThanOrEqual(after);
   });
 });
