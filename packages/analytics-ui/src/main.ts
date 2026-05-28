@@ -4,6 +4,7 @@
  */
 import './styles.css';
 import { Router } from './router.js';
+import { attachSidebarToggle } from './components/shared/ui.js';
 import { renderDashboard } from './components/player/dashboard.js';
 import { renderAccuracyTrend } from './components/player/accuracy-trend.js';
 import { renderWeakTopics } from './components/player/weak-topics.js';
@@ -18,6 +19,10 @@ import { renderEngagement } from './components/host/engagement.js';
 import { renderCompare } from './components/host/comparative.js';
 
 const app = document.getElementById('app')!;
+
+// Re-attach sidebar toggle after each render
+const observer = new MutationObserver(() => attachSidebarToggle());
+observer.observe(app, { childList: true });
 
 const router = new Router();
 

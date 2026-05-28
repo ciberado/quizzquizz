@@ -68,10 +68,39 @@ export function navSidebar(activeRoute: string): string {
 export function pageLayout(activeRoute: string, title: string, content: string): string {
   return `
     <div class="layout">
+      <button class="sidebar-toggle" aria-label="Toggle menu">☰</button>
+      <div class="sidebar-overlay"></div>
       ${navSidebar(activeRoute)}
       <main class="main-content">
         <h1 class="page-title">${title}</h1>
         ${content}
       </main>
     </div>`;
+}
+
+/** Attach sidebar toggle behavior. Call after rendering a page layout. */
+export function attachSidebarToggle(): void {
+  const toggle = document.querySelector('.sidebar-toggle');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (!toggle || !sidebar || !overlay) return;
+
+  const open = () => {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+  };
+  const close = () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  };
+
+  toggle.addEventListener('click', () => {
+    sidebar.classList.contains('open') ? close() : open();
+  });
+  overlay.addEventListener('click', close);
+
+  // Close sidebar when a nav link is clicked
+  sidebar.querySelectorAll('.nav-link').forEach((link) => {
+    link.addEventListener('click', close);
+  });
 }
