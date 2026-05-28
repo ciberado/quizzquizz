@@ -97,6 +97,14 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 },
       },
     },
+    {
+      name: 'mobile-responsive-tests',
+      testMatch: '**/mobile-responsive.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 375, height: 667 },
+      },
+    },
   ],
 
   // Start the API server and host/player apps before running tests
@@ -128,6 +136,14 @@ export default defineConfig({
     {
       command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); npm run dev --workspace=@quizzquizz/flashcard-app"',
       url: 'http://localhost:3004/flashcard/',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'bash -c "source /usr/local/share/nvm/nvm.sh 2>/dev/null; (nvm use 22 2>/dev/null || true); npm run dev --workspace=@quizzquizz/analytics-ui"',
+      url: 'http://localhost:3003',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
       stdout: 'pipe',
