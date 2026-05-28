@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.12.3] — 2026-05-28
+
+### Fixed
+- **[host-app]** Timer +5/-5 buttons no longer revert: server-side `adjust-timer` endpoint propagates changes to all clients, replacing fragile local-only adjustments.
+- **[host-app]** Pause/resume now works reliably: fixed elapsed-time calculation that used advancing `serverTime` instead of frozen `timerPausedAt` during pause, causing timer to drain to zero while paused.
+- **[player-app]** Player countdown now syncs with host timer adjustments (+5/-5, end, pause, resume) on every poll cycle.
+
+### Added
+- **[api-server]** `POST /api/sessions/:id/adjust-timer` endpoint with actions: add, remove, end, pause, resume.
+- **[api-server]** `timeLimitOverride` and `timerPausedAt` fields on QuizSession for server-authoritative timer control.
+- **[host-app]** End Timer and Pause/Resume buttons with redesigned responsive button bar (icons + labels).
+- **[api-server]** Integration tests for adjust-timer endpoint verifying full host→server→player flow.
+
 ## [0.12.2] — 2026-05-28
 
 ### Fixed
