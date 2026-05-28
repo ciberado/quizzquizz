@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[host-app]** Host lobby-screen was not navigating to the question screen when `status=playing` arrived via Yjs (e.g. after a browser refresh mid-game). Now detects the playing state in the Yjs observer and redirects immediately.
+
 ### Added
 - **[host-app, player-app]** Structured console logging for all Yjs WebSocket events (`[HOST/PLAYER][Yjs] WS status`, `sync`, `connection-close`, `connection-error`, per-update doc snapshots) and phase transitions (`[HOST/PLAYER][Lobby/Question/Leaderboard/Waiting]`) to aid live game debugging in DevTools.
 
