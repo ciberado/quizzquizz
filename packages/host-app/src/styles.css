@@ -821,6 +821,19 @@ button.loading::after {
   background: var(--color-surface);
 }
 
+.btn-large {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  font-size: var(--font-size-large);
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
+  border-radius: var(--border-radius);
+}
+
 /* =================================
    Final Results Screen Styles
    ================================= */
@@ -996,6 +1009,8 @@ button.loading::after {
 .final-actions {
   display: flex;
   justify-content: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
   margin-top: var(--spacing-xl);
 }
 
