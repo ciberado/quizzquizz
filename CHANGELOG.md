@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.12.2] — 2026-05-28
+
+### Fixed
+- **[host-app]** Mobile responsive layout for all host-app screens: reduced CSS variable scale (font sizes, spacing) at ≤768px; `.card` is now full-bleed (no border-radius, zero container padding) so the body gradient no longer shows as blue side margins; filter panel stacks to single column; action buttons stack vertically full-width.
+- **[host-app]** Quiz lobby screen (`lobby-screen`): added mobile media query — PIN banner stacks vertically, min-width removed from PIN center section, buttons stack full-width, waiting icon and player cards scaled down for small screens.
+- **[host-app]** Flashcard lobby screen (`flashcard-lobby-screen`): buttons now fill full width on mobile (overrode the `width: 280px` base rule that blocked `align-items: stretch`).
+- **[player-app]** Mobile layout: tighter spacing, smaller button heights, hidden floating theme toggle (already in top bar), text overflow protection.
+- **[flashcard-app]** Mobile layout: same tighter spacing and button sizing treatment as player-app.
+- **[analytics-ui]** Responsive sidebar: hamburger toggle button and overlay added; sidebar collapses at ≤640px with a slide-in panel; card grid and tables scroll horizontally on small viewports.
+
+### Added
+- **[e2e]** `mobile-responsive.spec.ts`: five Playwright tests at 375×667 viewport covering player join, host create-session, lobby PIN, leaderboard, and analytics sidebar toggle.
+- **[config]** Added `mobile-responsive-tests` Playwright project and `analytics-ui` webServer entry to `playwright.config.ts`.
+
 ## [0.12.1] — 2026-05-27
 
 ### Fixed
