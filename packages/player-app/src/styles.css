@@ -763,31 +763,42 @@ label {
 /* Extra small phones (320px-479px) - optimized defaults */
 @media (max-width: 479px) {
   :root {
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
+    --spacing-sm: 0.625rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
   }
 
   .screen {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
   }
 
   .question-text {
     font-size: var(--font-size-lg);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
+  }
+
+  /* Compact buttons: shorter height, use full width */
+  button {
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-sm);
   }
 
   .answer-btn {
-    min-height: 70px;
-    padding: var(--spacing-md);
+    min-height: 56px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
   }
 
   .card {
     padding: var(--spacing-md);
+    border-radius: var(--radius-md);
   }
 
   /* Compact timer for small screens */
@@ -804,6 +815,57 @@ label {
   .pin-badge {
     font-size: var(--font-size-lg);
     letter-spacing: 0.1em;
+  }
+
+  /* Full-width forms */
+  form {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .login-card {
+    padding: var(--spacing-md);
+  }
+
+  /* Hide floating theme toggle — it's already in the top bar */
+  theme-toggle {
+    display: none !important;
+  }
+
+  /* Tighter top bar */
+  .top-bar {
+    padding: 6px 10px;
+  }
+  .top-bar-brand a { font-size: 16px; }
+  .top-bar-label { display: none; }
+  .top-bar-actions { gap: 6px; }
+  .top-bar-btn { padding: 4px 8px; font-size: 12px; }
+  .top-bar-theme-btn { width: 28px; height: 28px; min-height: 28px; font-size: 14px; }
+
+  /* Prevent text overflow */
+  .entry-nickname, .answer-btn, .question-text, h1, h2 {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Answers grid tighter */
+  .answers-grid {
+    padding: 0 var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+
+  /* Stats cards compact */
+  .stats-summary { gap: var(--spacing-sm); }
+  .stat-card { padding: var(--spacing-sm); }
+  .stat-card .stat-value { font-size: var(--font-size-lg); }
+
+  /* Lobby tighter */
+  .lobby-status { padding: var(--spacing-md) 0; }
+
+  /* Results page */
+  .play-again-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
   }
 }
 

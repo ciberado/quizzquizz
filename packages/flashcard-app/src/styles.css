@@ -598,31 +598,41 @@ label {
 /* Extra small phones (320px-479px) - optimized defaults */
 @media (max-width: 479px) {
   :root {
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
+    --spacing-sm: 0.625rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
   }
 
   .screen {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
   }
 
   .question-text {
     font-size: var(--font-size-lg);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
+  }
+
+  button {
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-sm);
   }
 
   .answer-btn {
-    min-height: 70px;
-    padding: var(--spacing-md);
+    min-height: 56px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
   }
 
   .card {
     padding: var(--spacing-md);
+    border-radius: var(--radius-md);
   }
 
   /* Compact timer for small screens */
@@ -639,6 +649,12 @@ label {
   .pin-badge {
     font-size: var(--font-size-lg);
     letter-spacing: 0.1em;
+  }
+
+  /* Prevent text overflow */
+  h1, h2, h3, p, .question-text, .answer-btn {
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
 
