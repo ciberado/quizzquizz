@@ -105,6 +105,14 @@ export default defineConfig({
         viewport: { width: 375, height: 667 },
       },
     },
+    {
+      name: 'yjs-resilience-tests',
+      testMatch: '**/yjs-resilience.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
   ],
 
   // Start the API server and host/player apps before running tests
