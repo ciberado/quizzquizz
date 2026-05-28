@@ -98,6 +98,14 @@ export default defineConfig({
       },
     },
     {
+      name: 'flashcard-progress-tests',
+      testMatch: '**/flashcard-progress.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+    {
       name: 'mobile-responsive-tests',
       testMatch: '**/mobile-responsive.spec.ts',
       use: {
