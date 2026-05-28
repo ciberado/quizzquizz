@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import analyticsRoutes from './routes/analytics.js';
 import userBankRoutes from './routes/user-banks.js';
+import flashcardProgressRoutes from './routes/flashcard-progress.js';
 import { startCleanupJob } from './session-cleanup.js';
 import { createWsServer } from './ws-handler.js';
 import { updateDoc, getActiveSessionIds } from './session-doc-manager.js';
@@ -72,6 +73,7 @@ app.route('/api/users', userRoutes);
 // IMPORTANT: Mount gameRoutes first to ensure specific routes like
 // /:sessionId/players/:playerId/review match before catch-all /:id in sessionRoutes
 app.route('/api/sessions', gameRoutes); // Game routes use /api/sessions/:id/state, /answer, and /players/:id/review patterns
+app.route('/api/sessions', flashcardProgressRoutes); // Flashcard progress: /:id/flashcard-answer, /:id/flashcard-progress
 app.route('/api/sessions', sessionRoutes);
 app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/join pattern
 app.route('/api/question-banks', questionBankRoutes);

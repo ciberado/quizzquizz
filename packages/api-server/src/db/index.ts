@@ -66,6 +66,7 @@ export async function initDatabase() {
     await client.$executeRawUnsafe(`PRAGMA foreign_keys = ON`);
     
     // Drop existing tables to ensure clean schema (important with shared cache)
+    await client.$executeRawUnsafe(`DROP TABLE IF EXISTS flashcard_progress`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS player_answers`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS players`);
     await client.$executeRawUnsafe(`DROP TABLE IF EXISTS quiz_sessions`);
@@ -244,6 +245,22 @@ export async function initDatabase() {
         empirical_difficulty REAL,
         updated_at BIGINT NOT NULL DEFAULT (unixepoch() * 1000),
         UNIQUE(question_bank_id, question_id)
+      )
+    `);
+
+    await client.$executeRawUnsafe(`
+      CREATE TABLE flashcard_progress (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        card_id TEXT NOT NULL,
+        box INTEGER NOT NULL DEFAULT 1,
+        yes_count INTEGER NOT NULL DEFAULT 0,
+        no_count INTEGER NOT NULL DEFAULT 0,
+        graduated INTEGER NOT NULL DEFAULT 0,
+        first_try_success INTEGER,
+        updated_at BIGINT NOT NULL DEFAULT (unixepoch() * 1000),
+        UNIQUE(session_id, player_id, card_id)
       )
     `);
 

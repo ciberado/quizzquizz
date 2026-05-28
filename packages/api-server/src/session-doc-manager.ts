@@ -44,6 +44,21 @@ export interface SessionDocState {
   // Players & leaderboard (updated on every join / answer)
   players: Array<{ id: string; nickname: string; score: number; joinedAt: number }>;
   leaderboard: Array<{ playerId: string; nickname: string; score: number; rank: number }>;
+
+  // Flashcard progress — per-player aggregate stats (updated on every card answer)
+  flashcardProgress: Record<string, FlashcardPlayerProgress>;
+}
+
+export interface FlashcardPlayerProgress {
+  playerId: string;
+  nickname: string;
+  totalCards: number;
+  graduated: number;
+  box1: number;
+  box2: number;
+  box3: number;
+  totalAnswers: number;
+  lastUpdated: number;
 }
 
 interface SessionEntry {

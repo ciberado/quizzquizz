@@ -125,11 +125,31 @@ model Player {
   joinedAt  DateTime @default(now()) @map("joined_at")
 
   // Relations
-  session QuizSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  answers PlayerAnswer[]
+  session           QuizSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answers           PlayerAnswer[]
+  flashcardProgress FlashcardProgress[]
 
   @@index([userId])
   @@map("players")
+}
+
+model FlashcardProgress {
+  id              String    @id
+  sessionId       String    @map("session_id")
+  playerId        String    @map("player_id")
+  cardId          String    @map("card_id")
+  box             Int       @default(1)
+  yesCount        Int       @default(0) @map("yes_count")
+  noCount         Int       @default(0) @map("no_count")
+  graduated       Boolean   @default(false)
+  firstTrySuccess Boolean?  @map("first_try_success")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, playerId, cardId])
+  @@index([sessionId, playerId])
+  @@map("flashcard_progress")
 }
 
 model PlayerAnswer {
