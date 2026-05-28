@@ -13,6 +13,7 @@ import { retryWithBackoff, isNetworkError } from './network-utils';
 interface SessionWithTimeLimit extends Session {
   currentQuestionTimeLimit: number | null;
   serverTime: number; // Server's current time for clock synchronization
+  timerPausedAt: number | null; // When host paused timer (ms epoch), null = running
 }
 
 interface PlayerWithAnswerStatus extends Player {
@@ -309,6 +310,25 @@ export const api = {
       headers: {
         'X-Host-Token': hostToken,
       },
+    });
+  },
+
+  /**
+   * Adjust the timer for the current question (propagates to all players)
+   */
+  async adjustTimer(
+    sessionId: string,
+    hostToken: string,
+    action: 'add' | 'remove' | 'end' | 'pause' | 'resume',
+    seconds?: number
+  ): Promise<void> {
+    await apiRequest(`/api/sessions/${sessionId}/adjust-timer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Host-Token': hostToken,
+      },
+      body: JSON.stringify({ action, ...(seconds !== undefined && { seconds }) }),
     });
   },
 

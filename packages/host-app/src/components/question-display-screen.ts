@@ -41,6 +41,8 @@ export class QuestionDisplayScreen extends HTMLElement {
   private pace: 'normal' | 'calm' | 'manual' = 'normal'; // Session pacing mode
   private serverTime: number = 0; // Server's current time for clock synchronization
   private earlyStop: boolean = false; // Set when all players answered early (prevents timer restart in polls)
+  private paused: boolean = false; // Whether the host has paused the timer
+  private optimisticUntil: number = 0; // Timestamp until which we skip server reconciliation (after button click)
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -121,17 +123,54 @@ export class QuestionDisplayScreen extends HTMLElement {
           this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
 
           if (!this.earlyStop) {
-            // Only recalculate from server when not in early-stop mode (all players answered)
-            // Without this guard, the next poll after stopTimer() restarts the timer because
-            // timerInterval===null but timeRemaining>0.
-            const elapsed = Math.floor((this.serverTime - Number(session.questionStartedAt)) / 1000);
-            this.timeRemaining = Math.max(0, timeLimit - elapsed);
+            // Check if server says timer is paused
+            const serverPaused = !!session.timerPausedAt;
+
+            // Calculate server-authoritative remaining time
+            // When paused, use timerPausedAt as the effective "now" — elapsed must freeze
+            const effectiveNow = serverPaused ? Number(session.timerPausedAt) : this.serverTime;
+            const elapsed = Math.floor((effectiveNow - Number(session.questionStartedAt)) / 1000);
+            const serverRemaining = Math.max(0, timeLimit - elapsed);
+
+            // Decide whether to reconcile from server or keep optimistic local value
+            const inOptimisticWindow = Date.now() < this.optimisticUntil;
+
+            if (!inOptimisticWindow) {
+              // Reconcile: server is authoritative
+              if (serverPaused && !this.paused) {
+                // Server says paused — sync
+                this.paused = true;
+                this.timeRemaining = serverRemaining;
+                this.stopTimer();
+              } else if (!serverPaused && this.paused) {
+                // Server says resumed — sync
+                this.paused = false;
+                this.timeRemaining = serverRemaining;
+                if (this.timeRemaining > 0) {
+                  this.startTimer();
+                }
+              } else if (serverPaused) {
+                // Both agree paused — update remaining from server
+                this.timeRemaining = serverRemaining;
+              } else {
+                // Both agree running — reconcile if drift > 2s
+                const drift = Math.abs(this.timeRemaining - serverRemaining);
+                if (drift > 2 || !this.timerInterval) {
+                  this.timeRemaining = serverRemaining;
+                  if (this.timeRemaining > 0 && !this.timerInterval) {
+                    this.startTimer();
+                  }
+                }
+              }
+            }
+
+            // Update progress bar limit if timer extended
+            if (this.timeRemaining > this.currentTimeLimit) {
+              this.currentTimeLimit = this.timeRemaining;
+            }
             newGameState.timeRemaining = this.timeRemaining;
 
-            if (this.timeRemaining > 0 && !this.timerInterval) {
-              this.startTimer();
-            } else if (this.timeRemaining <= 0) {
-              // Timer already expired from server - just stop timer and show correct answers
+            if (this.timeRemaining <= 0 && !this.paused) {
               this.stopTimer();
             }
           } else {
@@ -295,32 +334,45 @@ export class QuestionDisplayScreen extends HTMLElement {
 
   private handleAddTime() {
     if (this.pace === 'manual') return;
+    // Optimistic local update + skip server reconciliation for 3s
+    this.optimisticUntil = Date.now() + 3000;
     this.timeRemaining += 5;
     if (this.timeRemaining > this.currentTimeLimit) {
       this.currentTimeLimit = this.timeRemaining;
     }
-    // If timer was stopped (e.g. early-stop), restart it
     if (this.earlyStop) {
       this.earlyStop = false;
     }
-    if (!this.timerInterval && this.timeRemaining > 0) {
+    if (!this.timerInterval && this.timeRemaining > 0 && !this.paused) {
       this.wasTimerActive = true;
       this.startTimer();
-      this.render(); // Re-render to show timer controls again
+      this.render();
     } else {
       this.updateTimerDisplay();
+    }
+    // Propagate to server
+    const { sessionId, hostToken } = state.getState();
+    if (sessionId && hostToken) {
+      api.adjustTimer(sessionId, hostToken, 'add', 5).catch(() => {});
     }
   }
 
   private handleRemoveTime() {
     if (this.pace === 'manual') return;
+    this.optimisticUntil = Date.now() + 3000;
     this.timeRemaining = Math.max(0, this.timeRemaining - 5);
     if (this.timeRemaining === 0) {
+      this.paused = false;
       this.stopTimer();
       this.wasTimerActive = false;
       this.render();
     } else {
       this.updateTimerDisplay();
+    }
+    // Propagate to server
+    const { sessionId, hostToken } = state.getState();
+    if (sessionId && hostToken) {
+      api.adjustTimer(sessionId, hostToken, 'remove', 5).catch(() => {});
     }
   }
 
@@ -330,6 +382,54 @@ export class QuestionDisplayScreen extends HTMLElement {
       this.autoNavigateTimeout = null;
     }
     router.navigate('/leaderboard');
+  }
+
+  private handleEndTimer() {
+    if (this.pace === 'manual') return;
+    this.optimisticUntil = Date.now() + 3000;
+    this.paused = false;
+    this.timeRemaining = 0;
+    this.stopTimer();
+    this.wasTimerActive = false;
+    this.render();
+
+    if (this.automaticPace && !this.autoNavigateTimeout) {
+      this.autoNavigateTimeout = window.setTimeout(() => {
+        router.navigate('/leaderboard');
+      }, 4000);
+    }
+    // Propagate to server
+    const { sessionId, hostToken } = state.getState();
+    if (sessionId && hostToken) {
+      api.adjustTimer(sessionId, hostToken, 'end').catch(() => {});
+    }
+  }
+
+  private handlePause() {
+    if (this.pace === 'manual') return;
+    this.optimisticUntil = Date.now() + 3000;
+    if (this.paused) {
+      // Resume
+      this.paused = false;
+      if (this.timeRemaining > 0) {
+        this.wasTimerActive = true;
+        this.startTimer();
+      }
+      this.render();
+      const { sessionId, hostToken } = state.getState();
+      if (sessionId && hostToken) {
+        api.adjustTimer(sessionId, hostToken, 'resume').catch(() => {});
+      }
+    } else {
+      // Pause
+      this.paused = true;
+      this.stopTimer();
+      this.render();
+      const { sessionId, hostToken } = state.getState();
+      if (sessionId && hostToken) {
+        api.adjustTimer(sessionId, hostToken, 'pause').catch(() => {});
+      }
+    }
   }
 
   private getAnswerLabel(index: number): string {
@@ -409,14 +509,16 @@ export class QuestionDisplayScreen extends HTMLElement {
             <div class="timer-value">⏸ Manual pace</div>
           </div>
           ` : `
-          <div class="timer-section ${!isTimerActive ? 'expired' : ''}">
+          <div class="timer-section ${!isTimerActive && !this.paused ? 'expired' : ''}">
             <div class="timer-bar">
-              <div class="timer-progress" style="width: ${isTimerActive ? (this.timeRemaining / this.currentTimeLimit) * 100 : 0}%"></div>
+              <div class="timer-progress" style="width: ${isTimerActive || this.paused ? (this.timeRemaining / this.currentTimeLimit) * 100 : 0}%"></div>
             </div>
-            <div class="timer-value ${this.timeRemaining <= 5 ? 'warning' : ''}">
-              ${isTimerActive
-                ? this.formatTime(this.timeRemaining)
-                : (this.earlyStop ? '✅ All players answered!' : 'Time\'s up!')}
+            <div class="timer-value ${this.timeRemaining <= 5 && !this.paused ? 'warning' : ''} ${this.paused ? 'paused' : ''}">
+              ${this.paused
+                ? `⏸ ${this.formatTime(this.timeRemaining)}`
+                : (isTimerActive
+                  ? this.formatTime(this.timeRemaining)
+                  : (this.earlyStop ? '✅ All players answered!' : 'Time\'s up!'))}
             </div>
           </div>
           `}
@@ -424,7 +526,7 @@ export class QuestionDisplayScreen extends HTMLElement {
           <div class="controls">
             ${this.pace === 'manual'
               ? `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`
-              : (!isTimerActive
+              : (!isTimerActive && !this.paused
                 ? (this.automaticPace
                   ? `<div class="autopace-status">
                        <div class="autopace-spinner"></div>
@@ -432,11 +534,28 @@ export class QuestionDisplayScreen extends HTMLElement {
                      </div>`
                   : `<button class="btn-primary btn-action" id="next-button">Show Leaderboard</button>`)
                 : `
-                  <div class="time-adjust-row">
-                    <button class="btn-secondary btn-action btn-time-adjust" id="minus-5-button">−5s</button>
-                    <button class="btn-secondary btn-action btn-time-adjust" id="plus-5-button">+5s</button>
+                  <div class="timer-button-bar">
+                    <button class="timer-btn timer-btn-adjust" id="minus-5-button" title="Remove 5 seconds">
+                      <span class="timer-btn-icon">−5</span>
+                      <span class="timer-btn-label">sec</span>
+                    </button>
+                    <button class="timer-btn timer-btn-pause ${this.paused ? 'active' : ''}" id="pause-button" title="${this.paused ? 'Resume timer' : 'Pause timer'}">
+                      <span class="timer-btn-icon">${this.paused ? '▶' : '⏸'}</span>
+                      <span class="timer-btn-label">${this.paused ? 'Resume' : 'Pause'}</span>
+                    </button>
+                    <button class="timer-btn timer-btn-end" id="end-timer-button" title="End timer now">
+                      <span class="timer-btn-icon">⏹</span>
+                      <span class="timer-btn-label">End</span>
+                    </button>
+                    <button class="timer-btn timer-btn-adjust" id="plus-5-button" title="Add 5 seconds">
+                      <span class="timer-btn-icon">+5</span>
+                      <span class="timer-btn-label">sec</span>
+                    </button>
+                    <button class="timer-btn timer-btn-skip" id="jump-button" title="Jump to scoreboard">
+                      <span class="timer-btn-icon">⏭</span>
+                      <span class="timer-btn-label">Skip</span>
+                    </button>
                   </div>
-                  <button class="btn-primary btn-action" id="jump-button">Jump to Scoreboard →</button>
                 `)
             }
           </div>
@@ -464,6 +583,8 @@ export class QuestionDisplayScreen extends HTMLElement {
     this.querySelector('#minus-5-button')?.addEventListener('click', () => this.handleRemoveTime());
     this.querySelector('#plus-5-button')?.addEventListener('click', () => this.handleAddTime());
     this.querySelector('#jump-button')?.addEventListener('click', () => this.handleJumpToScoreboard());
+    this.querySelector('#pause-button')?.addEventListener('click', () => this.handlePause());
+    this.querySelector('#end-timer-button')?.addEventListener('click', () => this.handleEndTimer());
 
     // Add inline styles for component-specific styling
     this.addStyles();
@@ -725,15 +846,109 @@ export class QuestionDisplayScreen extends HTMLElement {
         min-width: 0;
       }
 
-      .time-adjust-row {
+      .timer-button-bar {
         display: flex;
+        align-items: stretch;
         gap: 0.5rem;
+        width: 100%;
       }
 
-      .btn-time-adjust {
+      .timer-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.15rem;
         flex: 1;
+        padding: 0.5rem 0.75rem;
+        border: 2px solid var(--color-border);
+        border-radius: 0.75rem;
+        background: var(--color-surface);
+        color: var(--color-text);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        min-width: 3.5rem;
+      }
+
+      .timer-btn:hover {
+        border-color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+
+      .timer-btn:active {
+        transform: translateY(0);
+        box-shadow: none;
+      }
+
+      .timer-btn-icon {
+        font-size: clamp(1rem, 2vw, 1.5rem);
         font-weight: 700;
-        font-size: clamp(0.875rem, 1.5vw, 1.125rem);
+        line-height: 1;
+      }
+
+      .timer-btn-label {
+        font-size: clamp(0.6rem, 1vw, 0.75rem);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+      }
+
+      .timer-btn-adjust {
+        border-color: var(--color-border);
+      }
+
+      .timer-btn-adjust:hover {
+        border-color: var(--color-accent);
+        background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+      }
+
+      .timer-btn-pause {
+        border-color: var(--color-warning, #f59e0b);
+      }
+
+      .timer-btn-pause:hover {
+        background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, var(--color-surface));
+      }
+
+      .timer-btn-pause.active {
+        background: var(--color-warning, #f59e0b);
+        color: white;
+        border-color: var(--color-warning, #f59e0b);
+      }
+
+      .timer-btn-pause.active .timer-btn-label {
+        color: rgba(255,255,255,0.85);
+      }
+
+      .timer-btn-end {
+        border-color: var(--color-error);
+      }
+
+      .timer-btn-end:hover {
+        background: color-mix(in srgb, var(--color-error) 12%, var(--color-surface));
+      }
+
+      .timer-btn-skip {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: white;
+      }
+
+      .timer-btn-skip .timer-btn-label {
+        color: rgba(255,255,255,0.85);
+      }
+
+      .timer-btn-skip:hover {
+        background: color-mix(in srgb, var(--color-primary) 85%, black);
+        border-color: color-mix(in srgb, var(--color-primary) 85%, black);
+      }
+
+      .timer-value.paused {
+        color: var(--color-warning, #f59e0b);
+        animation: pulse-warning 1.5s ease infinite;
       }
 
       .autopace-status {

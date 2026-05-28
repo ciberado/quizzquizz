@@ -29,7 +29,7 @@ const { mockNavigate, mockGetState, mockGetSession, mockGetPlayers } = vi.hoiste
 vi.mock('../router', () => ({ router: { navigate: mockNavigate } }));
 vi.mock('../state', () => ({ state: { getState: mockGetState } }));
 vi.mock('../api-client', () => ({
-  api: { getSession: mockGetSession, getPlayers: mockGetPlayers },
+  api: { getSession: mockGetSession, getPlayers: mockGetPlayers, adjustTimer: vi.fn(() => Promise.resolve()) },
   cancelAllRequests: vi.fn(),
 }));
 
@@ -389,5 +389,102 @@ describe('QuestionDisplayScreen – timer control buttons', () => {
     expect(el.querySelector('#plus-5-button')).toBeNull();
     expect(el.querySelector('#minus-5-button')).toBeNull();
     expect(el.querySelector('.autopace-status')).toBeTruthy();
+  });
+});
+
+// ── Server sync tests ────────────────────────────────────────────────────────
+describe('QuestionDisplayScreen – server timer synchronization', () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: NOW });
+    mockNavigate.mockClear();
+    mockGetSession.mockReset();
+    mockGetPlayers.mockReset();
+  });
+
+  afterEach(() => {
+    if (el?.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+    vi.useRealTimers();
+  });
+
+  it('+5s button value persists across a poll cycle (optimistic window)', async () => {
+    // Setup: 25s remaining (elapsed=5, timeLimit=30)
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    // Timer shows 25
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('25');
+
+    // Click +5 → should show 30
+    (el.querySelector('#plus-5-button') as HTMLButtonElement).click();
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('30');
+
+    // Advance 2s → poll fires but server still returns old timeLimit=30 (API hasn't propagated yet)
+    // The optimistic window (3s) protects us from reverting
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 7, timeLimit: 30, automaticPace: false }),
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+
+    // Timer should have ticked down ~2s from 30, NOT reverted to server's 23 (30-7)
+    const timerVal = parseInt(el.querySelector('.timer-value')?.textContent?.trim() || '0');
+    expect(timerVal).toBeGreaterThanOrEqual(27); // ~30 - 2 ticks = 28, not 23
+  });
+
+  it('reconciles with server after optimistic window expires', async () => {
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    // Click +5 → optimistic local = 30
+    (el.querySelector('#plus-5-button') as HTMLButtonElement).click();
+
+    // Advance past the 3s optimistic window; server now reflects the new timeLimit=35
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 9, timeLimit: 35, automaticPace: false }),
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+
+    // After reconciliation, timer should be ~26 (35-9) or thereabouts (local ticks ±1)
+    const timerVal = parseInt(el.querySelector('.timer-value')?.textContent?.trim() || '0');
+    expect(timerVal).toBeGreaterThanOrEqual(24);
+    expect(timerVal).toBeLessThanOrEqual(27);
+  });
+
+  it('end timer sets time to 0 and does not revert on next poll', async () => {
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false }),
+    );
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    el = document.createElement(TAG);
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100);
+
+    // End timer
+    (el.querySelector('#end-timer-button') as HTMLButtonElement).click();
+
+    // Timer should be at 0, show leaderboard button
+    expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
+
+    // Next poll returns server reflecting the end (timeLimitOverride = elapsed)
+    mockGetSession.mockResolvedValue(
+      makeSession({ elapsed: 7, timeLimit: 7, automaticPace: false }),
+    );
+    await vi.advanceTimersByTimeAsync(2100);
+
+    // Should still show "Show Leaderboard" — not revert to active timer
+    expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
   });
 });
