@@ -3,83 +3,140 @@ import { state } from '../state';
 import { api } from '../api-client';
 import { router } from '../router';
 import type { GameState } from '@quizzquizz/common';
+import { connectToSession, type SessionDocState } from '../yjs-provider';
 
 /**
  * Question Screen Component
  * Displays the current question with answers, timer, and submit button.
- * Polls for game state to detect when question changes or quiz ends.
+ * Observes the Yjs session doc to detect question changes or quiz end.
  */
 export class QuestionScreen extends BaseComponent {
-  private pollInterval: number | null = null;
+  private disconnectYjs: (() => void) | null = null;
   private timerInterval: number | null = null;
   private selectedAnswerIds: Set<string> = new Set();
   private timeRemaining: number = 0;
   private currentQuestion: GameState['currentQuestion'] = null;
-  private currentQuestionIndex: number = 0; // Track question index for display
+  private currentQuestionIndex: number = 0;
   private questionStartedAt: number | null = null;
-  private serverTime: number = 0; // Server's current time for clock synchronization
+  private serverTime: number = 0;
   private timeLimit: number = 0;
   private hasSubmitted: boolean = false;
-  private hasRenderedQuestion: boolean = false; // Track if we've rendered with actual question data
-  private errorNavigationTimeout: number | null = null; // Track error navigation timeout
+  private hasRenderedQuestion: boolean = false;
+  private errorNavigationTimeout: number | null = null;
 
   protected onMount(): void {
-    this.startPolling();
+    const currentState = state.getState();
+    if (!currentState.sessionId || !currentState.playerId) {
+      router.navigate('/');
+      return;
+    }
+
+    this.disconnectYjs = connectToSession(
+      currentState.sessionId,
+      currentState.playerId,
+      (docState) => this.handleDocState(docState)
+    );
   }
 
   protected onUnmount(): void {
-    // Stop polling when leaving screen
-    this.stopPolling();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
     this.stopTimer();
     if (this.errorNavigationTimeout !== null) {
       clearTimeout(this.errorNavigationTimeout);
       this.errorNavigationTimeout = null;
     }
-    this.stopPolling();
-    this.stopTimer();
   }
 
-  private startPolling(): void {
-    this.pollGameState(); // Immediate first call
-    this.pollInterval = window.setInterval(() => {
-      this.pollGameState();
-    }, 1500); // Poll every 1.5 seconds
-  }
+  private handleDocState(docState: SessionDocState): void {
+    if (docState.status === 'finished') {
+      const sessionId = state.getState().sessionId;
+      router.navigate(`/results?sessionId=${sessionId}`);
+      return;
+    }
+    if (docState.status === 'lobby') {
+      const sessionId = state.getState().sessionId;
+      router.navigate(`/lobby?sessionId=${sessionId}`);
+      return;
+    }
 
-  private stopPolling(): void {
-    if (this.pollInterval !== null) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
+    if (docState.currentQuestion) {
+      const timerPaused = docState.timerPaused ?? false;
+      const timerPausedAt = docState.timerPausedAt ?? null;
+
+      if (!this.currentQuestion) {
+        // First load
+        this.currentQuestion = docState.currentQuestion as GameState['currentQuestion'];
+        this.currentQuestionIndex = (docState.currentQuestionNumber || 1) - 1;
+        this.questionStartedAt = docState.questionStartedAt ?? null;
+        this.serverTime = docState.serverTime ?? Date.now();
+        this.timeLimit = docState.timeLimit ?? 20;
+        this.selectedAnswerIds.clear();
+        this.hasSubmitted = false;
+
+        if (!this.hasRenderedQuestion) {
+          this.hasRenderedQuestion = true;
+          this.render();
+          if (!timerPaused) {
+            this.startTimer();
+          }
+        }
+      } else if (docState.currentQuestion.id !== this.currentQuestion.id) {
+        // Question changed — go to waiting screen
+        router.navigate(`/waiting`);
+      } else {
+        // Same question — sync timer state from server
+        const newTimeLimit = docState.timeLimit ?? 20;
+        this.serverTime = docState.serverTime ?? this.serverTime;
+        this.questionStartedAt = docState.questionStartedAt ?? this.questionStartedAt;
+
+        if (newTimeLimit !== this.timeLimit) {
+          this.timeLimit = newTimeLimit;
+          const effectiveNow = timerPaused && timerPausedAt ? timerPausedAt : this.serverTime;
+          const elapsed = effectiveNow - (this.questionStartedAt || 0);
+          const serverRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
+          if (Math.abs(this.timeRemaining - serverRemaining) > 2) {
+            this.timeRemaining = serverRemaining;
+            this.updateTimerDisplay();
+          }
+          if (this.timeRemaining <= 0 && !this.hasSubmitted) {
+            this.stopTimer();
+            this.submitAnswer();
+          }
+        }
+
+        if (timerPaused && this.timerInterval !== null) {
+          this.stopTimer();
+          this.updateTimerDisplay();
+        } else if (!timerPaused && this.timerInterval === null && this.timeRemaining > 0 && !this.hasSubmitted) {
+          this.resumeTimerInterval();
+        }
+      }
     }
   }
 
   private startTimer(): void {
-    this.stopTimer(); // Clear any existing timer
-    
-    // Calculate initial time remaining using server time (not client clock)
-    // This prevents clock drift issues between devices
+    this.stopTimer();
     const elapsed = this.serverTime - (this.questionStartedAt || 0);
     this.timeRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
-    
     this.resumeTimerInterval();
   }
 
-  /** Start the countdown interval without recalculating timeRemaining (used for resume). */
   private resumeTimerInterval(): void {
     this.stopTimer();
     this.timerInterval = window.setInterval(() => {
       this.timeRemaining -= 1;
-      
       if (this.timeRemaining <= 0) {
         this.stopTimer();
         if (!this.hasSubmitted) {
-          this.submitAnswer(); // Auto-submit when time runs out
+          this.submitAnswer();
         }
       } else {
         this.updateTimerDisplay();
       }
     }, 1000);
-    
     this.updateTimerDisplay();
   }
 
@@ -94,135 +151,31 @@ export class QuestionScreen extends BaseComponent {
     const timerEl = this.querySelector('.timer');
     if (timerEl) {
       timerEl.textContent = `${this.timeRemaining}s`;
-      
-      // Update timer color based on remaining time
       const percentRemaining = this.timeRemaining / this.timeLimit;
-      
       timerEl.classList.remove('timer-warning', 'timer-caution');
-      
       if (this.timeRemaining <= 5) {
-        timerEl.classList.add('timer-warning'); // Red + pulse
+        timerEl.classList.add('timer-warning');
       } else if (percentRemaining <= 0.3) {
-        timerEl.classList.add('timer-caution'); // Yellow
+        timerEl.classList.add('timer-caution');
       }
-      // else: green (default)
-    }
-  }
-
-  private async pollGameState(): Promise<void> {
-    const currentState = state.getState();
-    
-    if (!currentState.sessionId || !currentState.playerId) {
-      router.navigate('/');
-      return;
-    }
-
-    try {
-      const gameState = await api.getGameState(
-        currentState.sessionId,
-        currentState.playerId
-      );
-
-      // Check if quiz ended
-      if (gameState.status === 'finished') {
-        router.navigate(`/results?sessionId=${currentState.sessionId}`);
-        return;
-      }
-
-      // Check if we're in lobby (shouldn't happen, but handle it)
-      if (gameState.status === 'lobby') {
-        router.navigate(`/lobby?sessionId=${currentState.sessionId}`);
-        return;
-      }
-
-      // Initial question load or question changed - navigate to force component remount
-      if (gameState.currentQuestion) {
-        if (!this.currentQuestion) {
-          // First time loading question data
-          this.currentQuestion = gameState.currentQuestion;
-          this.currentQuestionIndex = (gameState.currentQuestionNumber || 1) - 1; // Convert 1-based to 0-based
-          this.questionStartedAt = gameState.questionStartedAt;
-          this.serverTime = gameState.serverTime; // Store server time for synchronized timer
-          this.timeLimit = gameState.timeLimit || 20;
-          this.selectedAnswerIds.clear();
-          this.hasSubmitted = false;
-          
-          // Render once with the question data
-          if (!this.hasRenderedQuestion) {
-            this.hasRenderedQuestion = true;
-            this.render();
-            if (!gameState.timerPaused) {
-              this.startTimer();
-            }
-          }
-        } else if (gameState.currentQuestion.id !== this.currentQuestion.id) {
-          // Question changed - navigate to waiting screen (host will advance)
-          // The host shows results between questions
-          router.navigate(`/waiting`);
-        } else {
-          // Same question — sync timer state from server
-          const newTimeLimit = gameState.timeLimit || 20;
-          const timerPaused = gameState.timerPaused ?? false;
-          const timerPausedAt = (gameState as { timerPausedAt?: number | null }).timerPausedAt ?? null;
-          this.serverTime = gameState.serverTime;
-          this.questionStartedAt = gameState.questionStartedAt;
-
-          if (newTimeLimit !== this.timeLimit) {
-            // Time limit changed (host used +5/-5 or end) — recalculate
-            this.timeLimit = newTimeLimit;
-            // When paused, freeze elapsed at the moment of pause
-            const effectiveNow = timerPaused && timerPausedAt ? timerPausedAt : this.serverTime;
-            const elapsed = effectiveNow - (this.questionStartedAt || 0);
-            const serverRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
-            // Only hard-reset if drift > 2s to avoid visual jitter
-            if (Math.abs(this.timeRemaining - serverRemaining) > 2) {
-              this.timeRemaining = serverRemaining;
-              this.updateTimerDisplay();
-            }
-            if (this.timeRemaining <= 0 && !this.hasSubmitted) {
-              this.stopTimer();
-              this.submitAnswer();
-            }
-          }
-
-          // Handle pause/resume from host
-          if (timerPaused && this.timerInterval !== null) {
-            this.stopTimer();
-            this.updateTimerDisplay();
-          } else if (!timerPaused && this.timerInterval === null && this.timeRemaining > 0 && !this.hasSubmitted) {
-            // Resume: restart interval at current timeRemaining without recalculating
-            this.resumeTimerInterval();
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error polling game state:', error);
-      // Continue polling even on error
     }
   }
 
   private toggleAnswer(answerId: string, button: HTMLElement): void {
-    if (this.hasSubmitted) return; // Don't allow changes after submission
-    
-    // Add visual feedback (ripple effect)
+    if (this.hasSubmitted) return;
     this.addRippleEffect(button);
-    
     if (this.selectedAnswerIds.has(answerId)) {
       this.selectedAnswerIds.delete(answerId);
     } else {
       this.selectedAnswerIds.add(answerId);
     }
-    
     this.updateAnswerButtons();
-    
-    // Enable/disable submit button based on selection
     this.updateSubmitButton();
   }
 
   private addRippleEffect(button: HTMLElement): void {
     const ripple = document.createElement('span');
     ripple.className = 'ripple';
-    
     const rect = button.getBoundingClientRect();
     const size = Math.max(rect.width, rect.height);
     ripple.style.width = ripple.style.height = size + 'px';
@@ -230,7 +183,6 @@ export class QuestionScreen extends BaseComponent {
     ripple.style.top = '50%';
     ripple.style.marginLeft = -(size / 2) + 'px';
     ripple.style.marginTop = -(size / 2) + 'px';
-    
     button.appendChild(ripple);
     setTimeout(() => ripple.remove(), 600);
   }
@@ -265,21 +217,14 @@ export class QuestionScreen extends BaseComponent {
     const submitBtn = this.querySelector('.submit-btn') as HTMLButtonElement;
     if (submitBtn) {
       submitBtn.textContent = this.getSubmitButtonText();
-
-      // If already submitted, keep disabled
       if (this.hasSubmitted) {
         submitBtn.disabled = true;
         return;
       }
-      
-      // Must have at least one answer selected
       if (this.selectedAnswerIds.size === 0) {
         submitBtn.disabled = true;
         return;
       }
-      
-      // If multiple correct answers exist, must select exact count
-      // Note: correctAnswerIds may not be available before submission (security)
       if (this.currentQuestion && this.currentQuestion.correctAnswerIds) {
         const correctCount = this.currentQuestion.correctAnswerIds.length;
         if (correctCount > 1 && this.selectedAnswerIds.size !== correctCount) {
@@ -287,32 +232,23 @@ export class QuestionScreen extends BaseComponent {
           return;
         }
       }
-      
-      // All validations passed
       submitBtn.disabled = false;
     }
   }
 
   private async submitAnswer(): Promise<void> {
-    if (this.hasSubmitted) return; // Prevent double submission
-    
+    if (this.hasSubmitted) return;
     const currentState = state.getState();
-    if (!currentState.sessionId || !currentState.playerId || !this.currentQuestion) {
-      return;
-    }
+    if (!currentState.sessionId || !currentState.playerId || !this.currentQuestion) return;
 
     this.hasSubmitted = true;
     this.stopTimer();
-    this.stopPolling();
 
-    // Show loading state on submit button
     const submitBtn = this.querySelector('.submit-btn');
     if (submitBtn) {
       submitBtn.classList.add('loading');
       (submitBtn as HTMLButtonElement).disabled = true;
     }
-
-    // Disable all answer buttons
     const buttons = this.querySelectorAll('.answer-btn');
     buttons.forEach((btn) => {
       (btn as HTMLButtonElement).disabled = true;
@@ -327,30 +263,13 @@ export class QuestionScreen extends BaseComponent {
           selectedAnswerIds: Array.from(this.selectedAnswerIds),
         }
       );
-
-      // Navigate to waiting screen
       router.navigate(`/waiting?correct=${result.correct}&score=${result.score}&lastQuestionId=${this.currentQuestion.id}`);
     } catch (error) {
-      // Enhanced error logging
       console.error('Error submitting answer:', error);
-      if (error instanceof Error) {
-        console.error('  Error name:', error.name);
-        console.error('  Error message:', error.message);
-        if ('status' in error) {
-          console.error('  HTTP status:', (error as { status: number }).status);
-        }
-        if ('data' in error) {
-          console.error('  Error data:', JSON.stringify((error as { data: unknown }).data, null, 2));
-        }
-      }
-      
-      // Show error message but don't retry
       const errorEl = this.querySelector('.error-message');
       if (errorEl) {
         errorEl.textContent = 'Failed to submit answer. Moving to next question...';
       }
-      
-      // Navigate to waiting screen anyway after a delay (track timeout to prevent duplicates)
       if (this.errorNavigationTimeout === null) {
         this.errorNavigationTimeout = window.setTimeout(() => {
           this.errorNavigationTimeout = null;
@@ -417,13 +336,12 @@ export class QuestionScreen extends BaseComponent {
         <div class="error-message"></div>
       </div>
     `;
-    
+
     this.setContent(html);
     this.attachEventListeners();
   }
 
   protected attachEventListeners(): void {
-    // Answer button clicks
     const answerButtons = this.querySelectorAll('.answer-btn');
     answerButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -434,7 +352,6 @@ export class QuestionScreen extends BaseComponent {
       });
     });
 
-    // Submit button
     const submitBtn = this.querySelector('.submit-btn');
     if (submitBtn) {
       submitBtn.addEventListener('click', () => {
@@ -451,3 +368,4 @@ export class QuestionScreen extends BaseComponent {
 }
 
 customElements.define('question-screen', QuestionScreen);
+

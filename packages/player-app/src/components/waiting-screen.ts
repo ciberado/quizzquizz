@@ -1,22 +1,20 @@
 import { BaseComponent } from './base-component';
 import { state } from '../state';
-import { api } from '../api-client';
 import { router } from '../router';
-import { handleApiError, isSessionEndError } from '../error-handler';
+import { connectToSession } from '../yjs-provider';
 
 /**
  * Waiting Screen Component
  * Displayed after a player submits an answer.
- * Shows feedback (correct/incorrect, points earned) and polls for next question.
+ * Shows feedback (correct/incorrect, points earned) and waits via Yjs for next question.
  */
 export class WaitingScreen extends BaseComponent {
-  private pollInterval: number | null = null;
+  private disconnectYjs: (() => void) | null = null;
   private isCorrect: boolean | null = null;
   private pointsEarned: number = 0;
-  private lastQuestionId: string | null = null; // Track to detect new questions
+  private lastQuestionId: string | null = null;
 
   protected onMount(): void {
-    // Get query parameters
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
     const correctParam = params.get('correct');
     const scoreParam = params.get('score');
@@ -25,92 +23,54 @@ export class WaitingScreen extends BaseComponent {
     if (correctParam !== null) {
       this.isCorrect = correctParam === 'true';
     }
-
     if (scoreParam !== null) {
       this.pointsEarned = parseInt(scoreParam, 10);
     }
-
-    // Initialize with the question ID we just answered
     if (lastQuestionIdParam) {
       this.lastQuestionId = lastQuestionIdParam;
     }
 
-    this.startPolling();
-    this.render();
-  }
-
-  protected onUnmount(): void {
-    this.stopPolling();
-  }
-
-  private startPolling(): void {
-    this.pollGameState(); // Immediate first call
-    this.pollInterval = window.setInterval(() => {
-      this.pollGameState();
-    }, 2000); // Poll every 2 seconds
-  }
-
-  private stopPolling(): void {
-    if (this.pollInterval !== null) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
-  }
-
-  private async pollGameState(): Promise<void> {
     const currentState = state.getState();
-    
     if (!currentState.sessionId || !currentState.playerId) {
       router.navigate('/');
       return;
     }
 
-    try {
-      const gameState = await api.getGameState(
-        currentState.sessionId,
-        currentState.playerId
-      );
-
-      // Check if quiz ended
-      if (gameState.status === 'finished') {
-        router.navigate(`/results?sessionId=${currentState.sessionId}`);
-        return;
-      }
-
-      // Check if back in lobby (shouldn't happen, but handle it)
-      if (gameState.status === 'lobby') {
-        router.navigate(`/lobby?sessionId=${currentState.sessionId}`);
-        return;
-      }
-
-      // Check if new question started (not the same question we came from)
-      if (gameState.currentQuestion) {
-        // If we don't know the last question ID, or if the current question is different
-        if (!this.lastQuestionId || gameState.currentQuestion.id !== this.lastQuestionId) {
-          // Update tracking and navigate to new question
-          this.lastQuestionId = gameState.currentQuestion.id;
-          router.navigate(`/question?sessionId=${currentState.sessionId}`);
+    this.disconnectYjs = connectToSession(
+      currentState.sessionId,
+      currentState.playerId,
+      (docState) => {
+        if (docState.status === 'finished') {
+          router.navigate(`/results?sessionId=${currentState.sessionId}`);
           return;
         }
-        // Same question - stay on waiting screen
+        if (docState.status === 'lobby') {
+          router.navigate(`/lobby?sessionId=${currentState.sessionId}`);
+          return;
+        }
+        if (docState.currentQuestion) {
+          const qId = docState.currentQuestion.id;
+          if (!this.lastQuestionId || qId !== this.lastQuestionId) {
+            this.lastQuestionId = qId;
+            router.navigate(`/question?sessionId=${currentState.sessionId}`);
+          }
+        }
       }
-    } catch (error) {
-      console.error('Error polling game state:', error);
-      
-      // Handle session end errors (404, 401, 403)
-      if (isSessionEndError(error)) {
-        this.stopPolling();
-        handleApiError(error, 'Polling game state');
-        return;
-      }
-      
-      // Continue polling for other errors (network issues, etc.)
+    );
+
+    this.render();
+  }
+
+  protected onUnmount(): void {
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
     }
   }
 
   protected render(): void {
     let feedbackHtml = '';
-    
+
     if (this.isCorrect !== null) {
       if (this.isCorrect) {
         feedbackHtml = `
@@ -145,7 +105,7 @@ export class WaitingScreen extends BaseComponent {
         </div>
       </div>
     `;
-    
+
     this.setContent(html);
     this.attachEventListeners();
   }

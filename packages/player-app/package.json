@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@quizzquizz/common": "*",
-    "morphdom": "^2.7.8"
+    "morphdom": "^2.7.8",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.30"
   },
   "devDependencies": {
     "happy-dom": "^20.8.3",

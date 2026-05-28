@@ -1,41 +1,52 @@
 import { BaseComponent } from './base-component';
-import { api, ApiError } from '../api-client';
 import { router } from '../router';
 import { state } from '../state';
+import { connectToSession } from '../yjs-provider';
 
 /**
  * Lobby screen - Waiting for host to start the quiz
  */
 export class LobbyScreen extends BaseComponent {
   private playerCountElement: HTMLSpanElement | null = null;
-  private statusElement: HTMLParagraphElement | null = null;
-  private pollingInterval: number | null = null;
+  private disconnectYjs: (() => void) | null = null;
   private sessionId = '';
   private playerId = '';
   private lastPlayerCount: number = 0;
 
   protected onMount(): void {
-    // Get session info from state
     const currentState = state.getState();
     this.sessionId = currentState.sessionId || '';
     this.playerId = currentState.playerId || '';
 
-    // Validate we have required info
     if (!this.sessionId || !this.playerId) {
-      // No session info, go back to join
       router.navigate('/join');
       return;
     }
 
-    // Start polling for game state
-    this.startPolling();
+    this.disconnectYjs = connectToSession(this.sessionId, this.playerId, (docState) => {
+      if (docState.status === 'playing') {
+        router.navigate(`/question/${this.sessionId}`);
+        return;
+      }
+      if (docState.status === 'finished') {
+        router.navigate(`/results/${this.sessionId}`);
+        return;
+      }
+
+      const players = docState.players ?? [];
+      const playerCount = players.length;
+      if (playerCount !== this.lastPlayerCount && this.playerCountElement) {
+        this.playerCountElement.textContent = String(playerCount);
+        this.lastPlayerCount = playerCount;
+      }
+    });
   }
 
   protected onUnmount(): void {
-    // Stop polling when leaving screen
-    this.stopPolling();
-    // Clear API cache to free memory
-    api.clearCache();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
   }
 
   protected render(): void {
@@ -62,17 +73,13 @@ export class LobbyScreen extends BaseComponent {
       </div>
     `);
 
-    // Cache DOM elements
     this.playerCountElement = this.qs<HTMLSpanElement>('#player-count');
-    this.statusElement = this.qs<HTMLParagraphElement>('#status-message');
 
-    // Set up event listeners
     this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
     const leaveButton = this.qs<HTMLButtonElement>('#leave-button');
-    
     if (leaveButton) {
       leaveButton.addEventListener('click', () => {
         this.handleLeave();
@@ -80,85 +87,9 @@ export class LobbyScreen extends BaseComponent {
     }
   }
 
-  private startPolling(): void {
-    // Poll every 2 seconds
-    this.pollGameState();
-    this.pollingInterval = window.setInterval(() => {
-      this.pollGameState();
-    }, 2000);
-  }
-
-  private stopPolling(): void {
-    if (this.pollingInterval !== null) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
-  }
-
-  private async pollGameState(): Promise<void> {
-    try {
-      const gameState = await api.getGameState(this.sessionId, this.playerId);
-
-      // Check if game has started FIRST (before fetching leaderboard)
-      if (gameState.status === 'playing') {
-        // Game started! Stop polling and navigate to question screen
-        this.stopPolling();
-        router.navigate(`/question/${this.sessionId}`);
-        return; // Early return, no need to update player count
-      } else if (gameState.status === 'finished') {
-        // Game finished (shouldn't happen in lobby but handle it)
-        this.stopPolling();
-        router.navigate(`/results/${this.sessionId}`);
-        return;
-      }
-
-      // Update player count (from leaderboard)
-      try {
-        const leaderboard = await api.getLeaderboard(this.sessionId);
-        if (this.playerCountElement && leaderboard.entries) {
-          const playerCount = leaderboard.entries.length;
-          // Only update DOM if player count actually changed
-          if (playerCount !== this.lastPlayerCount) {
-            this.playerCountElement.textContent = String(playerCount);
-            this.lastPlayerCount = playerCount;
-          }
-        }
-      } catch (leaderboardError) {
-        // Ignore leaderboard errors, don't fail the whole poll
-        console.debug('Could not fetch leaderboard:', leaderboardError);
-      }
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.status === 404) {
-          // Session not found - host deleted it
-          this.stopPolling();
-          this.showError('Quiz was cancelled by the host');
-          setTimeout(() => {
-            router.navigate('/join');
-          }, 3000);
-        } else {
-          console.error('Polling error:', error);
-          // Continue polling on other errors
-        }
-      } else {
-        console.error('Network error:', error);
-        // Continue polling on network errors
-      }
-    }
-  }
-
   private handleLeave(): void {
-    // Clear state and go back to join screen
     state.clearState();
-    this.stopPolling();
     router.navigate('/join');
-  }
-
-  private showError(message: string): void {
-    if (this.statusElement) {
-      this.statusElement.textContent = message;
-      this.statusElement.style.color = 'var(--color-error)';
-    }
   }
 }
 

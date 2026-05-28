@@ -8,6 +8,11 @@ export default defineConfig({
     hmr: { clientPort: 3000, path: '/__hmr' },
     proxy: {
       '/api': 'http://localhost:3010',
+      '/ws': {
+        target: 'ws://localhost:3010',
+        ws: true,
+        rewriteWsOrigin: true,
+      },
     },
   },
 });
