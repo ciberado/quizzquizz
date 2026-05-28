@@ -33,7 +33,7 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 
 ## Core Conventions
 
-- Keep the architecture simple: REST plus polling, not WebSockets.
+- Keep the architecture simple: **REST for all mutations, Yjs + y-websocket for real-time push**. Do not revert to polling; do not add additional WebSocket protocols.
 - Preserve the frontend stack: vanilla TypeScript with Web Components, not React or other frameworks.
 - Keep TypeScript strict. Avoid implicit `any` and prefer explicit types.
 - Use named exports, not default exports.
@@ -87,18 +87,36 @@ In Docker, Caddy proxies everything through port 3000:
 - When changing API contracts, update shared types and validate both API and consuming apps.
 - Keep tests close to the code they validate, matching the existing Vitest and Playwright patterns.
 
+### Yjs Real-time Sync
+
+The real-time layer uses **Yjs + y-websocket**. Key files:
+
+| File | Role |
+|---|---|
+| `packages/api-server/src/session-doc-manager.ts` | In-memory Yjs doc registry per session (`getOrCreateSession`, `updateDoc`, `destroySession`) |
+| `packages/api-server/src/ws-handler.ts` | WebSocket upgrade handler; validates auth via `?playerId=` or `?hostToken=` query params |
+| `packages/host-app/src/yjs-provider.ts` | Singleton `WebsocketProvider` for the host; `connectYjs` / `disconnectYjs` |
+| `packages/player-app/src/yjs-provider.ts` | Same for the player |
+
+Rules:
+- All **mutations** (join, answer, start, next, end, adjust-timer) go through REST endpoints. The route handler calls `updateDoc` after every DB write.
+- All **state observations** (lobby count, question, timer, leaderboard) happen by observing the `Y.Map` in the Yjs doc — no polling.
+- The server runs a **5-second heartbeat** that updates `serverTime` in every active doc; clients compute remaining timer as `questionStartedAt + timeLimit - serverTime`.
+- A 5-second **server heartbeat** (`setInterval` in `session-doc-manager.ts`) keeps timer state fresh for all clients.
+- `correctAnswerIds` are **never** placed in the Yjs doc (security boundary).
+
 ### Web Component Pattern
 
 All screen components extend `BaseComponent` (in each app's `src/components/base-component.ts`). The standard lifecycle is:
 
 ```typescript
-protected onMount(): void { /* setup, start polling */ }
-protected onUnmount(): void { /* teardown — clear ALL intervals and timeouts */ }
+protected onMount(): void { /* setup — connect Yjs provider, observe doc */ }
+protected onUnmount(): void { /* teardown — disconnect Yjs provider, clear ALL intervals/timeouts */ }
 protected render(): void { this.setContent(html); this.attachEventListeners(); }
 protected attachEventListeners(): void { /* querySelector + addEventListener */ }
 ```
 
-`setContent(html)` replaces inner HTML. Always re-attach event listeners after calling it. Clear every `setInterval`/`setTimeout` in `onUnmount` — leaks cause subtle bugs across navigations.
+`setContent(html)` replaces inner HTML. Always re-attach event listeners after calling it. Disconnect the Yjs provider and clear every `setInterval`/`setTimeout` in `onUnmount` — leaks cause subtle bugs across navigations.
 
 ## Commit Expectations
 
@@ -111,7 +129,7 @@ protected attachEventListeners(): void { /* querySelector + addEventListener */ 
 
 ## Common Pitfalls
 
-- Do not replace polling with sockets unless the user explicitly requests an architectural change.
+- Do not reintroduce REST polling for game state. The architecture uses Yjs + y-websocket for all push updates; `setInterval` polling for game state has been removed.
 - Do not add a UI framework where Web Components are the established pattern.
 - Do not assume old phase docs reflect current status without checking the code and package scripts.
 - Prisma generation is part of the API server workflow; generated output may need regeneration before builds in fresh environments.
@@ -119,3 +137,5 @@ protected attachEventListeners(): void { /* querySelector + addEventListener */ 
 - The question-bank-builder uses `commonjs` modules and has relaxed `noUncheckedIndexedAccess`. This is intentional — it is a standalone CLI tool imported from another project. Do not try to convert it to ESM or tighten its type checks without cause.
 - The `flashcard-app` is a fully independent frontend. It has its own `styles.css`, `router.ts`, `state.ts`, `api-client.ts`, and `BaseComponent`. The `play-screen` component also injects additional scoped styles at runtime via `injectStyles()` — edit those inline styles inside `play-screen.ts`, not a separate CSS file.
 - Never commit AWS credentials or `.env` files from the builder. The builder's `.gitignore` and root `.gitignore` both guard against this.
+- Each screen component that needs real-time state must call the `connectYjs(sessionId)` helper from `yjs-provider.ts` and **disconnect in `onUnmount`**. Forgetting to disconnect leaks WebSocket connections across route changes.
+- `correctAnswerIds` are **never** placed in the Yjs doc — they are only fetched by the host via REST after the question ends. This is a security boundary; do not add them to the doc.

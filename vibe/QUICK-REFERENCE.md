@@ -180,10 +180,12 @@ packages/
 │
 ├── api-server/
 │   ├── src/
-│   │   ├── index.ts          # Hono server setup
+│   │   ├── index.ts          # Hono server setup + WebSocket upgrade
 │   │   ├── db/index.ts       # Database schema and queries
 │   │   ├── reload-banks.ts   # Shared reload helper
 │   │   ├── upload-mutex.ts   # Async mutex for upload serialization
+│   │   ├── session-doc-manager.ts # In-memory Yjs doc registry (getOrCreateSession, updateDoc, destroySession)
+│   │   ├── ws-handler.ts     # y-websocket sync handler; auth via ?playerId= / ?hostToken=
 │   │   ├── routes/
 │   │   │   ├── sessions.ts   # Session endpoints (quiz + flashcard)
 │   │   │   ├── players.ts    # Player endpoints
@@ -199,6 +201,8 @@ packages/
 │   │   ├── router.ts         # Hash-based routing
 │   │   ├── state.ts          # State management
 │   │   ├── api-client.ts     # API client with host endpoints
+│   │   ├── yjs-provider.ts   # Singleton WebsocketProvider; connectYjs/disconnectYjs
+│   │   ├── offline-indicator.ts # Shows offline banner on WS disconnect
 │   │   ├── components/
 │   │   │   ├── base-component.ts
 │   │   │   ├── bank-browser.ts       # Bank browser + upload button
@@ -220,6 +224,8 @@ packages/
 │   │   ├── router.ts         # Hash-based routing
 │   │   ├── state.ts          # State management
 │   │   ├── api-client.ts     # API client with player endpoints
+│   │   ├── yjs-provider.ts   # Singleton WebsocketProvider; connectYjs/disconnectYjs
+│   │   ├── offline-indicator.ts # Shows offline banner on WS disconnect
 │   │   ├── components/
 │   │   │   ├── base-component.ts
 │   │   │   ├── join-screen.ts
@@ -279,6 +285,7 @@ e2e/
 ├── player-ui.spec.ts        # Player UI tests
 ├── host-analytics.spec.ts   # Host analytics tests
 ├── quiz-upload.spec.ts      # Quiz upload tests
+├── yjs-resilience.spec.ts   # Yjs reconnection, late-join, host refresh tests
 └── [other E2E tests]
 ```
 

@@ -244,10 +244,14 @@ Which of the following are parts of a cell? (Select all that apply)
 - `GET /api/question-banks` - List available question banks
 - `GET /api/question-banks/:id` - Get question bank details
 
-### Polling Strategy
-- Players poll `/api/sessions/:id/state` every 1-2 seconds
-- Response includes: session status, current question (if playing), time remaining
-- ETag or version number to minimize data transfer when no changes
+### Push Strategy (Yjs WebSocket)
+
+- After every REST mutation, the server calls `updateDoc(sessionId, patch)` which fires a Yjs transaction.
+- All connected WebSocket clients receive the binary delta immediately — no client polling required.
+- A 5-second server heartbeat updates `serverTime` in every active session doc, keeping timers accurate.
+- Clients connect to `ws://host/ws/sessions/:id?playerId=…` (players) or `?hostToken=…` (hosts).
+- The Yjs doc is **ephemeral** — rebuilt from DB if the server restarts and a client reconnects.
+- `correctAnswerIds` are **never** placed in the Yjs doc (security boundary — host fetches them via REST).
 
 ---
 
@@ -300,5 +304,4 @@ Which of the following are parts of a cell? (Select all that apply)
 - Custom themes and branding
 - Question bank editor UI
 - Import from other formats (CSV, JSON)
-- WebSocket option for lower latency
 - Mobile app versions
