@@ -2,7 +2,7 @@
 
 ## Vision
 
-QuizzQuizz is a real-time, competitive quiz platform inspired by Kahoot. A host creates quiz sessions from markdown-based question banks, players join via PIN codes, and compete for the highest score on a live leaderboard. The system prioritizes simplicity over complexity—using REST APIs with polling instead of WebSockets, vanilla TypeScript with Web Components instead of heavy frameworks, and SQLite for persistence.
+QuizzQuizz is a real-time, competitive quiz platform inspired by Kahoot. A host creates quiz sessions from markdown-based question banks, players join via PIN codes, and compete for the highest score on a live leaderboard. The system prioritizes simplicity over complexity—using a **server-authoritative Yjs + WebSocket hybrid** for real-time push synchronization (with REST for all mutations), vanilla TypeScript with Web Components instead of heavy frameworks, and SQLite for persistence.
 
 ---
 
@@ -82,11 +82,13 @@ quizzquizz/
 - See [`packages/question-bank-builder/README.md`](../packages/question-bank-builder/README.md) for full CLI reference
 
 #### `@quizzquizz/api-server`
-- REST API endpoints
+- REST API endpoints (all mutations: join, answer, start, next, end, adjust-timer)
 - SQLite database with Prisma ORM (type-safe, developer-friendly)
 - Session management (create, join, state transitions)
 - Game state management
-- Polling endpoints for real-time updates
+- **Yjs WebSocket server**: one shared `Y.Doc` per session (ephemeral, in-memory); after every DB write the doc is updated and all connected clients receive a push update automatically
+- `session-doc-manager.ts` — in-memory doc registry (`getOrCreateSession`, `updateDoc`, `destroySession`)
+- `ws-handler.ts` — WebSocket upgrade handler implementing the y-websocket sync protocol; auth via `?playerId=` or `?hostToken=` query params
 
 #### `@quizzquizz/host-app`
 - Web Components-based SPA
@@ -114,6 +116,7 @@ quizzquizz/
 - **Framework**: Hono (lightweight, fast)
 - **Database**: SQLite with Prisma v6 ORM (type-safe, auto-generated client)
 - **Validation**: Zod
+- **Real-time sync**: Yjs (`yjs` + `y-websocket` + `ws`) — server-authoritative shared doc per session
 
 ### Frontend
 - **Language**: TypeScript

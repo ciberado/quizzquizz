@@ -359,7 +359,16 @@ npm run prisma:studio  # Interactive UI
 ### Frontend ↔ API
 - No shared code between frontend packages
 - Both consume API contract from `@quizzquizz/common` types
-- Polling-based (no WebSockets) - ETags for optimization
+- **Mutations** (join, answer, start, next, end, timer) go through REST endpoints
+- **Push updates** arrive via Yjs WebSocket (`ws://host/ws/sessions/:id`) — no polling needed
+- `yjs-provider.ts` in each app manages the `WebsocketProvider` lifecycle
+
+### Real-time Sync Architecture
+- Server holds one `Y.Doc` per active session (ephemeral — rebuilt from DB if server restarts and a client reconnects)
+- After every REST mutation, the route calls `updateDoc(sessionId, patch)` which fires a Yjs transaction
+- The `update` event broadcasts the binary Yjs delta to all connected WebSocket clients
+- A 5-second server heartbeat updates `serverTime` in every active doc — used by clients for timer sync
+- `correctAnswerIds` are **never** put in the Yjs doc (security boundary — host fetches them via REST)
 
 ### Type Safety
 - Zod schemas in `@quizzquizz/common` for runtime validation
@@ -496,12 +505,13 @@ docker push your-registry/quizzquizz:latest
 
 ## Performance Tips
 
-1. **Polling Optimization**: Use ETags to reduce data transfer
-2. **Component Rendering**: Only update DOM on actual state changes
-3. **Event Cleanup**: Ensure all event listeners and intervals are cleaned up on unmount
-4. **Request Deduplication**: Cancel pending requests before making new ones
-5. **Database Indexes**: Consider adding indexes on frequently queried columns (sessionId, pin)
-6. **Static Serving**: Compress static assets and use appropriate cache headers
+1. **WebSocket push**: Yjs pushes updates immediately after each mutation — no client-side polling loops
+2. **Timer sync**: Clients compute remaining time locally using `questionStartedAt + timeLimit - serverTime`; `serverTime` is refreshed every 5s by the server heartbeat
+3. **Component Rendering**: Only update DOM on actual state changes (observe Yjs `Y.Map` changes)
+4. **Event Cleanup**: Ensure all event listeners and provider connections are cleaned up in `onUnmount`
+5. **Yjs transactions**: Multiple field updates are wrapped in `doc.transact()` → single WebSocket message
+6. **Database Indexes**: Consider adding indexes on frequently queried columns (sessionId, pin)
+7. **Static Serving**: Compress static assets and use appropriate cache headers
 
 ---
 
