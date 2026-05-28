@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/root",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "private": true,
   "description": "QuizzQuizz - Real-time competitive quiz platform",
   "repository": {
