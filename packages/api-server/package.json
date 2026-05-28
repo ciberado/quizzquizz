@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/api-server",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "REST API backend for QuizzQuizz",
   "type": "module",
   "main": "./dist/index.js",
