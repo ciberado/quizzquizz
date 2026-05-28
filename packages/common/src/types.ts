@@ -162,6 +162,8 @@ export const GameStateSchema = z.object({
   currentQuestion: QuestionSchema.nullable(),
   questionStartedAt: z.number().nullable(),
   timeLimit: z.number().nullable(),
+  timerPaused: z.boolean().optional(),
+  timerPausedAt: z.number().nullable().optional(),
   totalQuestions: z.number(),
   currentQuestionNumber: z.number(),
   serverTime: z.number(), // Server's current time for clock synchronization
