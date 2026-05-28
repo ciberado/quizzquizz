@@ -57,8 +57,26 @@ When modifying a request or response shape:
 3. Check all consumers (`host-app`, `player-app`, `analytics-ui`) for type errors.
 4. Update or add Vitest unit tests and, if the flow is user-facing, an E2E scenario.
 
+## WebSocket / Yjs Real-time Sync
+
+The API server runs a Yjs-based push channel alongside its REST routes:
+
+- **Endpoint**: `GET /ws/sessions/:sessionId` (WebSocket upgrade)
+- **Auth**: `?playerId=<id>` for players, `?hostToken=<token>` for the host — validated against DB on connect; unauthenticated connections are rejected with code 1008
+- **Protocol**: y-websocket sync protocol (y-protocols/sync) — the standard `WebsocketProvider` client works out of the box
+- **Doc shape** (`Y.Map` named `"state"`): `status`, `currentQuestion` (no `correctAnswerIds`), `questionStartedAt`, `timeLimit`, `timerPaused`, `timerPausedAt`, `answeredCount`, `allPlayersAnswered`, `serverTime`, `players[]`, `leaderboard[]`
+- **Server heartbeat**: every 5 seconds `serverTime` is updated in all active docs so clients can sync timers
+- **Security**: `correctAnswerIds` are NEVER put in the Yjs doc; the host fetches them once via REST
+
+Key files:
+- `src/session-doc-manager.ts` — `getOrCreateSession`, `updateDoc`, `destroySession`, `getActiveSessionIds`
+- `src/ws-handler.ts` — `createWsServer()` — WebSocket server factory
+
+Every REST mutation route calls `updateDoc(sessionId, patch)` after the DB write so connected clients receive a push immediately. Do not skip this step when adding new mutation routes.
+
 ## Tests
 
 - Vitest, tests alongside source as `*.test.ts`.
 - One-shot run: `npm test -- --run -w @quizzquizz/api-server` (or relevant workspace).
 - HTTP integration tests: use the `.http` files in `packages/api-server/` with the VS Code REST Client.
+- `lib0` and `y-protocols` must be excluded from Vite's transform in `vitest.config.ts` (`ssr.external`) — they have binary initialization that fails under vite-node. Tests that import `ws-handler.ts` must mock these modules with `vi.mock`.
