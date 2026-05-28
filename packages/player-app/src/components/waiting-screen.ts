@@ -41,16 +41,19 @@ export class WaitingScreen extends BaseComponent {
       currentState.playerId,
       (docState) => {
         if (docState.status === 'finished') {
+          console.log('[PLAYER][Waiting] status=finished → /results');
           router.navigate(`/results?sessionId=${currentState.sessionId}`);
           return;
         }
         if (docState.status === 'lobby') {
+          console.log('[PLAYER][Waiting] status=lobby → /lobby');
           router.navigate(`/lobby?sessionId=${currentState.sessionId}`);
           return;
         }
         if (docState.currentQuestion) {
           const qId = docState.currentQuestion.id;
           if (!this.lastQuestionId || qId !== this.lastQuestionId) {
+            console.log(`[PLAYER][Waiting] New question detected: ${qId.slice(0,8)} (was ${this.lastQuestionId?.slice(0,8) ?? 'none'}) → /question`);
             this.lastQuestionId = qId;
             router.navigate(`/question?sessionId=${currentState.sessionId}`);
           }

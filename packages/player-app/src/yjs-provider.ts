@@ -61,14 +61,26 @@ function buildBaseUrl(): string {
 function getEntry(sessionId: string, playerId: string): ProviderEntry {
   if (!registry.has(sessionId)) {
     const doc = new Y.Doc();
-    // y-websocket builds URL as: baseUrl + '/' + roomname + '?' + params
-    // This yields: /ws/sessions/{sessionId}?playerId=xxx
     const provider = new WebsocketProvider(
       buildBaseUrl(),
       sessionId,
       doc,
       { params: { playerId }, connect: false }
     );
+
+    provider.on('status', ({ status }: { status: string }) => {
+      console.log(`[PLAYER][Yjs] WS status → ${status} (session=${sessionId.slice(0, 8)})`);
+    });
+    provider.on('sync', (synced: boolean) => {
+      console.log(`[PLAYER][Yjs] sync=${synced} (session=${sessionId.slice(0, 8)})`);
+    });
+    provider.on('connection-error', (event: Event, _provider: WebsocketProvider) => {
+      console.error('[PLAYER][Yjs] connection-error', event);
+    });
+    provider.on('connection-close', (event: CloseEvent | null, _provider: WebsocketProvider) => {
+      console.warn(`[PLAYER][Yjs] connection-close code=${event?.code} reason=${event?.reason}`);
+    });
+
     registry.set(sessionId, { provider, doc, refCount: 0 });
   }
   return registry.get(sessionId)!;
@@ -98,6 +110,7 @@ export function connectToSession(
     stateMap.forEach((value, key) => {
       (state as Record<string, unknown>)[key] = value;
     });
+    console.log(`[PLAYER][Yjs] doc update: status=${state.status} qIdx=${state.currentQuestionIndex ?? '?'} qId=${(state.currentQuestion as { id?: string } | null | undefined)?.id?.slice(0, 8) ?? '?'} answeredCount=${state.answeredCount ?? '?'}`);
     onStateChange(state);
   };
 

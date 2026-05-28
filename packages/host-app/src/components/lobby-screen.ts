@@ -62,6 +62,7 @@ export class LobbyScreen extends BaseComponent {
         const currentIds = this.players.map(p => p.id).sort().join(',');
         const newIds = newPlayers.map(p => p.id).sort().join(',');
         if (currentIds !== newIds) {
+          console.log(`[HOST][Lobby] Players updated: ${newPlayers.map(p => p.nickname).join(', ')} (${newPlayers.length} total)`);
           this.players = newPlayers;
           this.patchRender();
         }

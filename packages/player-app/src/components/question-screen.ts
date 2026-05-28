@@ -52,11 +52,13 @@ export class QuestionScreen extends BaseComponent {
 
   private handleDocState(docState: SessionDocState): void {
     if (docState.status === 'finished') {
+      console.log('[PLAYER][Question] status=finished → /results');
       const sessionId = state.getState().sessionId;
       router.navigate(`/results?sessionId=${sessionId}`);
       return;
     }
     if (docState.status === 'lobby') {
+      console.log('[PLAYER][Question] status=lobby → /lobby');
       const sessionId = state.getState().sessionId;
       router.navigate(`/lobby?sessionId=${sessionId}`);
       return;
@@ -68,6 +70,7 @@ export class QuestionScreen extends BaseComponent {
 
       if (!this.currentQuestion) {
         // First load
+        console.log(`[PLAYER][Question] First question received: id=${docState.currentQuestion.id.slice(0,8)} "${docState.currentQuestion.text.slice(0,50)}"`);
         this.currentQuestion = docState.currentQuestion as GameState['currentQuestion'];
         this.currentQuestionIndex = (docState.currentQuestionNumber || 1) - 1;
         this.questionStartedAt = docState.questionStartedAt ?? null;
@@ -85,6 +88,7 @@ export class QuestionScreen extends BaseComponent {
         }
       } else if (docState.currentQuestion.id !== this.currentQuestion.id) {
         // Question changed — go to waiting screen
+        console.log(`[PLAYER][Question] Question changed → /waiting`);
         router.navigate(`/waiting`);
       } else {
         // Same question — sync timer state from server

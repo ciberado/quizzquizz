@@ -73,6 +73,7 @@ export class LeaderboardScreen extends HTMLElement {
       const data = await api.getLeaderboard(sessionId);
       this.leaderboard = data.leaderboard || [];
       this.initialized = true;
+      console.log(`[HOST][Leaderboard] Loaded: Q${this.currentQuestionIndex + 1}/${this.totalQuestions}, status=${this.sessionStatus}, autoPace=${this.automaticPace}, players=${this.leaderboard.length}`);
       this.render();
 
       this.scheduleAutoNavigateIfNeeded(true);
@@ -115,15 +116,15 @@ export class LeaderboardScreen extends HTMLElement {
     if (isFirstLoad && this.automaticPace && this.sessionStatus === 'playing' && !this.autoNavigateTimeout) {
       const hasMoreQuestions = this.currentQuestionIndex < this.totalQuestions - 1;
       if (hasMoreQuestions) {
-        console.log('⏱️ Automatic pace enabled - will advance to next question in 4s');
+        console.log(`[HOST][Leaderboard] Auto-pace: advancing to Q${this.currentQuestionIndex + 2} in 4s`);
         this.autoNavigateTimeout = window.setTimeout(() => {
-          console.log('🚀 Auto-advancing to next question');
+          console.log('[HOST][Leaderboard] Auto-navigating → /question');
           this.handleNextQuestion();
         }, 4000);
       } else {
-        console.log('⏱️ Automatic pace enabled - will show final results in 4s');
+        console.log('[HOST][Leaderboard] Auto-pace: final results in 4s');
         this.autoNavigateTimeout = window.setTimeout(() => {
-          console.log('🚀 Auto-navigating to final results');
+          console.log('[HOST][Leaderboard] Auto-navigating → final results');
           this.handleViewFinalResults();
         }, 4000);
       }

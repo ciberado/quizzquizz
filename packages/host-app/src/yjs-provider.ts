@@ -58,13 +58,26 @@ function buildBaseUrl(): string {
 function getEntry(sessionId: string, hostToken: string): ProviderEntry {
   if (!registry.has(sessionId)) {
     const doc = new Y.Doc();
-    // y-websocket builds URL as: baseUrl + '/' + roomname + '?' + params
     const provider = new WebsocketProvider(
       buildBaseUrl(),
       sessionId,
       doc,
       { params: { hostToken }, connect: false }
     );
+
+    provider.on('status', ({ status }: { status: string }) => {
+      console.log(`[HOST][Yjs] WS status → ${status} (session=${sessionId.slice(0, 8)})`);
+    });
+    provider.on('sync', (synced: boolean) => {
+      console.log(`[HOST][Yjs] sync=${synced} (session=${sessionId.slice(0, 8)})`);
+    });
+    provider.on('connection-error', (event: Event, _provider: WebsocketProvider) => {
+      console.error('[HOST][Yjs] connection-error', event);
+    });
+    provider.on('connection-close', (event: CloseEvent | null, _provider: WebsocketProvider) => {
+      console.warn(`[HOST][Yjs] connection-close code=${event?.code} reason=${event?.reason}`);
+    });
+
     registry.set(sessionId, { provider, doc, refCount: 0 });
   }
   return registry.get(sessionId)!;
@@ -92,6 +105,7 @@ export function connectToSession(
     stateMap.forEach((value, key) => {
       (docState as Record<string, unknown>)[key] = value;
     });
+    console.log(`[HOST][Yjs] doc update: status=${docState.status} players=${(docState.players as unknown[])?.length ?? '?'} qIdx=${docState.currentQuestionIndex ?? '?'} answeredCount=${docState.answeredCount ?? '?'}`);
     onStateChange(docState);
   };
 

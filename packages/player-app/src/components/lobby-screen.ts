@@ -25,16 +25,21 @@ export class LobbyScreen extends BaseComponent {
 
     this.disconnectYjs = connectToSession(this.sessionId, this.playerId, (docState) => {
       if (docState.status === 'playing') {
+        console.log('[PLAYER][Lobby] status=playing → navigating to /question');
         router.navigate(`/question/${this.sessionId}`);
         return;
       }
       if (docState.status === 'finished') {
+        console.log('[PLAYER][Lobby] status=finished → navigating to /results');
         router.navigate(`/results/${this.sessionId}`);
         return;
       }
 
       const players = docState.players ?? [];
       const playerCount = players.length;
+      if (playerCount !== this.lastPlayerCount) {
+        console.log(`[PLAYER][Lobby] playerCount: ${this.lastPlayerCount} → ${playerCount}`);
+      }
       if (playerCount !== this.lastPlayerCount && this.playerCountElement) {
         this.playerCountElement.textContent = String(playerCount);
         this.lastPlayerCount = playerCount;

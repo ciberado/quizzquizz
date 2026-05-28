@@ -56,6 +56,7 @@ export class QuestionDisplayScreen extends HTMLElement {
 
     this.render();
     await this.loadInitialGameState();
+    console.log(`[HOST][Question] Initial state loaded: Q${(this.currentGameState?.currentQuestionIndex ?? -1) + 1} "${this.currentGameState?.currentQuestion?.text?.slice(0, 50) ?? 'none'}"`);
 
     // Subscribe to Yjs for real-time updates
     this.disconnectYjs = connectToSession(sessionId, hostToken, (docState) => {
@@ -159,6 +160,10 @@ export class QuestionDisplayScreen extends HTMLElement {
     // Update player counts from doc
     const newPlayerCount = (docState.players ?? []).length;
     const newAnsweredCount = docState.answeredCount ?? this.answeredCount;
+
+    if (newAnsweredCount !== this.answeredCount) {
+      console.log(`[HOST][Question] answeredCount: ${this.answeredCount} → ${newAnsweredCount} / ${newPlayerCount} players`);
+    }
 
     // Update timer state from server (unless in optimistic window)
     if (!inOptimisticWindow && !this.earlyStop && this.pace !== 'manual') {
@@ -305,6 +310,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private async handleNextQuestion() {
+    console.log('[HOST][Question] Manual "Next Question" → /leaderboard');
     router.navigate('/leaderboard');
   }
 
@@ -350,6 +356,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private handleJumpToScoreboard() {
+    console.log('[HOST][Question] "Jump to Scoreboard" → /leaderboard');
     if (this.autoNavigateTimeout) {
       clearTimeout(this.autoNavigateTimeout);
       this.autoNavigateTimeout = null;
