@@ -8,6 +8,7 @@ import { router } from '../router';
 import { state } from '../state';
 import { api, cancelAllRequests } from '../api-client';
 import morphdom from 'morphdom';
+import { connectToSession, type SessionDocState } from '../yjs-provider';
 
 // Local interface for game state (matches API response)
 interface HostGameState {
@@ -28,21 +29,21 @@ interface HostGameState {
 }
 
 export class QuestionDisplayScreen extends HTMLElement {
-  private pollInterval: number | null = null;
+  private disconnectYjs: (() => void) | null = null;
   private currentGameState: HostGameState | null = null;
   private timerInterval: number | null = null;
   private timeRemaining: number = 0;
-  private currentTimeLimit: number = 20; // Actual time limit being used for current question
-  private wasTimerActive: boolean = false; // Track timer state to detect when it expires
+  private currentTimeLimit: number = 20;
+  private wasTimerActive: boolean = false;
   private playerCount: number = 0;
   private answeredCount: number = 0;
   private autoNavigateTimeout: number | null = null;
-  private automaticPace: boolean = false; // Auto-advance enabled
-  private pace: 'normal' | 'calm' | 'manual' = 'normal'; // Session pacing mode
-  private serverTime: number = 0; // Server's current time for clock synchronization
-  private earlyStop: boolean = false; // Set when all players answered early (prevents timer restart in polls)
-  private paused: boolean = false; // Whether the host has paused the timer
-  private optimisticUntil: number = 0; // Timestamp until which we skip server reconciliation (after button click)
+  private automaticPace: boolean = false;
+  private pace: 'normal' | 'calm' | 'manual' = 'normal';
+  private serverTime: number = 0;
+  private earlyStop: boolean = false;
+  private paused: boolean = false;
+  private optimisticUntil: number = 0;
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -54,12 +55,19 @@ export class QuestionDisplayScreen extends HTMLElement {
     }
 
     this.render();
-    await this.loadGameState();
-    this.startPolling();
+    await this.loadInitialGameState();
+
+    // Subscribe to Yjs for real-time updates
+    this.disconnectYjs = connectToSession(sessionId, hostToken, (docState) => {
+      this.handleDocState(docState);
+    });
   }
 
   disconnectedCallback() {
-    this.stopPolling();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
     this.stopTimer();
     if (this.autoNavigateTimeout) {
       clearTimeout(this.autoNavigateTimeout);
@@ -68,7 +76,7 @@ export class QuestionDisplayScreen extends HTMLElement {
     cancelAllRequests();
   }
 
-  private async loadGameState() {
+  private async loadInitialGameState() {
     const { sessionId, hostToken } = state.getState();
     if (!sessionId || !hostToken) {
       router.navigate('/');
@@ -76,19 +84,17 @@ export class QuestionDisplayScreen extends HTMLElement {
     }
 
     try {
-      // Get session state from API (we'll use the player state endpoint for now)
+      // Fetch full session (with correctAnswerIds) — this is the one REST call we keep
       const session = await api.getSession(sessionId, hostToken);
       const players = await api.getPlayers(sessionId);
-      
-      // Store automatic pace and pacing mode from session
+
       this.pace = (session.pace as 'normal' | 'calm' | 'manual') || 'normal';
       this.automaticPace = this.pace === 'normal' ? (session.automaticPace ?? true) : false;
-      
-      // Build game state from session data
+
       const currentQ = session.currentQuestionIndex >= 0 && session.questions.length > 0
         ? session.questions[session.currentQuestionIndex]
         : null;
-      
+
       const newGameState: HostGameState = {
         status: session.status,
         currentQuestion: currentQ ? {
@@ -103,180 +109,156 @@ export class QuestionDisplayScreen extends HTMLElement {
         } : null,
         currentQuestionIndex: session.currentQuestionIndex,
         totalQuestions: session.questions.length,
-        timeRemaining: null, // Calculate from questionStartedAt
+        timeRemaining: null,
       };
-      
-      // Calculate time remaining
+
+      // Initial timer calculation
       if (newGameState.currentQuestion && session.questionStartedAt) {
         const isManualPace = this.pace === 'manual';
-        // Use computed timeLimit from API (null means manual pace — no timer)
         const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
-        this.serverTime = session.serverTime; // Store server time for synchronized timer
+        this.serverTime = session.serverTime;
 
         if (isManualPace) {
-          // Manual pace: no timer countdown — host always sees the "Show Leaderboard" button
           this.stopTimer();
           this.currentTimeLimit = 0;
           this.timeRemaining = 0;
           newGameState.timeRemaining = 0;
         } else {
-          this.currentTimeLimit = timeLimit; // Store actual time limit for progress bar
+          this.currentTimeLimit = timeLimit;
+          const serverPaused = !!session.timerPausedAt;
+          const effectiveNow = serverPaused ? Number(session.timerPausedAt) : this.serverTime;
+          const elapsed = Math.floor((effectiveNow - Number(session.questionStartedAt)) / 1000);
+          const serverRemaining = Math.max(0, timeLimit - elapsed);
 
-          if (!this.earlyStop) {
-            // Check if server says timer is paused
-            const serverPaused = !!session.timerPausedAt;
+          this.paused = serverPaused;
+          this.timeRemaining = serverRemaining;
+          newGameState.timeRemaining = serverRemaining;
 
-            // Calculate server-authoritative remaining time
-            // When paused, use timerPausedAt as the effective "now" — elapsed must freeze
-            const effectiveNow = serverPaused ? Number(session.timerPausedAt) : this.serverTime;
-            const elapsed = Math.floor((effectiveNow - Number(session.questionStartedAt)) / 1000);
-            const serverRemaining = Math.max(0, timeLimit - elapsed);
-
-            // Decide whether to reconcile from server or keep optimistic local value
-            const inOptimisticWindow = Date.now() < this.optimisticUntil;
-
-            if (!inOptimisticWindow) {
-              // Reconcile: server is authoritative
-              if (serverPaused && !this.paused) {
-                // Server says paused — sync
-                this.paused = true;
-                this.timeRemaining = serverRemaining;
-                this.stopTimer();
-              } else if (!serverPaused && this.paused) {
-                // Server says resumed — sync
-                this.paused = false;
-                this.timeRemaining = serverRemaining;
-                if (this.timeRemaining > 0) {
-                  this.startTimer();
-                }
-              } else if (serverPaused) {
-                // Both agree paused — update remaining from server
-                this.timeRemaining = serverRemaining;
-              } else {
-                // Both agree running — reconcile if drift > 2s
-                const drift = Math.abs(this.timeRemaining - serverRemaining);
-                if (drift > 2 || !this.timerInterval) {
-                  this.timeRemaining = serverRemaining;
-                  if (this.timeRemaining > 0 && !this.timerInterval) {
-                    this.startTimer();
-                  }
-                }
-              }
-            }
-
-            // Update progress bar limit if timer extended
-            if (this.timeRemaining > this.currentTimeLimit) {
-              this.currentTimeLimit = this.timeRemaining;
-            }
-            newGameState.timeRemaining = this.timeRemaining;
-
-            if (this.timeRemaining <= 0 && !this.paused) {
-              this.stopTimer();
-            }
-          } else {
-            // Early-stop mode: keep timeRemaining at 0 so answers stay revealed
-            newGameState.timeRemaining = 0;
+          if (serverRemaining > 0 && !serverPaused) {
+            this.startTimer();
           }
         }
       }
 
-      // Get player stats
-      const newPlayerCount = players.length;
-      // Count how many players have answered the current question
-      const newAnsweredCount = players.filter(p => p.hasAnswered).length;
-
-      // Check timer state
-      const isTimerActive = this.timeRemaining > 0;
-      const timerStateChanged = this.wasTimerActive !== isTimerActive;
-      
-      // Check if all players have answered (auto-advance feature)
-      const allPlayersAnswered = (session as any).allPlayersAnswered || false;
-      
-      // If all players answered OR timer just expired, and automatic pace is enabled, schedule navigation
-      if (this.automaticPace && !this.autoNavigateTimeout) {
-        if (allPlayersAnswered && isTimerActive) {
-          // All players answered before timer expired - show correct answers for 4 seconds
-          console.log('✅ All players answered - will show leaderboard in 4s');
-          // FIX: set earlyStop BEFORE the poll cycle's next render so that:
-          //  1. timeRemaining is forced to 0 → render() shows answer reveal
-          //  2. subsequent polls skip server-recalculation → timer never restarts
-          this.earlyStop = true;
-          this.timeRemaining = 0;
-          this.wasTimerActive = false; // Prevent false timerStateChanged in next poll
-          this.stopTimer();
-          this.render(); // Re-render now with isTimerActive=false → correct answers revealed
-          this.autoNavigateTimeout = window.setTimeout(() => {
-            console.log('🚀 Auto-navigating to leaderboard');
-            router.navigate('/leaderboard');
-          }, 4000);
-        } else if (timerStateChanged && !isTimerActive) {
-          // Timer just expired - show correct answers for 4 seconds then navigate
-          console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
-          this.autoNavigateTimeout = window.setTimeout(() => {
-            console.log('🚀 Auto-navigating to leaderboard');
-            router.navigate('/leaderboard');
-          }, 4000);
-        }
-      }
-
-      // Check what changed
-      const structuralChange = 
-        !this.currentGameState ||
-        this.currentGameState.status !== newGameState.status ||
-        this.currentGameState.currentQuestionIndex !== newGameState.currentQuestionIndex ||
-        timerStateChanged; // Timer expiring/starting is a structural change
-
-      const statsChanged = 
-        this.playerCount !== newPlayerCount ||
-        this.answeredCount !== newAnsweredCount;
-
-      if (structuralChange) {
-        // Full re-render needed for structural changes
-        this.currentGameState = newGameState;
-        this.playerCount = newPlayerCount;
-        this.answeredCount = newAnsweredCount;
-        this.wasTimerActive = isTimerActive;
-        this.render();
-      } else if (statsChanged) {
-        // Only update player stats without full re-render
-        this.playerCount = newPlayerCount;
-        this.answeredCount = newAnsweredCount;
-        this.updatePlayerStats();
-      }
+      this.playerCount = players.length;
+      this.answeredCount = players.filter(p => p.hasAnswered).length;
+      this.currentGameState = newGameState;
+      this.wasTimerActive = this.timeRemaining > 0;
+      this.render();
     } catch (error) {
       console.error('Failed to load game state:', error);
       this.renderError('Failed to load question. Please try again.');
     }
   }
 
-  private startPolling() {
-    this.pollInterval = window.setInterval(async () => {
-      await this.loadGameState();
-    }, 2000); // Poll every 2 seconds
-  }
+  private handleDocState(docState: SessionDocState) {
+    if (!this.currentGameState) return;
 
-  private stopPolling() {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
+    const inOptimisticWindow = Date.now() < this.optimisticUntil;
+
+    // Update player counts from doc
+    const newPlayerCount = (docState.players ?? []).length;
+    const newAnsweredCount = docState.answeredCount ?? this.answeredCount;
+
+    // Update timer state from server (unless in optimistic window)
+    if (!inOptimisticWindow && !this.earlyStop && this.pace !== 'manual') {
+      const serverPaused = docState.timerPaused ?? false;
+      const timerPausedAt = docState.timerPausedAt ?? null;
+      const serverTime = docState.serverTime ?? this.serverTime;
+      const questionStartedAt = docState.questionStartedAt ?? null;
+      const timeLimit = docState.timeLimit ?? this.currentTimeLimit;
+
+      this.serverTime = serverTime;
+      this.currentTimeLimit = timeLimit;
+
+      if (questionStartedAt !== null) {
+        const effectiveNow = serverPaused && timerPausedAt ? timerPausedAt : serverTime;
+        const elapsed = Math.floor((effectiveNow - questionStartedAt) / 1000);
+        const serverRemaining = Math.max(0, timeLimit - elapsed);
+
+        if (serverPaused && !this.paused) {
+          this.paused = true;
+          this.timeRemaining = serverRemaining;
+          this.stopTimer();
+        } else if (!serverPaused && this.paused) {
+          this.paused = false;
+          this.timeRemaining = serverRemaining;
+          if (this.timeRemaining > 0) this.startTimer();
+        } else if (serverPaused) {
+          this.timeRemaining = serverRemaining;
+        } else {
+          const drift = Math.abs(this.timeRemaining - serverRemaining);
+          if (drift > 2 || !this.timerInterval) {
+            this.timeRemaining = serverRemaining;
+            if (this.timeRemaining > 0 && !this.timerInterval) this.startTimer();
+          }
+        }
+      }
+    }
+
+    const isTimerActive = this.timeRemaining > 0;
+    const timerStateChanged = this.wasTimerActive !== isTimerActive;
+    const allPlayersAnswered = docState.allPlayersAnswered ?? false;
+
+    // Auto-navigate logic
+    if (this.automaticPace && !this.autoNavigateTimeout) {
+      if (allPlayersAnswered && isTimerActive) {
+        console.log('✅ All players answered - will show leaderboard in 4s');
+        this.earlyStop = true;
+        this.timeRemaining = 0;
+        this.wasTimerActive = false;
+        this.stopTimer();
+        this.render();
+        this.autoNavigateTimeout = window.setTimeout(() => {
+          console.log('🚀 Auto-navigating to leaderboard');
+          router.navigate('/leaderboard');
+        }, 4000);
+        return;
+      } else if (timerStateChanged && !isTimerActive) {
+        console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
+        this.autoNavigateTimeout = window.setTimeout(() => {
+          console.log('🚀 Auto-navigating to leaderboard');
+          router.navigate('/leaderboard');
+        }, 4000);
+      }
+    }
+
+    const statsChanged =
+      this.playerCount !== newPlayerCount ||
+      this.answeredCount !== newAnsweredCount;
+
+    const structuralChange =
+      !this.currentGameState ||
+      timerStateChanged;
+
+    this.wasTimerActive = isTimerActive;
+    this.playerCount = newPlayerCount;
+    this.answeredCount = newAnsweredCount;
+
+    if (this.currentGameState) {
+      this.currentGameState.timeRemaining = this.earlyStop ? 0 : this.timeRemaining;
+    }
+
+    if (structuralChange) {
+      this.render();
+    } else if (statsChanged) {
+      this.updatePlayerStats();
     }
   }
 
   private startTimer() {
-    this.stopTimer(); // Clear any existing timer
-    this.wasTimerActive = true; // Mark timer as active
-    
+    this.stopTimer();
+    this.wasTimerActive = true;
+
     this.timerInterval = window.setInterval(() => {
       if (this.timeRemaining > 0) {
         this.timeRemaining -= 1;
         this.updateTimerDisplay();
       } else {
         this.stopTimer();
-        this.wasTimerActive = false; // Mark timer as expired
-        // Timer expired - render to show correct answers with Continue button
+        this.wasTimerActive = false;
         this.render();
-        
-        // If automatic pace is enabled, schedule navigation to leaderboard
+
         if (this.automaticPace && !this.autoNavigateTimeout) {
           console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
           this.autoNavigateTimeout = window.setTimeout(() => {
@@ -299,14 +281,11 @@ export class QuestionDisplayScreen extends HTMLElement {
     const timerEl = this.querySelector('.timer-value');
     if (timerEl) {
       timerEl.textContent = this.formatTime(this.timeRemaining);
-      
-      // Add warning class when time is low
       if (this.timeRemaining <= 5) {
         timerEl.classList.add('warning');
       }
     }
 
-    // Update progress bar
     const progressEl = this.querySelector('.timer-progress') as HTMLElement;
     if (progressEl) {
       const percentage = (this.timeRemaining / this.currentTimeLimit) * 100;
@@ -319,7 +298,6 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private updatePlayerStats() {
-    // Update only the answered count display without full re-render
     const answeredCountEl = this.querySelector('.answered-count');
     if (answeredCountEl) {
       answeredCountEl.textContent = `${this.answeredCount}/${this.playerCount}`;
@@ -327,14 +305,11 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private async handleNextQuestion() {
-    // Navigate to leaderboard instead of directly advancing
-    // Leaderboard will handle the actual next question API call
     router.navigate('/leaderboard');
   }
 
   private handleAddTime() {
     if (this.pace === 'manual') return;
-    // Optimistic local update + skip server reconciliation for 3s
     this.optimisticUntil = Date.now() + 3000;
     this.timeRemaining += 5;
     if (this.timeRemaining > this.currentTimeLimit) {
@@ -350,7 +325,6 @@ export class QuestionDisplayScreen extends HTMLElement {
     } else {
       this.updateTimerDisplay();
     }
-    // Propagate to server
     const { sessionId, hostToken } = state.getState();
     if (sessionId && hostToken) {
       api.adjustTimer(sessionId, hostToken, 'add', 5).catch(() => {});
@@ -369,7 +343,6 @@ export class QuestionDisplayScreen extends HTMLElement {
     } else {
       this.updateTimerDisplay();
     }
-    // Propagate to server
     const { sessionId, hostToken } = state.getState();
     if (sessionId && hostToken) {
       api.adjustTimer(sessionId, hostToken, 'remove', 5).catch(() => {});
@@ -398,7 +371,6 @@ export class QuestionDisplayScreen extends HTMLElement {
         router.navigate('/leaderboard');
       }, 4000);
     }
-    // Propagate to server
     const { sessionId, hostToken } = state.getState();
     if (sessionId && hostToken) {
       api.adjustTimer(sessionId, hostToken, 'end').catch(() => {});
@@ -409,7 +381,6 @@ export class QuestionDisplayScreen extends HTMLElement {
     if (this.pace === 'manual') return;
     this.optimisticUntil = Date.now() + 3000;
     if (this.paused) {
-      // Resume
       this.paused = false;
       if (this.timeRemaining > 0) {
         this.wasTimerActive = true;
@@ -421,7 +392,6 @@ export class QuestionDisplayScreen extends HTMLElement {
         api.adjustTimer(sessionId, hostToken, 'resume').catch(() => {});
       }
     } else {
-      // Pause
       this.paused = true;
       this.stopTimer();
       this.render();
@@ -433,7 +403,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   }
 
   private getAnswerLabel(index: number): string {
-    return String.fromCharCode(65 + index); // A, B, C, D, ...
+    return String.fromCharCode(65 + index);
   }
 
   private renderError(message: string) {
@@ -563,7 +533,6 @@ export class QuestionDisplayScreen extends HTMLElement {
       </div>
     `;
 
-    // Use morphdom for in-place patching if DOM already exists
     if (this.firstElementChild && this.querySelector('.question-display-screen')) {
       const template = document.createElement('div');
       template.innerHTML = html;
@@ -574,7 +543,6 @@ export class QuestionDisplayScreen extends HTMLElement {
       this.innerHTML = html;
     }
 
-    // Add event listeners
     const nextButton = this.querySelector('#next-button');
     if (nextButton) {
       nextButton.addEventListener('click', () => this.handleNextQuestion());
@@ -586,7 +554,6 @@ export class QuestionDisplayScreen extends HTMLElement {
     this.querySelector('#pause-button')?.addEventListener('click', () => this.handlePause());
     this.querySelector('#end-timer-button')?.addEventListener('click', () => this.handleEndTimer());
 
-    // Add inline styles for component-specific styling
     this.addStyles();
   }
 

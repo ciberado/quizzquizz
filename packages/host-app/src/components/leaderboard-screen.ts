@@ -6,8 +6,9 @@
 
 import { router } from '../router';
 import { state } from '../state';
-import { api, cancelAllRequests } from '../api-client';
+import { api } from '../api-client';
 import morphdom from 'morphdom';
+import { connectToSession, type SessionDocState } from '../yjs-provider';
 
 interface LeaderboardEntry {
   rank: number;
@@ -17,14 +18,15 @@ interface LeaderboardEntry {
 }
 
 export class LeaderboardScreen extends HTMLElement {
-  private pollInterval: number | null = null;
+  private disconnectYjs: (() => void) | null = null;
   private leaderboard: LeaderboardEntry[] = [];
   private sessionStatus: 'lobby' | 'playing' | 'finished' = 'playing';
   private currentQuestionIndex: number = 0;
   private totalQuestions: number = 0;
-  private automaticPace: boolean = false; // Auto-advance enabled
+  private automaticPace: boolean = false;
   private autoNavigateTimeout: number | null = null;
-  private isNavigating: boolean = false; // Prevent concurrent API calls
+  private isNavigating: boolean = false;
+  private initialized: boolean = false;
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -36,95 +38,95 @@ export class LeaderboardScreen extends HTMLElement {
     }
 
     this.render();
-    await this.loadLeaderboard();
-    this.startPolling();
+
+    // Load initial data from REST (for totalQuestions and initial state)
+    await this.loadInitialData();
+
+    // Subscribe to Yjs doc for real-time updates
+    this.disconnectYjs = connectToSession(sessionId, hostToken, (docState) => {
+      this.handleDocState(docState);
+    });
   }
 
   disconnectedCallback() {
-    this.stopPolling();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
     if (this.autoNavigateTimeout) {
       clearTimeout(this.autoNavigateTimeout);
       this.autoNavigateTimeout = null;
     }
-    cancelAllRequests();
   }
 
-  private async loadLeaderboard() {
+  private async loadInitialData() {
     const { sessionId, hostToken } = state.getState();
-    if (!sessionId || !hostToken) {
-      router.navigate('/');
-      return;
-    }
+    if (!sessionId || !hostToken) return;
 
     try {
-      // Get session status
       const session = await api.getSession(sessionId, hostToken);
-      const newSessionStatus = session.status;
-      const newCurrentQuestionIndex = session.currentQuestionIndex;
-      const newTotalQuestions = session.questions.length;
-      const newAutomaticPace = session.pace === 'normal' ? true : (session.automaticPace || false);
+      this.totalQuestions = session.questions.length;
+      this.currentQuestionIndex = session.currentQuestionIndex;
+      this.sessionStatus = session.status;
+      this.automaticPace = session.pace === 'normal' ? true : (session.automaticPace || false);
 
-      // Get leaderboard data
       const data = await api.getLeaderboard(sessionId);
-      const newLeaderboard = data.leaderboard || [];
-      
-      // Check if anything changed
-      const leaderboardChanged = 
-        this.sessionStatus !== newSessionStatus ||
-        this.currentQuestionIndex !== newCurrentQuestionIndex ||
-        this.totalQuestions !== newTotalQuestions ||
-        this.automaticPace !== newAutomaticPace ||
-        this.leaderboard.length !== newLeaderboard.length ||
-        JSON.stringify(this.leaderboard.map(e => ({ rank: e.rank, score: e.score }))) !== 
-        JSON.stringify(newLeaderboard.map(e => ({ rank: e.rank, score: e.score })));
+      this.leaderboard = data.leaderboard || [];
+      this.initialized = true;
+      this.render();
 
-      // Only update and re-render if something changed
-      if (leaderboardChanged) {
-        const wasFirstLoad = this.leaderboard.length === 0;
-        
-        this.sessionStatus = newSessionStatus;
-        this.currentQuestionIndex = newCurrentQuestionIndex;
-        this.totalQuestions = newTotalQuestions;
-        this.automaticPace = newAutomaticPace;
-        this.leaderboard = newLeaderboard;
-        this.render();
-        
-        // If automatic pace is enabled and this is the first load, schedule auto-advance.
-        // Guard with !this.autoNavigateTimeout to prevent double-scheduling when
-        // leaderboardChanged fires multiple times (e.g. late scores, empty leaderboard race).
-        if (wasFirstLoad && this.automaticPace && this.sessionStatus === 'playing' && !this.autoNavigateTimeout) {
-          const hasMoreQuestions = this.currentQuestionIndex < this.totalQuestions - 1;
-          if (hasMoreQuestions) {
-            console.log('⏱️ Automatic pace enabled - will advance to next question in 4s');
-            this.autoNavigateTimeout = window.setTimeout(() => {
-              console.log('🚀 Auto-advancing to next question');
-              this.handleNextQuestion();
-            }, 4000); // 4 seconds
-          } else {
-            console.log('⏱️ Automatic pace enabled - will show final results in 4s');
-            this.autoNavigateTimeout = window.setTimeout(() => {
-              console.log('🚀 Auto-navigating to final results');
-              this.handleViewFinalResults();
-            }, 4000); // 4 seconds
-          }
-        }
-      }
+      this.scheduleAutoNavigateIfNeeded(true);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
       this.showError();
     }
   }
 
-  private startPolling() {
-    this.pollInterval = window.setInterval(() => {
-      this.loadLeaderboard();
-    }, 2000);
+  private handleDocState(docState: SessionDocState) {
+    if (!this.initialized) return;
+
+    const newLeaderboard = (docState.leaderboard ?? []) as LeaderboardEntry[];
+    const newStatus = (docState.status ?? this.sessionStatus) as 'lobby' | 'playing' | 'finished';
+    const newQIndex = docState.currentQuestionIndex ?? this.currentQuestionIndex;
+    const newTotal = docState.totalQuestions ?? this.totalQuestions;
+    const newAutoPace = docState.automaticPace ?? this.automaticPace;
+
+    const leaderboardChanged =
+      this.sessionStatus !== newStatus ||
+      this.currentQuestionIndex !== newQIndex ||
+      this.totalQuestions !== newTotal ||
+      this.automaticPace !== newAutoPace ||
+      this.leaderboard.length !== newLeaderboard.length ||
+      JSON.stringify(this.leaderboard.map(e => ({ rank: e.rank, score: e.score }))) !==
+      JSON.stringify(newLeaderboard.map(e => ({ rank: e.rank, score: e.score })));
+
+    if (leaderboardChanged) {
+      this.sessionStatus = newStatus;
+      this.currentQuestionIndex = newQIndex;
+      this.totalQuestions = newTotal;
+      this.automaticPace = newAutoPace;
+      this.leaderboard = newLeaderboard;
+      this.render();
+      this.scheduleAutoNavigateIfNeeded(false);
+    }
   }
 
-  private stopPolling() {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
+  private scheduleAutoNavigateIfNeeded(isFirstLoad: boolean) {
+    if (isFirstLoad && this.automaticPace && this.sessionStatus === 'playing' && !this.autoNavigateTimeout) {
+      const hasMoreQuestions = this.currentQuestionIndex < this.totalQuestions - 1;
+      if (hasMoreQuestions) {
+        console.log('⏱️ Automatic pace enabled - will advance to next question in 4s');
+        this.autoNavigateTimeout = window.setTimeout(() => {
+          console.log('🚀 Auto-advancing to next question');
+          this.handleNextQuestion();
+        }, 4000);
+      } else {
+        console.log('⏱️ Automatic pace enabled - will show final results in 4s');
+        this.autoNavigateTimeout = window.setTimeout(() => {
+          console.log('🚀 Auto-navigating to final results');
+          this.handleViewFinalResults();
+        }, 4000);
+      }
     }
   }
 
@@ -136,7 +138,6 @@ export class LeaderboardScreen extends HTMLElement {
   }
 
   private async handleNextQuestion() {
-    // Prevent concurrent calls
     if (this.isNavigating) {
       console.log('⚠️ Already navigating, skipping duplicate call');
       return;
@@ -151,12 +152,11 @@ export class LeaderboardScreen extends HTMLElement {
       router.navigate('/question');
     } catch (error) {
       console.error('Error advancing to next question:', error);
-      this.isNavigating = false; // Reset on error
+      this.isNavigating = false;
     }
   }
 
   private async handleViewFinalResults() {
-    // Prevent concurrent calls
     if (this.isNavigating) {
       console.log('⚠️ Already navigating, skipping duplicate call');
       return;
@@ -167,15 +167,12 @@ export class LeaderboardScreen extends HTMLElement {
 
     this.isNavigating = true;
     try {
-      // Call next to mark session as finished (when at last question)
       await api.nextQuestion(sessionId, hostToken);
       router.navigate('/results');
     } catch (error) {
       console.error('Error finalizing quiz:', error);
-      // Navigate anyway - might already be finished
       router.navigate('/results');
     }
-    // Note: Don't reset isNavigating after success - component will unmount
   }
 
   private async handleEndQuiz() {
@@ -183,7 +180,6 @@ export class LeaderboardScreen extends HTMLElement {
       return;
     }
 
-    // Prevent concurrent calls
     if (this.isNavigating) {
       console.log('⚠️ Already navigating, skipping duplicate call');
       return;
@@ -198,7 +194,7 @@ export class LeaderboardScreen extends HTMLElement {
       router.navigate('/results');
     } catch (error) {
       console.error('Error ending quiz:', error);
-      this.isNavigating = false; // Reset on error
+      this.isNavigating = false;
     }
   }
 
@@ -261,7 +257,6 @@ export class LeaderboardScreen extends HTMLElement {
       </div>
     `;
 
-    // Use morphdom for in-place patching if DOM already exists
     if (this.firstElementChild) {
       const template = document.createElement('div');
       template.innerHTML = html;
@@ -272,15 +267,12 @@ export class LeaderboardScreen extends HTMLElement {
       this.innerHTML = html;
     }
 
-    // Add event listeners
     this.querySelector('[data-action="next"]')?.addEventListener('click', () => {
       this.handleNextQuestion();
     });
-
     this.querySelector('[data-action="final"]')?.addEventListener('click', () => {
       this.handleViewFinalResults();
     });
-
     this.querySelector('[data-action="end"]')?.addEventListener('click', () => {
       this.handleEndQuiz();
     });

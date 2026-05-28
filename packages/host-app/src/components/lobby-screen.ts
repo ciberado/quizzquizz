@@ -3,18 +3,18 @@ import { api, ApiError, cancelAllRequests } from '../api-client';
 import { router } from '../router';
 import { state } from '../state';
 import type { Player } from '@quizzquizz/common';
+import { connectToSession } from '../yjs-provider';
 
 /**
  * Lobby screen - Display PIN and show joining players
  * Optimized for projector display with large text
  */
 export class LobbyScreen extends BaseComponent {
-  private pollingInterval: number | null = null;
+  private disconnectYjs: (() => void) | null = null;
   private sessionId = '';
   private hostToken = '';
   private pin = '';
   private players: Player[] = [];
-  private previousPlayerCount = 0;
 
   protected onMount(): void {
     // Get session info from state
@@ -41,7 +41,7 @@ export class LobbyScreen extends BaseComponent {
     // Re-render with loaded state
     this.render();
 
-    // Delegated event handling — registered once so polling patchRender() calls
+    // Delegated event handling — registered once so Yjs patch renders
     // don't stack duplicate listeners on the same morphdom-reused nodes.
     this.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -55,12 +55,25 @@ export class LobbyScreen extends BaseComponent {
       if (btn.id === 'cancel-button') { this.handleCancel(); return; }
     });
 
-    // Start polling for players
-    this.startPolling();
+    // Connect to Yjs to receive real-time player join updates
+    this.disconnectYjs = connectToSession(this.sessionId, this.hostToken, (docState) => {
+      if (docState.players !== undefined) {
+        const newPlayers = (docState.players as Player[]);
+        const currentIds = this.players.map(p => p.id).sort().join(',');
+        const newIds = newPlayers.map(p => p.id).sort().join(',');
+        if (currentIds !== newIds) {
+          this.players = newPlayers;
+          this.patchRender();
+        }
+      }
+    });
   }
 
   protected onUnmount(): void {
-    this.stopPolling();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
     cancelAllRequests();
   }
 
@@ -461,63 +474,6 @@ export class LobbyScreen extends BaseComponent {
     }
   }
 
-  private startPolling(): void {
-    // Poll immediately
-    this.pollPlayers();
-
-    // Then poll every 2 seconds
-    this.pollingInterval = window.setInterval(() => {
-      this.pollPlayers();
-    }, 2000);
-  }
-
-  private stopPolling(): void {
-    if (this.pollingInterval !== null) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
-  }
-
-  private async pollPlayers(): Promise<void> {
-    try {
-      const players = await api.getPlayers(this.sessionId);
-      
-      // Check if player count changed
-      const newPlayerCount = players.length;
-      const playerCountChanged = newPlayerCount !== this.previousPlayerCount;
-      
-      // Check if any player IDs changed (someone left/joined)
-      const currentPlayerIds = this.players.map(p => p.id).sort().join(',');
-      const newPlayerIds = players.map(p => p.id).sort().join(',');
-      const playerListChanged = currentPlayerIds !== newPlayerIds;
-      
-      // Only update and re-render if something actually changed
-      if (playerCountChanged || playerListChanged) {
-        this.players = players;
-        this.previousPlayerCount = newPlayerCount;
-        this.patchRender();
-
-        // Log new players joining
-        if (playerCountChanged && newPlayerCount > this.previousPlayerCount) {
-          console.log(`✨ New player(s) joined! Total: ${newPlayerCount}`);
-        }
-      }
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.status === 404) {
-          // Session deleted
-          console.error('Session not found - was it deleted?');
-          this.stopPolling();
-          state.clearState();
-          router.navigate('/create');
-        } else {
-          console.error('Polling error:', error);
-        }
-      } else {
-        console.error('Network error polling players:', error);
-      }
-    }
-  }
 
   private async handleStart(): Promise<void> {
     if (this.players.length === 0) {
@@ -525,7 +481,10 @@ export class LobbyScreen extends BaseComponent {
     }
 
     this.showLoading('Starting quiz...');
-    this.stopPolling();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
 
     try {
       await api.startQuiz(this.sessionId, this.hostToken);
@@ -537,7 +496,13 @@ export class LobbyScreen extends BaseComponent {
     } catch (error) {
       console.error('Failed to start quiz:', error);
       this.showError('Failed to start quiz. Please try again.');
-      this.startPolling(); // Resume polling on error
+      // Reconnect Yjs on error
+      this.disconnectYjs = connectToSession(this.sessionId, this.hostToken, (docState) => {
+        if (docState.players !== undefined) {
+          this.players = docState.players as Player[];
+          this.patchRender();
+        }
+      });
     }
   }
 
@@ -554,7 +519,10 @@ export class LobbyScreen extends BaseComponent {
     }
 
     this.showLoading('Cancelling session...');
-    this.stopPolling();
+    if (this.disconnectYjs) {
+      this.disconnectYjs();
+      this.disconnectYjs = null;
+    }
 
     try {
       await api.deleteSession(this.sessionId, this.hostToken);
@@ -573,8 +541,13 @@ export class LobbyScreen extends BaseComponent {
         this.showError('Could not cancel session. Please try again.');
       }
 
-      // Restart polling
-      this.startPolling();
+      // Reconnect on error
+      this.disconnectYjs = connectToSession(this.sessionId, this.hostToken, (docState) => {
+        if (docState.players !== undefined) {
+          this.players = docState.players as Player[];
+          this.patchRender();
+        }
+      });
     }
   }
 
