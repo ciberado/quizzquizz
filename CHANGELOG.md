@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-05-28
+
+### Added
+- **[api-server]** Server-side flashcard progress tracking: new `FlashcardProgress` Prisma model persists per-player, per-card state (box, yes/no counts, graduated flag, first-try success). Includes Prisma migration `20260528160755_add_flashcard_progress`.
+- **[api-server]** `POST /api/sessions/:id/flashcard-answer` — records a card answer (upsert), recomputes player aggregate stats, and pushes a `flashcardProgress` update to the Yjs doc for real-time visibility.
+- **[api-server]** `GET /api/sessions/:id/flashcard-progress?playerId=` — returns all saved card states for a player, enabling session resume.
+- **[api-server]** `FlashcardPlayerProgress` interface added to `SessionDocState` so the Yjs doc carries live per-player progress aggregates.
+- **[flashcard-app]** `LeitnerEngine.restoreCardState()` — restores individual card state from server-saved data so interrupted sessions can resume from where the player left off.
+- **[flashcard-app]** Play screen now loads server progress on session start and resumes the engine state; every Yes/No answer fires a non-blocking `api.recordAnswer()` call to persist progress to the server.
+- **[e2e]** `e2e/flashcard-progress.spec.ts` — 10 new E2E tests covering API progress tracking, two-player isolation, upsert behaviour, session resume, offline resilience (player can study while server is unreachable), and concurrent multi-user scenarios.
+
+### Fixed
+- **[flashcard-app]** Summary screen horizontal overflow on mobile viewports: replaced inline `display: grid` styles with CSS classes (`fc-summary-stats`, `fc-summary-actions`, `fc-summary-table-scroll`) and injected responsive styles that collapse download buttons to a single column on screens ≤ 480 px and stat cards on screens ≤ 360 px.
+
 ## [0.13.0] — 2026-05-28
 
 ### Added
