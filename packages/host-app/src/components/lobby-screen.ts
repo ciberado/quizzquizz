@@ -57,6 +57,13 @@ export class LobbyScreen extends BaseComponent {
 
     // Connect to Yjs to receive real-time player join updates
     this.disconnectYjs = connectToSession(this.sessionId, this.hostToken, (docState) => {
+      // If the game already started (e.g. host refreshed mid-game), navigate immediately
+      if (docState.status === 'playing') {
+        console.log('[HOST][Lobby] status=playing detected via Yjs → navigating to /question');
+        if (this.disconnectYjs) { this.disconnectYjs(); this.disconnectYjs = null; }
+        router.navigate(`/question/${this.sessionId}`);
+        return;
+      }
       if (docState.players !== undefined) {
         const newPlayers = (docState.players as Player[]);
         const currentIds = this.players.map(p => p.id).sort().join(',');
