@@ -61,6 +61,12 @@ export class QuestionScreen extends BaseComponent {
     const elapsed = this.serverTime - (this.questionStartedAt || 0);
     this.timeRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
     
+    this.resumeTimerInterval();
+  }
+
+  /** Start the countdown interval without recalculating timeRemaining (used for resume). */
+  private resumeTimerInterval(): void {
+    this.stopTimer();
     this.timerInterval = window.setInterval(() => {
       this.timeRemaining -= 1;
       
@@ -145,12 +151,48 @@ export class QuestionScreen extends BaseComponent {
           if (!this.hasRenderedQuestion) {
             this.hasRenderedQuestion = true;
             this.render();
-            this.startTimer();
+            if (!gameState.timerPaused) {
+              this.startTimer();
+            }
           }
         } else if (gameState.currentQuestion.id !== this.currentQuestion.id) {
           // Question changed - navigate to waiting screen (host will advance)
           // The host shows results between questions
           router.navigate(`/waiting`);
+        } else {
+          // Same question — sync timer state from server
+          const newTimeLimit = gameState.timeLimit || 20;
+          const timerPaused = gameState.timerPaused ?? false;
+          const timerPausedAt = (gameState as { timerPausedAt?: number | null }).timerPausedAt ?? null;
+          this.serverTime = gameState.serverTime;
+          this.questionStartedAt = gameState.questionStartedAt;
+
+          if (newTimeLimit !== this.timeLimit) {
+            // Time limit changed (host used +5/-5 or end) — recalculate
+            this.timeLimit = newTimeLimit;
+            // When paused, freeze elapsed at the moment of pause
+            const effectiveNow = timerPaused && timerPausedAt ? timerPausedAt : this.serverTime;
+            const elapsed = effectiveNow - (this.questionStartedAt || 0);
+            const serverRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
+            // Only hard-reset if drift > 2s to avoid visual jitter
+            if (Math.abs(this.timeRemaining - serverRemaining) > 2) {
+              this.timeRemaining = serverRemaining;
+              this.updateTimerDisplay();
+            }
+            if (this.timeRemaining <= 0 && !this.hasSubmitted) {
+              this.stopTimer();
+              this.submitAnswer();
+            }
+          }
+
+          // Handle pause/resume from host
+          if (timerPaused && this.timerInterval !== null) {
+            this.stopTimer();
+            this.updateTimerDisplay();
+          } else if (!timerPaused && this.timerInterval === null && this.timeRemaining > 0 && !this.hasSubmitted) {
+            // Resume: restart interval at current timeRemaining without recalculating
+            this.resumeTimerInterval();
+          }
         }
       }
     } catch (error) {
