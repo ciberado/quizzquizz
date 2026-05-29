@@ -85,12 +85,11 @@ describe('updateSetBoxCounts', () => {
     });
   });
 
-  it('does nothing when no progress exists for bankId', () => {
-    // Should not throw
-    expect(() =>
-      updateSetBoxCounts('bank-missing', 0, { box1: 1, box2: 0, box3: 0, graduated: 0, total: 1 })
-    ).not.toThrow();
-    expect(loadProgress('bank-missing')).toBeNull();
+  it('creates a stub progress entry when no prior progress exists (dev-mode cross-origin scenario)', () => {
+    updateSetBoxCounts('bank-missing', 0, { box1: 1, box2: 0, box3: 0, graduated: 0, total: 1 });
+    const saved = loadProgress('bank-missing');
+    expect(saved).not.toBeNull();
+    expect(saved!.sets[0]!.boxCounts).toEqual({ box1: 1, box2: 0, box3: 0, graduated: 0, total: 1 });
   });
 
   it('does nothing for out-of-range setIndex', () => {

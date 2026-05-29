@@ -77,10 +77,18 @@ export function markSetCompleted(bankId: string, setIndex: number): void {
   saveProgress(bankId, existing);
 }
 
-/** Update the box distribution for a set after each card answer. */
+/** Update the box distribution for a set after each card answer.
+ * Creates a minimal stub entry when no progress exists yet (e.g. dev-mode
+ * cross-origin, where the host-app saved the entry on a different port). */
 export function updateSetBoxCounts(bankId: string, setIndex: number, counts: BoxCounts): void {
-  const existing = loadProgress(bankId);
-  if (!existing || setIndex < 0 || setIndex >= existing.sets.length) return;
+  let existing = loadProgress(bankId);
+  if (!existing) {
+    existing = {
+      setSize: DEFAULT_SET_SIZE,
+      sets: Array.from({ length: setIndex + 1 }, () => ({ ids: [], completedAt: null })),
+    };
+  }
+  if (setIndex < 0 || setIndex >= existing.sets.length) return;
   existing.sets[setIndex]!.boxCounts = counts;
   saveProgress(bankId, existing);
 }
