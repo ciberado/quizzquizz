@@ -59,6 +59,16 @@ playerRoutes.post('/join', zValidator('json', JoinSessionSchema), async (c) => {
     });
 
     if (existingPlayer) {
+      // For flashcard sessions, re-joining with the same nickname resumes the player's
+      // previous session. Return the existing playerId so the client can restore progress.
+      if (session.mode === 'flashcard') {
+        return c.json({
+          playerId: existingPlayer.id,
+          sessionId: session.id,
+          nickname: existingPlayer.nickname,
+          mode: session.mode,
+        });
+      }
       return c.json({ error: 'Nickname already taken' }, 400);
     }
 

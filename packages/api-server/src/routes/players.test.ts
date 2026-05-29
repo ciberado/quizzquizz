@@ -104,6 +104,36 @@ describe('Player Routes', () => {
       expect(res.status).toBe(400);
     });
 
+    it('should return the same playerId when a flashcard player re-joins with the same nickname', async () => {
+      const sessionRes = await request('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionBankId: 'test-bank', mode: 'flashcard' }),
+      });
+      const session: any = await sessionRes.json();
+
+      const firstJoin = await request('/api/sessions/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: session.pin, nickname: 'Alice' }),
+      });
+      const firstData: any = await firstJoin.json();
+      expect(firstJoin.status).toBe(201);
+
+      // Re-join with same nickname — must get back the same playerId for progress resume
+      const secondJoin = await request('/api/sessions/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: session.pin, nickname: 'Alice' }),
+      });
+      const secondData: any = await secondJoin.json();
+      expect(secondJoin.status).toBe(200);
+      expect(secondData.playerId).toBe(firstData.playerId);
+      expect(secondData.sessionId).toBe(session.id);
+      expect(secondData.nickname).toBe('Alice');
+      expect(secondData.mode).toBe('flashcard');
+    });
+
     it('should allow same nickname in different sessions', async () => {
       const session1 = await createSession();
       const session2 = await createSession();
