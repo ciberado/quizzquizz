@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.15.2] — 2026-05-29
+
+### Added
+- **[api-server]** Flashcard players can re-join a session with the same nickname and receive their original `playerId`, enabling seamless progress resume after a page refresh or reconnection.
+
+### Fixed
+- **[flashcard-app]** `updateSetBoxCounts` now creates a minimal stub `BankProgress` entry when none exists (e.g., dev-mode cross-origin scenario where host-app and flashcard-app run on different ports). Box counts are now persisted to localStorage on every card answer, not only when the set is fully completed.
+- **[host-app]** Set picker badge for in-progress sets now shows the first (lowest) Leitner box that still has active cards — e.g., "📦 Learning · 3/10 ✅", "🔄 Reviewing · 7/10 ✅" — instead of the generic "In progress" label.
+
 ## [0.15.1] — 2026-05-29
 
 ### Added
