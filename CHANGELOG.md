@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-05-29
+
+### Added
+- **[flashcard-app]** `updateSetBoxCounts()` in `flashcard-sets.ts`: persists the Leitner box distribution (box1/box2/box3/graduated/total) for a set to localStorage after every card answer, so the host-app's set picker can display live in-progress state.
+- **[flashcard-app]** `DEFAULT_SET_SIZE` constant and `BoxCounts` interface exported from `flashcard-sets.ts` for consistency with the host-app.
+
+### Fixed
+- **[flashcard-app]** Study sets now correctly transition from "Not started" to "Done" after completing a flashcard session, even in development (where host-app and flashcard-app run on different ports with isolated `localStorage`). The flashcard lobby now encodes `bankId`, `setIndex`, and `returnUrl` as hash query params in the play URL; the play screen stores them in `sessionStorage`; the summary screen marks the set complete and appends `?done=1&bankId=…&setIndex=…` to the return URL so the host-app's lobby screen can mark it in its own `localStorage`. Production (same-origin) continues to work via the existing `localStorage` path as a fallback.
+- **[flashcard-app]** `markSetCompleted` no longer silently fails when no progress entry exists for the given bank ID; it now creates a minimal stub so completion is always recorded.
+- **[flashcard-app]** Box distribution (Learning / Reviewing / Mastering counts) in the play screen's progress bar now updates correctly after every card answer because `syncAnswer` calls `updateSetBoxCounts` with the engine's post-mark state.
+- **[host-app]** Set picker now shows an "In progress · X/Y done" badge and per-box breakdown for sets that have been started but not completed.
+- **[host-app]** `getOrBuildProgress` now preserves `boxCounts` when the set structure matches, preventing in-progress data from being lost when the set picker is reopened.
+- **[host-app]** `flashcard-lobby-screen` now handles `?done=1&bankId=…&setIndex=…` return params written by the flashcard-app summary screen, marking the set complete in the host-app's own `localStorage` (cross-origin dev-mode fix).
+
 ## [0.15.0] — 2026-05-29
 
 ### Changed
