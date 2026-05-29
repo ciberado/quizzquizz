@@ -6,6 +6,7 @@
 import { BaseComponent } from './base-component';
 import { state } from '../state';
 import { router } from '../router';
+import { getActiveSession, markSetCompleted, clearActiveSession } from '../flashcard-sets';
 
 // Injected by Vite at build time (see vite.config.ts define).
 // In dev: 'http://localhost:3004'; in production builds: ''.
@@ -21,12 +22,41 @@ export class FlashcardLobbyScreen extends BaseComponent {
     this.sessionId = match ? match[1]! : (state.getState().sessionId || '');
     this.pin = state.getState().pin || '';
 
+    // When returning from the flashcard app after completing a session, the summary
+    // screen appends ?done=1&bankId=...&setIndex=... to the return URL so that the
+    // host app can mark the set complete in its own localStorage (works cross-origin
+    // in dev mode where apps run on different ports).
+    this.handleReturnFromFlashcard(hash);
+
     if (!this.sessionId || !this.pin) {
       router.navigate('/create');
       return;
     }
 
     this.render();
+  }
+
+  private handleReturnFromFlashcard(hash: string): void {
+    if (!hash.includes('?')) return;
+    const queryPart = hash.split('?')[1] ?? '';
+    const params = new URLSearchParams(queryPart);
+    if (params.get('done') !== '1') return;
+
+    const bankId = params.get('bankId');
+    const setIndexStr = params.get('setIndex');
+    if (!bankId || setIndexStr === null) return;
+
+    const setIndex = parseInt(setIndexStr, 10);
+    if (isNaN(setIndex)) return;
+
+    markSetCompleted(bankId, setIndex);
+    clearActiveSession();
+
+    // Clean the completion params from the URL to avoid re-processing on refresh
+    const cleanHash = hash.split('?')[0]!;
+    if (window.history?.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + cleanHash);
+    }
   }
 
   protected render(): void {
@@ -284,9 +314,13 @@ export class FlashcardLobbyScreen extends BaseComponent {
     });
 
     this.qs('#play-now-btn')?.addEventListener('click', () => {
-      // Store current URL so the summary screen can navigate back here
-      try { localStorage.setItem('qz-flashcard-return-url', window.location.href); } catch { /* ignore */ }
-      window.location.href = this.getFlashcardPlayUrl();
+      const returnUrl = window.location.href;
+      const active = getActiveSession();
+
+      // Store return URL in localStorage too (same-origin production path still works)
+      try { localStorage.setItem('qz-flashcard-return-url', returnUrl); } catch { /* ignore */ }
+
+      window.location.href = this.buildFlashcardPlayUrl(active, returnUrl);
     });
 
     this.qs('#pin-display')?.addEventListener('click', async () => {
@@ -314,8 +348,23 @@ export class FlashcardLobbyScreen extends BaseComponent {
     return `${this.getFlashcardBaseUrl()}#/?pin=${this.pin}`;
   }
 
-  private getFlashcardPlayUrl(): string {
-    return `${this.getFlashcardBaseUrl()}#/play/${this.sessionId}`;
+  /**
+   * Build the full URL for the host to play flashcards immediately.
+   * bankId, setIndex, and returnUrl are embedded as hash query params so the
+   * flashcard app can read them even when it runs on a different origin (dev mode).
+   */
+  private buildFlashcardPlayUrl(
+    active: { bankId: string; setIndex: number } | null,
+    returnUrl: string,
+  ): string {
+    const base = `${this.getFlashcardBaseUrl()}#/play/${this.sessionId}`;
+    const parts: string[] = [];
+    if (active) {
+      parts.push(`bankId=${encodeURIComponent(active.bankId)}`);
+      parts.push(`setIndex=${active.setIndex}`);
+    }
+    parts.push(`returnUrl=${encodeURIComponent(returnUrl)}`);
+    return `${base}?${parts.join('&')}`;
   }
 }
 

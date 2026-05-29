@@ -17,6 +17,14 @@ export const DEFAULT_SET_SIZE = 10;
 export interface SetProgress {
   ids: string[];
   completedAt: string | null; // ISO date string when completed, null otherwise
+  /** Box distribution for this set — updated by the flashcard-app after each card answer */
+  boxCounts?: {
+    box1: number;
+    box2: number;
+    box3: number;
+    graduated: number;
+    total: number;
+  } | null;
 }
 
 export interface BankProgress {
@@ -81,6 +89,7 @@ export function getOrBuildProgress(
     sets: sets.map((ids, i) => ({
       ids,
       completedAt: sameShape ? (existing!.sets[i]?.completedAt ?? null) : null,
+      boxCounts: sameShape ? (existing!.sets[i]?.boxCounts ?? null) : null,
     })),
   };
 

@@ -675,10 +675,10 @@ export class QuestionPreviewScreen extends BaseComponent {
                 Launch Flashcards
               </button>
               <button 
-                class="btn" 
+                class="btn-primary" 
                 data-action="create"
                 ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
-                style="padding-left: var(--spacing-md); padding-right: var(--spacing-md);"
+                style="padding-left: var(--spacing-xl); padding-right: var(--spacing-xl); padding-top: var(--spacing-md); padding-bottom: var(--spacing-md); font-size: var(--font-size-xlarge); font-weight: 700;"
               >
                 Create Quiz (${selectedCount})
               </button>
@@ -821,6 +821,32 @@ export class QuestionPreviewScreen extends BaseComponent {
       const doneDate = isDone
         ? new Date(set.completedAt!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
         : null;
+      const bc = set.boxCounts;
+      const hasStarted = !isDone && bc != null;
+
+      let badgeBg: string;
+      let badgeColor: string;
+      let badgeText: string;
+
+      if (isDone) {
+        badgeBg = 'color-mix(in srgb, var(--color-success) 20%, transparent)';
+        badgeColor = 'var(--color-success)';
+        badgeText = `Done ${doneDate}`;
+      } else if (hasStarted && bc) {
+        badgeBg = 'color-mix(in srgb, var(--color-primary) 15%, transparent)';
+        badgeColor = 'var(--color-primary)';
+        badgeText = `In progress · ${bc.graduated}/${bc.total} done`;
+      } else {
+        badgeBg = 'var(--color-bg-alt)';
+        badgeColor = 'var(--color-text-muted)';
+        badgeText = 'Not started';
+      }
+
+      const boxDetail = hasStarted && bc
+        ? `<div style="font-size: var(--font-size-xs, 0.7rem); color: var(--color-text-muted); margin-top: 2px; white-space: nowrap;">` +
+          `📦 ${bc.box1}&nbsp;&nbsp;🔄 ${bc.box2}&nbsp;&nbsp;⭐ ${bc.box3}&nbsp;&nbsp;✅ ${bc.graduated}` +
+          `</div>`
+        : '';
 
       return `
         <button
@@ -836,19 +862,22 @@ export class QuestionPreviewScreen extends BaseComponent {
             font-size: var(--font-size-base);
           "
         >
-          <span style="font-weight: ${isSelected ? '600' : '400'};">
-            Set ${i + 1}
-            <span style="color: var(--color-text-muted); font-weight: 400; font-size: var(--font-size-sm);">
-              &nbsp;(${set.ids.length} card${set.ids.length === 1 ? '' : 's'})
+          <div>
+            <span style="font-weight: ${isSelected ? '600' : '400'};">
+              Set ${i + 1}
+              <span style="color: var(--color-text-muted); font-weight: 400; font-size: var(--font-size-sm);">
+                &nbsp;(${set.ids.length} card${set.ids.length === 1 ? '' : 's'})
+              </span>
             </span>
-          </span>
+            ${boxDetail}
+          </div>
           <span style="
             font-size: var(--font-size-sm); padding: 2px 8px; border-radius: 9999px;
-            background: ${isDone ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : 'var(--color-bg-alt)'};
-            color: ${isDone ? 'var(--color-success)' : 'var(--color-text-muted)'};
-            font-weight: 500;
+            background: ${badgeBg};
+            color: ${badgeColor};
+            font-weight: 500; white-space: nowrap; flex-shrink: 0; margin-left: var(--spacing-sm);
           ">
-            ${isDone ? `Done ${doneDate}` : 'Not started'}
+            ${badgeText}
           </span>
         </button>
       `;
