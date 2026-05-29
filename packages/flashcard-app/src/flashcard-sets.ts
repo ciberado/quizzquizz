@@ -3,7 +3,12 @@
  *
  * Mirrors the completion-related functions from host-app/src/flashcard-sets.ts.
  * Both apps share the same localStorage keys so completion written here is
- * immediately visible to the host-app on its next load.
+ * immediately visible to the host-app on its next load (works when apps share
+ * the same origin, i.e., production).
+ *
+ * In development (separate ports), the host-app passes bankId/setIndex via URL
+ * hash params.  The summary screen then appends completion params to the return
+ * URL so the host-app marks the set done in its own localStorage.
  *
  * Keys:
  *   qz-fc-progress-{bankId}  — per-bank set progress (written by host; read+updated here)
@@ -12,10 +17,21 @@
 
 export const STORAGE_KEY_PREFIX = 'qz-fc-progress-';
 export const ACTIVE_SESSION_KEY = 'qz-fc-active-session';
+export const DEFAULT_SET_SIZE = 10;
+
+export interface BoxCounts {
+  box1: number;
+  box2: number;
+  box3: number;
+  graduated: number;
+  total: number;
+}
 
 export interface SetProgress {
   ids: string[];
   completedAt: string | null;
+  /** Box distribution for this set — updated after each card answer during a session */
+  boxCounts?: BoxCounts | null;
 }
 
 export interface BankProgress {
@@ -45,9 +61,27 @@ export function saveProgress(bankId: string, progress: BankProgress): void {
 }
 
 export function markSetCompleted(bankId: string, setIndex: number): void {
+  if (setIndex < 0) return;
+  let existing = loadProgress(bankId);
+  if (!existing) {
+    // No progress record in this origin's localStorage — create a minimal stub so the
+    // completion is persisted.  In production (same origin as host-app) the host-app will
+    // reconcile the full structure via getOrBuildProgress on its next load.
+    existing = {
+      setSize: DEFAULT_SET_SIZE,
+      sets: Array.from({ length: setIndex + 1 }, () => ({ ids: [], completedAt: null })),
+    };
+  }
+  if (setIndex >= existing.sets.length) return;
+  existing.sets[setIndex]!.completedAt = new Date().toISOString();
+  saveProgress(bankId, existing);
+}
+
+/** Update the box distribution for a set after each card answer. */
+export function updateSetBoxCounts(bankId: string, setIndex: number, counts: BoxCounts): void {
   const existing = loadProgress(bankId);
   if (!existing || setIndex < 0 || setIndex >= existing.sets.length) return;
-  existing.sets[setIndex]!.completedAt = new Date().toISOString();
+  existing.sets[setIndex]!.boxCounts = counts;
   saveProgress(bankId, existing);
 }
 

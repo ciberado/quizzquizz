@@ -16,6 +16,7 @@ import { router } from '../router';
 import { LeitnerEngine } from '../leitner';
 import type { FlashCard } from '../leitner';
 import type { FlashcardSessionState } from '../api-client';
+import { updateSetBoxCounts } from '../flashcard-sets';
 
 type Phase = 'loading' | 'question' | 'answer' | 'complete';
 
@@ -52,7 +53,28 @@ export class FlashcardPlayScreen extends BaseComponent {
       return;
     }
 
+    // Read active-session info and returnUrl from hash query params (passed by the host
+    // app so the data survives cross-origin navigation in dev mode).
+    this.readHashParams(hash);
+
     await this.loadSession();
+  }
+
+  /** Parse bankId, setIndex, and returnUrl from the hash query string and persist to sessionStorage. */
+  private readHashParams(hash: string): void {
+    if (!hash.includes('?')) return;
+    const queryPart = hash.split('?')[1] ?? '';
+    const params = new URLSearchParams(queryPart);
+
+    const bankId = params.get('bankId');
+    const setIndexStr = params.get('setIndex');
+    const returnUrl = params.get('returnUrl');
+
+    try {
+      if (bankId) sessionStorage.setItem('qz-active-bank-id', bankId);
+      if (setIndexStr !== null) sessionStorage.setItem('qz-active-set-index', setIndexStr);
+      if (returnUrl) sessionStorage.setItem('qz-flashcard-return-url', returnUrl);
+    } catch { /* ignore */ }
   }
 
   private injectStyles(): void {
@@ -474,6 +496,8 @@ export class FlashcardPlayScreen extends BaseComponent {
    * Fire-and-forget: send the current card state to the server after the engine has
    * already processed the answer locally.  Errors are silently swallowed so that a
    * network hiccup never blocks the player's study flow.
+   * Also updates the per-set box distribution in localStorage so the host-app's set
+   * picker can reflect current progress.
    */
   private syncAnswer(cardId: string, known: boolean): void {
     const playerId = state.playerId;
@@ -498,6 +522,19 @@ export class FlashcardPlayScreen extends BaseComponent {
       .catch(() => {
         // Non-blocking — local engine state is the source of truth during play
       });
+
+    // Update per-set box distribution so host-app set picker stays current
+    try {
+      const bankId = sessionStorage.getItem('qz-active-bank-id');
+      const setIndexStr = sessionStorage.getItem('qz-active-set-index');
+      if (bankId && setIndexStr !== null) {
+        const setIndex = parseInt(setIndexStr, 10);
+        if (!isNaN(setIndex)) {
+          const dist = this.engine.getBoxDistribution();
+          updateSetBoxCounts(bankId, setIndex, { ...dist, total: this.engine.getTotalCount() });
+        }
+      }
+    } catch { /* ignore */ }
   }
 
   private renderAnswerCard(

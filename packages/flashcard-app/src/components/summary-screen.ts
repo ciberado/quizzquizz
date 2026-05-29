@@ -9,6 +9,10 @@ import type { LeitnerStats } from '../leitner';
 import { getActiveSession, clearActiveSession, markSetCompleted } from '../flashcard-sets';
 
 const RETURN_URL_KEY = 'qz-flashcard-return-url';
+// sessionStorage keys written by play-screen when it reads hash params
+const SS_BANK_ID = 'qz-active-bank-id';
+const SS_SET_INDEX = 'qz-active-set-index';
+const SS_RETURN_URL = 'qz-flashcard-return-url';
 
 type SortCol = 'question' | 'yes' | 'no' | 'firstTry' | 'status';
 type SortDir = 'asc' | 'desc';
@@ -27,20 +31,56 @@ export class FlashcardSummaryScreen extends BaseComponent {
       const raw = sessionStorage.getItem('qz-flashcard-stats');
       if (raw) this.stats = JSON.parse(raw) as LeitnerStats;
       this.bankName = sessionStorage.getItem('qz-flashcard-bank-name') || 'Flashcard Session';
-      // Return URL set by the host app before navigating here
-      this.returnUrl = localStorage.getItem(RETURN_URL_KEY) || '';
+      // Return URL: prefer sessionStorage (written by play-screen from URL hash params,
+      // works cross-origin) then fall back to localStorage (same-origin production path).
+      this.returnUrl =
+        sessionStorage.getItem(SS_RETURN_URL) ||
+        localStorage.getItem(RETURN_URL_KEY) ||
+        '';
     } catch { /* ignore */ }
 
-    // Mark the active set as completed in the host-app's localStorage progress
+    // Mark the active set as completed.
+    // Strategy A: sessionStorage (written by play-screen from URL hash params — works in dev
+    //   when apps run on different ports, because URL params survive origin changes).
+    // Strategy B: localStorage (same-origin production — written by host-app).
+    // Strategy A is tried first; its completion is signalled back to the host-app by
+    // appending ?done=1&bankId=...&setIndex=... to the return URL.
     try {
-      const active = getActiveSession();
-      if (active) {
-        markSetCompleted(active.bankId, active.setIndex);
-        clearActiveSession();
+      const bankId = sessionStorage.getItem(SS_BANK_ID);
+      const setIndexStr = sessionStorage.getItem(SS_SET_INDEX);
+      if (bankId && setIndexStr !== null) {
+        const setIndex = parseInt(setIndexStr, 10);
+        if (!isNaN(setIndex)) {
+          // In production (same origin) this also writes to the shared localStorage that
+          // the host-app reads.  In dev mode the host-app reads it via the return URL params.
+          markSetCompleted(bankId, setIndex);
+          this.returnUrl = this.appendDoneParams(this.returnUrl, bankId, setIndex);
+        }
+        sessionStorage.removeItem(SS_BANK_ID);
+        sessionStorage.removeItem(SS_SET_INDEX);
+      } else {
+        // Fallback: localStorage-based active session (same-origin production)
+        const active = getActiveSession();
+        if (active) {
+          markSetCompleted(active.bankId, active.setIndex);
+          clearActiveSession();
+        }
       }
     } catch { /* ignore */ }
 
     this.render();
+  }
+
+  /**
+   * Append completion params to the return URL hash so the host-app's flashcard
+   * lobby screen can mark the set done in its own localStorage (cross-origin fix).
+   */
+  private appendDoneParams(returnUrl: string, bankId: string, setIndex: number): string {
+    if (!returnUrl) return returnUrl;
+    const suffix = `?done=1&bankId=${encodeURIComponent(bankId)}&setIndex=${setIndex}`;
+    // Return URL is a hash-based URL like: http://host/#/flashcard-lobby/SESSION
+    // Append the params after the hash path to form: .../#/flashcard-lobby/SESSION?done=1&...
+    return returnUrl + suffix;
   }
 
   private injectStyles(): void {
@@ -270,7 +310,10 @@ export class FlashcardSummaryScreen extends BaseComponent {
 
   private goBack(): void {
     if (this.returnUrl) {
-      try { localStorage.removeItem(RETURN_URL_KEY); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem(RETURN_URL_KEY);
+        sessionStorage.removeItem(SS_RETURN_URL);
+      } catch { /* ignore */ }
       window.location.href = this.returnUrl;
     } else {
       router.navigate('/');
