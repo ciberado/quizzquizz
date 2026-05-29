@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-05-29
+
+### Changed
+- **[api-server]** Timer is now server-authoritative: `session-doc-manager` runs a 1-second `setInterval` per active game session that pushes `timeRemaining` via Yjs to all connected clients. The 5-second `serverTime` heartbeat is still present but clients no longer use it to compute remaining time.
+- **[host-app]** Removed client-side `setInterval` countdown entirely. The host timer display now reads `docState.timeRemaining` directly from the Yjs doc, eliminating all client/server clock-skew and `setInterval` drift bugs. Optimistic display during in-flight API calls (`pendingTimerOps`) is preserved for instant button feedback.
+- **[player-app]** Removed client-side `setInterval` countdown. The player timer now reads `docState.timeRemaining` directly from the Yjs doc, guaranteeing pixel-perfect sync with the host display at all times.
+- **[host-app]** "Create Quiz" button in the quiz configuration screen is now more compact, and the redundant "Cancel" button has been removed (the "← Back" button serves the same purpose).
+- **[host-app]** "Auto-advancing…" message on the leaderboard screen is now horizontally centered within its container.
+
+### Fixed
+- **[api-server]** Timer adjust (+5/−5) while paused no longer unpauses the timer. Previously, pressing add/remove time cleared `timerPausedAt` without shifting `questionStartedAt`, causing elapsed-time calculations to include the paused duration and resulting in visible timer rollbacks on the host screen.
+- **[api-server]** Timer remove (−5) while paused now correctly computes elapsed time using `timerPausedAt` instead of the current wall-clock time, preventing an incorrect floor value.
+- **[api-server]** `pause` action now includes `timeRemaining` in the Yjs doc update so clients immediately display the frozen value.
+- **[host-app]** Fixed answered-count display not updating when the first player submits an answer. The rendering logic previously short-circuited stats updates whenever a timer tick was in-flight; timer and stats updates are now handled independently.
+- **[host-app]** Replaced fixed 3-second optimistic timer window with a pending-operations counter. The host now ignores server-driven timer corrections only while API calls are in-flight, eliminating rollbacks caused by heartbeat updates arriving after the optimistic window expired but before the API response.
+- **[host-app]** Fixed duplicate event listeners on timer buttons caused by `morphdom` reusing existing DOM elements across re-renders — each `render()` call stacked another `addEventListener` on the same button. Replaced all `addEventListener` calls in `render()` with `onclick` assignment, which is idempotent. This was the root cause of the pause/resume 400 Bad Request error: clicking Pause then Resume fired the handler twice in one click, the second invocation cancelled the in-flight pause request and immediately sent resume, which the server rejected because `timerPausedAt` was never set.
+- **[host-app]** Pressing −5 seconds that brings the timer to 0 now schedules the auto-navigate leaderboard transition, fixing the "Loading leaderboard…" spinner getting stuck after pause → resume → −5.
+
 ## [0.14.0] — 2026-05-28
 
 ### Added
