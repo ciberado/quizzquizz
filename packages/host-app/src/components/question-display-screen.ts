@@ -31,7 +31,6 @@ interface HostGameState {
 export class QuestionDisplayScreen extends HTMLElement {
   private disconnectYjs: (() => void) | null = null;
   private currentGameState: HostGameState | null = null;
-  private timerInterval: number | null = null;
   private timeRemaining: number = 0;
   private currentTimeLimit: number = 20;
   private wasTimerActive: boolean = false;
@@ -40,10 +39,9 @@ export class QuestionDisplayScreen extends HTMLElement {
   private autoNavigateTimeout: number | null = null;
   private automaticPace: boolean = false;
   private pace: 'normal' | 'calm' | 'manual' = 'normal';
-  private serverTime: number = 0;
   private earlyStop: boolean = false;
   private paused: boolean = false;
-  private optimisticUntil: number = 0;
+  private pendingTimerOps: number = 0;
 
   async connectedCallback() {
     const sessionId = state.getState().sessionId;
@@ -69,7 +67,6 @@ export class QuestionDisplayScreen extends HTMLElement {
       this.disconnectYjs();
       this.disconnectYjs = null;
     }
-    this.stopTimer();
     if (this.autoNavigateTimeout) {
       clearTimeout(this.autoNavigateTimeout);
       this.autoNavigateTimeout = null;
@@ -113,31 +110,26 @@ export class QuestionDisplayScreen extends HTMLElement {
         timeRemaining: null,
       };
 
-      // Initial timer calculation
+      // Initial timer calculation from REST response (Yjs will take over from here)
       if (newGameState.currentQuestion && session.questionStartedAt) {
         const isManualPace = this.pace === 'manual';
         const timeLimit = session.currentQuestionTimeLimit ?? newGameState.currentQuestion.timeLimit ?? 20;
-        this.serverTime = session.serverTime;
 
         if (isManualPace) {
-          this.stopTimer();
           this.currentTimeLimit = 0;
           this.timeRemaining = 0;
           newGameState.timeRemaining = 0;
         } else {
           this.currentTimeLimit = timeLimit;
           const serverPaused = !!session.timerPausedAt;
-          const effectiveNow = serverPaused ? Number(session.timerPausedAt) : this.serverTime;
+          // Use server times only (no client clock) for initial computation
+          const effectiveNow = serverPaused ? Number(session.timerPausedAt) : session.serverTime;
           const elapsed = Math.floor((effectiveNow - Number(session.questionStartedAt)) / 1000);
           const serverRemaining = Math.max(0, timeLimit - elapsed);
 
           this.paused = serverPaused;
           this.timeRemaining = serverRemaining;
           newGameState.timeRemaining = serverRemaining;
-
-          if (serverRemaining > 0 && !serverPaused) {
-            this.startTimer();
-          }
         }
       }
 
@@ -155,7 +147,7 @@ export class QuestionDisplayScreen extends HTMLElement {
   private handleDocState(docState: SessionDocState) {
     if (!this.currentGameState) return;
 
-    const inOptimisticWindow = Date.now() < this.optimisticUntil;
+    const inOptimisticWindow = this.pendingTimerOps > 0;
 
     // Update player counts from doc
     const newPlayerCount = (docState.players ?? []).length;
@@ -165,38 +157,21 @@ export class QuestionDisplayScreen extends HTMLElement {
       console.log(`[HOST][Question] answeredCount: ${this.answeredCount} → ${newAnsweredCount} / ${newPlayerCount} players`);
     }
 
-    // Update timer state from server (unless in optimistic window)
+    // Update timer state from server-pushed timeRemaining (unless in optimistic window)
     if (!inOptimisticWindow && !this.earlyStop && this.pace !== 'manual') {
       const serverPaused = docState.timerPaused ?? false;
-      const timerPausedAt = docState.timerPausedAt ?? null;
-      const serverTime = docState.serverTime ?? this.serverTime;
-      const questionStartedAt = docState.questionStartedAt ?? null;
       const timeLimit = docState.timeLimit ?? this.currentTimeLimit;
-
-      this.serverTime = serverTime;
       this.currentTimeLimit = timeLimit;
 
-      if (questionStartedAt !== null) {
-        const effectiveNow = serverPaused && timerPausedAt ? timerPausedAt : serverTime;
-        const elapsed = Math.floor((effectiveNow - questionStartedAt) / 1000);
-        const serverRemaining = Math.max(0, timeLimit - elapsed);
-
+      if (docState.timeRemaining !== undefined && docState.timeRemaining !== null) {
         if (serverPaused && !this.paused) {
           this.paused = true;
-          this.timeRemaining = serverRemaining;
-          this.stopTimer();
+          this.timeRemaining = docState.timeRemaining;
         } else if (!serverPaused && this.paused) {
           this.paused = false;
-          this.timeRemaining = serverRemaining;
-          if (this.timeRemaining > 0) this.startTimer();
-        } else if (serverPaused) {
-          this.timeRemaining = serverRemaining;
+          this.timeRemaining = docState.timeRemaining;
         } else {
-          const drift = Math.abs(this.timeRemaining - serverRemaining);
-          if (drift > 2 || !this.timerInterval) {
-            this.timeRemaining = serverRemaining;
-            if (this.timeRemaining > 0 && !this.timerInterval) this.startTimer();
-          }
+          this.timeRemaining = docState.timeRemaining;
         }
       }
     }
@@ -212,7 +187,6 @@ export class QuestionDisplayScreen extends HTMLElement {
         this.earlyStop = true;
         this.timeRemaining = 0;
         this.wasTimerActive = false;
-        this.stopTimer();
         this.render();
         this.autoNavigateTimeout = window.setTimeout(() => {
           console.log('🚀 Auto-navigating to leaderboard');
@@ -232,9 +206,9 @@ export class QuestionDisplayScreen extends HTMLElement {
       this.playerCount !== newPlayerCount ||
       this.answeredCount !== newAnsweredCount;
 
-    const structuralChange =
-      !this.currentGameState ||
-      timerStateChanged;
+    // Re-render on timer tick or structural change; only stats update otherwise
+    const timerTick = !inOptimisticWindow && docState.timeRemaining !== undefined;
+    const structuralChange = !this.currentGameState || timerStateChanged;
 
     this.wasTimerActive = isTimerActive;
     this.playerCount = newPlayerCount;
@@ -245,40 +219,11 @@ export class QuestionDisplayScreen extends HTMLElement {
     }
 
     if (structuralChange) {
+      this.updateTimerDisplay();
       this.render();
-    } else if (statsChanged) {
-      this.updatePlayerStats();
-    }
-  }
-
-  private startTimer() {
-    this.stopTimer();
-    this.wasTimerActive = true;
-
-    this.timerInterval = window.setInterval(() => {
-      if (this.timeRemaining > 0) {
-        this.timeRemaining -= 1;
-        this.updateTimerDisplay();
-      } else {
-        this.stopTimer();
-        this.wasTimerActive = false;
-        this.render();
-
-        if (this.automaticPace && !this.autoNavigateTimeout) {
-          console.log('⏱️ Timer expired with automatic pace - will show leaderboard in 4s');
-          this.autoNavigateTimeout = window.setTimeout(() => {
-            console.log('🚀 Auto-navigating to leaderboard');
-            router.navigate('/leaderboard');
-          }, 4000);
-        }
-      }
-    }, 1000);
-  }
-
-  private stopTimer() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
+    } else {
+      if (timerTick) this.updateTimerDisplay();
+      if (statsChanged) this.updatePlayerStats();
     }
   }
 
@@ -288,12 +233,16 @@ export class QuestionDisplayScreen extends HTMLElement {
       timerEl.textContent = this.formatTime(this.timeRemaining);
       if (this.timeRemaining <= 5) {
         timerEl.classList.add('warning');
+      } else {
+        timerEl.classList.remove('warning');
       }
     }
 
     const progressEl = this.querySelector('.timer-progress') as HTMLElement;
     if (progressEl) {
-      const percentage = (this.timeRemaining / this.currentTimeLimit) * 100;
+      const percentage = this.currentTimeLimit > 0
+        ? (this.timeRemaining / this.currentTimeLimit) * 100
+        : 0;
       progressEl.style.width = `${percentage}%`;
     }
   }
@@ -316,42 +265,53 @@ export class QuestionDisplayScreen extends HTMLElement {
 
   private handleAddTime() {
     if (this.pace === 'manual') return;
-    this.optimisticUntil = Date.now() + 3000;
+    this.pendingTimerOps++;
     this.timeRemaining += 5;
-    if (this.timeRemaining > this.currentTimeLimit) {
-      this.currentTimeLimit = this.timeRemaining;
-    }
+    this.currentTimeLimit += 5;
     if (this.earlyStop) {
       this.earlyStop = false;
     }
-    if (!this.timerInterval && this.timeRemaining > 0 && !this.paused) {
-      this.wasTimerActive = true;
-      this.startTimer();
-      this.render();
-    } else {
-      this.updateTimerDisplay();
+    // Cancel any pending auto-navigation (e.g. from earlyStop or timer expiry)
+    if (this.autoNavigateTimeout) {
+      clearTimeout(this.autoNavigateTimeout);
+      this.autoNavigateTimeout = null;
     }
+    if (this.timeRemaining > 0) {
+      this.wasTimerActive = true;
+    }
+    this.updateTimerDisplay();
     const { sessionId, hostToken } = state.getState();
     if (sessionId && hostToken) {
-      api.adjustTimer(sessionId, hostToken, 'add', 5).catch(() => {});
+      api.adjustTimer(sessionId, hostToken, 'add', 5)
+        .finally(() => { this.pendingTimerOps--; });
+    } else {
+      this.pendingTimerOps--;
     }
   }
 
   private handleRemoveTime() {
     if (this.pace === 'manual') return;
-    this.optimisticUntil = Date.now() + 3000;
+    this.pendingTimerOps++;
     this.timeRemaining = Math.max(0, this.timeRemaining - 5);
+    this.currentTimeLimit = Math.max(this.currentTimeLimit - 5, this.timeRemaining);
     if (this.timeRemaining === 0) {
       this.paused = false;
-      this.stopTimer();
       this.wasTimerActive = false;
       this.render();
+      if (this.automaticPace && !this.autoNavigateTimeout) {
+        this.autoNavigateTimeout = window.setTimeout(() => {
+          router.navigate('/leaderboard');
+        }, 4000);
+      }
     } else {
       this.updateTimerDisplay();
     }
     const { sessionId, hostToken } = state.getState();
     if (sessionId && hostToken) {
-      api.adjustTimer(sessionId, hostToken, 'remove', 5).catch(() => {});
+      api.adjustTimer(sessionId, hostToken, 'remove', 5)
+        .finally(() => { this.pendingTimerOps--; });
+    } else {
+      this.pendingTimerOps--;
     }
   }
 
@@ -366,10 +326,9 @@ export class QuestionDisplayScreen extends HTMLElement {
 
   private handleEndTimer() {
     if (this.pace === 'manual') return;
-    this.optimisticUntil = Date.now() + 3000;
+    this.pendingTimerOps++;
     this.paused = false;
     this.timeRemaining = 0;
-    this.stopTimer();
     this.wasTimerActive = false;
     this.render();
 
@@ -380,31 +339,36 @@ export class QuestionDisplayScreen extends HTMLElement {
     }
     const { sessionId, hostToken } = state.getState();
     if (sessionId && hostToken) {
-      api.adjustTimer(sessionId, hostToken, 'end').catch(() => {});
+      api.adjustTimer(sessionId, hostToken, 'end')
+        .finally(() => { this.pendingTimerOps--; });
+    } else {
+      this.pendingTimerOps--;
     }
   }
 
   private handlePause() {
     if (this.pace === 'manual') return;
-    this.optimisticUntil = Date.now() + 3000;
+    this.pendingTimerOps++;
     if (this.paused) {
+      // Optimistically resume — server will push timeRemaining updates via Yjs
       this.paused = false;
-      if (this.timeRemaining > 0) {
-        this.wasTimerActive = true;
-        this.startTimer();
-      }
       this.render();
       const { sessionId, hostToken } = state.getState();
       if (sessionId && hostToken) {
-        api.adjustTimer(sessionId, hostToken, 'resume').catch(() => {});
+        api.adjustTimer(sessionId, hostToken, 'resume')
+          .finally(() => { this.pendingTimerOps--; });
+      } else {
+        this.pendingTimerOps--;
       }
     } else {
       this.paused = true;
-      this.stopTimer();
       this.render();
       const { sessionId, hostToken } = state.getState();
       if (sessionId && hostToken) {
-        api.adjustTimer(sessionId, hostToken, 'pause').catch(() => {});
+        api.adjustTimer(sessionId, hostToken, 'pause')
+          .finally(() => { this.pendingTimerOps--; });
+      } else {
+        this.pendingTimerOps--;
       }
     }
   }
@@ -550,16 +514,21 @@ export class QuestionDisplayScreen extends HTMLElement {
       this.innerHTML = html;
     }
 
-    const nextButton = this.querySelector('#next-button');
-    if (nextButton) {
-      nextButton.addEventListener('click', () => this.handleNextQuestion());
-    }
+    // Use onclick assignment (not addEventListener) so morphdom-reused elements
+    // never accumulate duplicate listeners across re-renders.
+    const nextButton = this.querySelector<HTMLElement>('#next-button');
+    if (nextButton) nextButton.onclick = () => this.handleNextQuestion();
 
-    this.querySelector('#minus-5-button')?.addEventListener('click', () => this.handleRemoveTime());
-    this.querySelector('#plus-5-button')?.addEventListener('click', () => this.handleAddTime());
-    this.querySelector('#jump-button')?.addEventListener('click', () => this.handleJumpToScoreboard());
-    this.querySelector('#pause-button')?.addEventListener('click', () => this.handlePause());
-    this.querySelector('#end-timer-button')?.addEventListener('click', () => this.handleEndTimer());
+    const minus5 = this.querySelector<HTMLElement>('#minus-5-button');
+    if (minus5) minus5.onclick = () => this.handleRemoveTime();
+    const plus5 = this.querySelector<HTMLElement>('#plus-5-button');
+    if (plus5) plus5.onclick = () => this.handleAddTime();
+    const jump = this.querySelector<HTMLElement>('#jump-button');
+    if (jump) jump.onclick = () => this.handleJumpToScoreboard();
+    const pause = this.querySelector<HTMLElement>('#pause-button');
+    if (pause) pause.onclick = () => this.handlePause();
+    const endTimer = this.querySelector<HTMLElement>('#end-timer-button');
+    if (endTimer) endTimer.onclick = () => this.handleEndTimer();
 
     this.addStyles();
   }

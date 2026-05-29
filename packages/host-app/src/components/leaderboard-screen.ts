@@ -234,7 +234,7 @@ export class LeaderboardScreen extends HTMLElement {
 
           <div class="leaderboard-actions">
             ${this.automaticPace ? `
-              <div class="autopace-status">
+              <div class="autopace-status" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center;">
                 <div class="autopace-spinner"></div>
                 <span>Auto-advancing…</span>
               </div>

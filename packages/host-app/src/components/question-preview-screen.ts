@@ -657,10 +657,7 @@ export class QuestionPreviewScreen extends BaseComponent {
             </div>
 
             <!-- Action Buttons -->
-            <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); padding: var(--spacing-md); background: var(--color-bg-alt); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
-              <button class="btn-secondary" data-action="back">
-                Cancel
-              </button>
+            <div style="display: flex; justify-content: center; gap: var(--spacing-md); padding: var(--spacing-md); background: var(--color-bg-alt); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
               <button
                 class="btn-secondary"
                 data-action="download"
@@ -681,8 +678,9 @@ export class QuestionPreviewScreen extends BaseComponent {
                 class="btn" 
                 data-action="create"
                 ${this.preview.pagination.totalQuestions === 0 ? 'disabled' : ''}
+                style="padding-left: var(--spacing-md); padding-right: var(--spacing-md);"
               >
-                Create Quiz with ${selectedCount} Question${selectedCount === 1 ? '' : 's'}
+                Create Quiz (${selectedCount})
               </button>
             </div>
 
