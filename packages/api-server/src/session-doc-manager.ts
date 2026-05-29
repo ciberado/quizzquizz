@@ -40,6 +40,7 @@ export interface SessionDocState {
   allPlayersAnswered: boolean;
   answeredCount: number;
   serverTime: number;
+  timeRemaining: number | null;
 
   // Players & leaderboard (updated on every join / answer)
   players: Array<{ id: string; nickname: string; score: number; joinedAt: number }>;
@@ -67,6 +68,41 @@ interface SessionEntry {
 }
 
 const sessions = new Map<string, SessionEntry>();
+
+/** Per-session server-side countdown intervals. */
+const countdowns = new Map<string, ReturnType<typeof setInterval>>();
+
+/**
+ * Start (or restart) a 1-second server-side countdown for a session.
+ * Sends `timeRemaining` via Yjs every second. Stops automatically at 0.
+ */
+export function startCountdown(sessionId: string, initialRemaining: number): void {
+  stopCountdown(sessionId);
+  if (initialRemaining <= 0) {
+    updateDoc(sessionId, { timeRemaining: 0 });
+    return;
+  }
+  // Immediately publish the starting value so clients see it at once
+  updateDoc(sessionId, { timeRemaining: initialRemaining });
+  let remaining = initialRemaining;
+  const interval = setInterval(() => {
+    remaining--;
+    updateDoc(sessionId, { timeRemaining: remaining });
+    if (remaining <= 0) {
+      stopCountdown(sessionId);
+    }
+  }, 1000);
+  countdowns.set(sessionId, interval);
+}
+
+/** Stop the countdown for a session (pause, end, next question). */
+export function stopCountdown(sessionId: string): void {
+  const interval = countdowns.get(sessionId);
+  if (interval !== undefined) {
+    clearInterval(interval);
+    countdowns.delete(sessionId);
+  }
+}
 
 /** Get the shared entry for a session, creating it if needed. */
 export function getOrCreateSession(sessionId: string): SessionEntry {
@@ -103,6 +139,7 @@ export function updateDoc(
 
 /** Remove a session and destroy its doc (call on session delete). */
 export function destroySession(sessionId: string): void {
+  stopCountdown(sessionId);
   const entry = sessions.get(sessionId);
   if (entry) {
     // Close all connected clients gracefully

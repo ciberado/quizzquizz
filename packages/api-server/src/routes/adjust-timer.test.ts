@@ -12,7 +12,7 @@ import gameRoutes from './game';
 import { initDatabase, getPrisma, resetPrismaInstance } from '../db';
 import { questionBanks } from '../state';
 import { QuestionBank } from '@quizzquizz/common';
-import { getOrCreateSession, destroySession } from '../session-doc-manager';
+import { getOrCreateSession, destroySession, stopCountdown } from '../session-doc-manager';
 
 const app = new Hono();
 app.route('/api/sessions', sessionRoutes);
@@ -311,6 +311,51 @@ describe('Yjs doc updates — timer sync', () => {
     expect(stateMap.get('timerPaused')).toBe(false);
   });
 
+  it('add while paused — increases timeLimit but preserves pause state', async () => {
+    await setupPlayingSession();
+    // Pause first
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const pausedAt = stateMap.get('timerPausedAt') as number;
+    expect(pausedAt).toBeGreaterThan(0);
+
+    // Add time while paused
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'add', seconds: 10 }),
+    });
+    expect(stateMap.get('timeLimit')).toBe(40); // 30 + 10
+    expect(stateMap.get('timerPaused')).toBe(true);
+    expect(stateMap.get('timerPausedAt')).toBe(pausedAt); // unchanged
+  });
+
+  it('remove while paused — decreases timeLimit but preserves pause state', async () => {
+    await setupPlayingSession();
+    // Pause first
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const pausedAt = stateMap.get('timerPausedAt') as number;
+
+    // Remove time while paused — elapsed is measured from questionStartedAt to timerPausedAt
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'remove', seconds: 10 }),
+    });
+    expect(stateMap.get('timeLimit')).toBe(20); // 30 - 10
+    expect(stateMap.get('timerPaused')).toBe(true);
+    expect(stateMap.get('timerPausedAt')).toBe(pausedAt); // unchanged
+  });
+
   it('remove — sets reduced timeLimit in Yjs doc', async () => {
     await setupPlayingSession();
     await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
@@ -348,5 +393,229 @@ describe('Yjs doc updates — timer sync', () => {
     const serverTime = stateMap.get('serverTime') as number;
     expect(serverTime).toBeGreaterThanOrEqual(before);
     expect(serverTime).toBeLessThanOrEqual(after);
+  });
+
+  // ── Server-side countdown: timeRemaining field ────────────────────────────
+
+  it('add — sets timeRemaining = (remaining before add) + seconds in Yjs doc', async () => {
+    await setupPlayingSession();
+    // Session started 5s ago, timeLimit=30 → remaining ≈ 25. Add 10 → remaining ≈ 35.
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'add', seconds: 10 }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const tr = stateMap.get('timeRemaining') as number;
+    expect(tr).toBeGreaterThanOrEqual(33); // 25 + 10 − small execution slack
+    expect(tr).toBeLessThanOrEqual(37);
+  });
+
+  it('remove — sets timeRemaining = (remaining before remove) - seconds in Yjs doc', async () => {
+    await setupPlayingSession();
+    // remaining ≈ 25. Remove 10 → remaining ≈ 15.
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'remove', seconds: 10 }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const tr = stateMap.get('timeRemaining') as number;
+    expect(tr).toBeGreaterThanOrEqual(13);
+    expect(tr).toBeLessThanOrEqual(17);
+  });
+
+  it('remove more than remaining — clamps timeRemaining to 0', async () => {
+    await setupPlayingSession();
+    // remaining ≈ 25. Remove 30 → timeRemaining = 0.
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'remove', seconds: 30 }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timeRemaining')).toBe(0);
+  });
+
+  it('end — sets timeRemaining=0 in Yjs doc', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'end' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timeRemaining')).toBe(0);
+  });
+
+  it('pause — timeRemaining in doc is frozen at current value', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const trAtPause = stateMap.get('timeRemaining') as number;
+    // Should be around 25 (30 - 5s elapsed), not 0
+    expect(trAtPause).toBeGreaterThanOrEqual(23);
+    expect(trAtPause).toBeLessThanOrEqual(27);
+    // Wait a tick — value must not change (countdown stopped)
+    await new Promise(r => setTimeout(r, 1100));
+    expect(stateMap.get('timeRemaining')).toBe(trAtPause);
+  });
+
+  it('resume — timeRemaining restarts decrementing after resume', async () => {
+    await setupPlayingSession();
+    // Pause
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const trAtPause = stateMap.get('timeRemaining') as number;
+
+    // Resume
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'resume' }),
+    });
+    expect(stateMap.get('timeRemaining')).toBe(trAtPause); // immediate value unchanged
+
+    // After 1 tick the countdown decrements
+    await new Promise(r => setTimeout(r, 1100));
+    expect(stateMap.get('timeRemaining')).toBe(trAtPause - 1);
+  });
+
+  it('add while paused — increases timeRemaining but does not restart countdown', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const trAtPause = stateMap.get('timeRemaining') as number;
+
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'add', seconds: 10 }),
+    });
+    const trAfterAdd = stateMap.get('timeRemaining') as number;
+    expect(trAfterAdd).toBe(trAtPause + 10);
+
+    // Wait a tick — should NOT decrement (still paused)
+    await new Promise(r => setTimeout(r, 1100));
+    expect(stateMap.get('timeRemaining')).toBe(trAfterAdd);
+    expect(stateMap.get('timerPaused')).toBe(true);
+  });
+
+  it('remove while paused — decreases timeRemaining but does not restart countdown', async () => {
+    await setupPlayingSession();
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'pause' }),
+    });
+    const stateMap = getOrCreateSession(DOC_SESSION).doc.getMap<unknown>('state');
+    const trAtPause = stateMap.get('timeRemaining') as number;
+
+    await request(`/api/sessions/${DOC_SESSION}/adjust-timer`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': DOC_HOST_TOKEN },
+      body: JSON.stringify({ action: 'remove', seconds: 5 }),
+    });
+    const trAfterRemove = stateMap.get('timeRemaining') as number;
+    expect(trAfterRemove).toBe(trAtPause - 5);
+
+    // Wait a tick — should NOT decrement (still paused)
+    await new Promise(r => setTimeout(r, 1100));
+    expect(stateMap.get('timeRemaining')).toBe(trAfterRemove);
+    expect(stateMap.get('timerPaused')).toBe(true);
+  });
+});
+
+/**
+ * Tests for start/next/end routes — countdown lifecycle
+ */
+describe('Countdown lifecycle — start, next, end', () => {
+  const LIFE_SESSION = 'life-session';
+  const LIFE_HOST = 'life-host-token';
+
+  afterEach(() => {
+    stopCountdown(LIFE_SESSION);
+    destroySession(LIFE_SESSION);
+  });
+
+  async function createLobbySession() {
+    await getPrisma().quizSession.deleteMany({ where: { id: LIFE_SESSION } });
+    await getPrisma().quizSession.create({
+      data: {
+        id: LIFE_SESSION,
+        pin: '888999',
+        hostToken: LIFE_HOST,
+        questionBankId: 'timer-bank',
+        status: 'lobby',
+        currentQuestionIndex: -1,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+  it('start — Yjs doc gets timeRemaining = timeLimit immediately', async () => {
+    await createLobbySession();
+    await request(`/api/sessions/${LIFE_SESSION}/start`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': LIFE_HOST },
+    });
+    const stateMap = getOrCreateSession(LIFE_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timeRemaining')).toBe(30);
+    expect(stateMap.get('timeLimit')).toBe(30);
+  });
+
+  it('start — countdown decrements timeRemaining after 1 second', async () => {
+    await createLobbySession();
+    await request(`/api/sessions/${LIFE_SESSION}/start`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': LIFE_HOST },
+    });
+    const stateMap = getOrCreateSession(LIFE_SESSION).doc.getMap<unknown>('state');
+    await new Promise(r => setTimeout(r, 1100));
+    expect(stateMap.get('timeRemaining')).toBe(29);
+  });
+
+  it('next — resets timeRemaining to new question timeLimit and restarts countdown', async () => {
+    await createLobbySession();
+    const bank2: QuestionBank = {
+      id: 'life-bank-2q',
+      metadata: { name: 'Two Q Bank', defaultTimeLimit: 20, topics: [] },
+      questions: [
+        { id: 'q1', text: 'Q1?', answers: [{ id: 'a1', text: 'A' }], correctAnswerIds: ['a1'], difficulty: 'easy', topics: [], tags: [], timeLimit: 20 },
+        { id: 'q2', text: 'Q2?', answers: [{ id: 'a1', text: 'A' }], correctAnswerIds: ['a1'], difficulty: 'easy', topics: [], tags: [], timeLimit: 15 },
+      ],
+    };
+    questionBanks.set('life-bank-2q', bank2);
+    await getPrisma().quizSession.update({ where: { id: LIFE_SESSION }, data: { questionBankId: 'life-bank-2q' } });
+
+    await request(`/api/sessions/${LIFE_SESSION}/start`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': LIFE_HOST },
+    });
+    const stateMap = getOrCreateSession(LIFE_SESSION).doc.getMap<unknown>('state');
+    expect(stateMap.get('timeRemaining')).toBe(20);
+
+    await request(`/api/sessions/${LIFE_SESSION}/next`, {
+      method: 'POST',
+      headers: { 'X-Host-Token': LIFE_HOST },
+    });
+    expect(stateMap.get('timeRemaining')).toBe(15);
+
+    await new Promise(r => setTimeout(r, 1100));
+    expect(stateMap.get('timeRemaining')).toBe(14);
+
+    questionBanks.delete('life-bank-2q');
   });
 });

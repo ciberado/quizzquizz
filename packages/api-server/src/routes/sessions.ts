@@ -7,7 +7,7 @@ import { questionBanks } from '../state.js';
 import { getSessionQuestions } from '../session-utils.js';
 import { authMiddleware } from '../auth/middleware.js';
 import { recordSessionStats } from '../session-stats.js';
-import { updateDoc, destroySession } from '../session-doc-manager.js';
+import { updateDoc, destroySession, startCountdown, stopCountdown } from '../session-doc-manager.js';
 
 // Extend Hono with user context
 type Variables = {
@@ -314,12 +314,14 @@ sessionRoutes.post('/:id/start', async (c) => {
         : null,
       questionStartedAt: now.getTime(),
       timeLimit,
+      timeRemaining: timeLimit,
       timerPaused: false,
       timerPausedAt: null,
       allPlayersAnswered: false,
       answeredCount: 0,
       serverTime: Date.now(),
     });
+    if (timeLimit && timeLimit > 0) startCountdown(sessionId, timeLimit);
 
     return c.json({ message: 'Quiz started', currentQuestionIndex: 0 });
   } catch (error) {
@@ -378,6 +380,7 @@ sessionRoutes.post('/:id/next', async (c) => {
       // Record post-game statistics (non-blocking)
       void recordSessionStats(sessionId);
 
+      stopCountdown(sessionId);
       updateDoc(sessionId, {
         status: 'finished',
         currentQuestionIndex: -1,
@@ -420,6 +423,7 @@ sessionRoutes.post('/:id/next', async (c) => {
     // Count answers for the new question (should be 0, but reset in doc)
     const playerCount = await getPrisma().player.count({ where: { sessionId } });
 
+    stopCountdown(sessionId);
     updateDoc(sessionId, {
       status: 'playing',
       currentQuestionIndex: nextIndex,
@@ -429,12 +433,14 @@ sessionRoutes.post('/:id/next', async (c) => {
         : null,
       questionStartedAt: now.getTime(),
       timeLimit: nextTimeLimit,
+      timeRemaining: nextTimeLimit,
       timerPaused: false,
       timerPausedAt: null,
       allPlayersAnswered: playerCount === 0,
       answeredCount: 0,
       serverTime: Date.now(),
     });
+    if (nextTimeLimit && nextTimeLimit > 0) startCountdown(sessionId, nextTimeLimit);
 
     return c.json({
       message: 'Moved to next question',
@@ -506,11 +512,21 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
       if (session.timerPausedAt) {
         return c.json({ error: 'Timer is already paused' }, 400);
       }
+      stopCountdown(sessionId);
+      const elapsedAtPause = session.questionStartedAt
+        ? Math.floor((now.getTime() - session.questionStartedAt.getTime()) / 1000)
+        : 0;
+      const remainingAtPause = Math.max(0, currentTimeLimit - elapsedAtPause);
       await getPrisma().quizSession.update({
         where: { id: sessionId },
         data: { timerPausedAt: now },
       });
-      updateDoc(sessionId, { timerPaused: true, timerPausedAt: now.getTime(), serverTime: Date.now() });
+      updateDoc(sessionId, {
+        timerPaused: true,
+        timerPausedAt: now.getTime(),
+        timeRemaining: remainingAtPause,
+        serverTime: Date.now(),
+      });
       return c.json({ message: 'Timer paused', timerPausedAt: now.getTime() });
     }
 
@@ -518,11 +534,15 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
       if (!session.timerPausedAt) {
         return c.json({ error: 'Timer is not paused' }, 400);
       }
-      // Shift questionStartedAt forward by the paused duration so elapsed time stays correct
       const pausedDurationMs = now.getTime() - session.timerPausedAt.getTime();
       const newStartedAt = new Date(
         (session.questionStartedAt?.getTime() ?? now.getTime()) + pausedDurationMs
       );
+      // Remaining = how much was left when we paused (preserved in the doc)
+      const elapsedAtPause = session.questionStartedAt
+        ? Math.floor((session.timerPausedAt.getTime() - session.questionStartedAt.getTime()) / 1000)
+        : 0;
+      const remaining = Math.max(0, currentTimeLimit - elapsedAtPause);
       await getPrisma().quizSession.update({
         where: { id: sessionId },
         data: {
@@ -534,25 +554,24 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
         timerPaused: false,
         timerPausedAt: null,
         questionStartedAt: newStartedAt.getTime(),
+        timeRemaining: remaining,
         serverTime: Date.now(),
       });
+      if (remaining > 0) startCountdown(sessionId, remaining);
       return c.json({ message: 'Timer resumed' });
     }
 
     if (action === 'end') {
-      // Set the time limit to make remaining = 0 based on current elapsed
+      stopCountdown(sessionId);
       const elapsed = session.questionStartedAt
         ? Math.ceil((now.getTime() - session.questionStartedAt.getTime()) / 1000)
         : 0;
       await getPrisma().quizSession.update({
         where: { id: sessionId },
-        data: {
-          timeLimitOverride: elapsed, // remaining becomes 0
-          timerPausedAt: null,
-        },
+        data: { timeLimitOverride: elapsed, timerPausedAt: null },
       });
-      updateDoc(sessionId, { timeLimit: elapsed, timerPaused: false, timerPausedAt: null, serverTime: Date.now() });
-      return c.json({ message: 'Timer ended', timeLimitOverride: elapsed });
+      updateDoc(sessionId, { timeLimit: elapsed, timeRemaining: 0, timerPaused: false, timerPausedAt: null, serverTime: Date.now() });
+      return c.json({ message: 'Timer ended' });
     }
 
     // add or remove seconds
@@ -560,25 +579,45 @@ sessionRoutes.post('/:id/adjust-timer', zValidator('json', AdjustTimerSchema), a
       return c.json({ error: 'seconds is required for add/remove' }, 400);
     }
 
+    const wasPaused = !!session.timerPausedAt;
+
+    // Compute current remaining from DB so timeRemaining in doc stays accurate
+    const effectiveNow = wasPaused ? session.timerPausedAt!.getTime() : now.getTime();
+    const elapsedNow = session.questionStartedAt
+      ? Math.floor((effectiveNow - session.questionStartedAt.getTime()) / 1000)
+      : 0;
+    const currentRemaining = Math.max(0, currentTimeLimit - elapsedNow);
+
     let newTimeLimit: number;
+    let newRemaining: number;
     if (action === 'add') {
       newTimeLimit = currentTimeLimit + seconds;
+      newRemaining = currentRemaining + seconds;
     } else {
-      // For remove: ensure we don't go below elapsed time (would make remaining < 0)
-      const elapsed = session.questionStartedAt
-        ? Math.ceil((now.getTime() - session.questionStartedAt.getTime()) / 1000)
-        : 0;
-      newTimeLimit = Math.max(elapsed, currentTimeLimit - seconds);
+      newTimeLimit = Math.max(elapsedNow, currentTimeLimit - seconds);
+      newRemaining = Math.max(0, currentRemaining - seconds);
     }
 
     await getPrisma().quizSession.update({
       where: { id: sessionId },
-      data: {
-        timeLimitOverride: newTimeLimit,
-        timerPausedAt: null, // Unpause if adjusting while paused
-      },
+      data: { timeLimitOverride: newTimeLimit },
     });
-    updateDoc(sessionId, { timeLimit: newTimeLimit, timerPaused: false, timerPausedAt: null, serverTime: Date.now() });
+    updateDoc(sessionId, {
+      timeLimit: newTimeLimit,
+      timeRemaining: newRemaining,
+      ...(wasPaused
+        ? { timerPaused: true, timerPausedAt: session.timerPausedAt!.getTime() }
+        : { timerPaused: false, timerPausedAt: null }),
+      serverTime: Date.now(),
+    });
+    // Restart the countdown with the updated remaining (skip if paused or expired)
+    if (!wasPaused) {
+      if (newRemaining > 0) {
+        startCountdown(sessionId, newRemaining);
+      } else {
+        stopCountdown(sessionId);
+      }
+    }
     return c.json({ message: `Timer adjusted`, timeLimitOverride: newTimeLimit });
   } catch (error) {
     console.error('Error adjusting timer:', error);
@@ -625,6 +664,7 @@ sessionRoutes.post('/:id/end', async (c) => {
     // Record post-game statistics (non-blocking)
     void recordSessionStats(sessionId);
 
+    stopCountdown(sessionId);
     updateDoc(sessionId, {
       status: 'finished',
       currentQuestionIndex: -1,
