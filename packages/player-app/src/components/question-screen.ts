@@ -12,14 +12,11 @@ import { connectToSession, type SessionDocState } from '../yjs-provider';
  */
 export class QuestionScreen extends BaseComponent {
   private disconnectYjs: (() => void) | null = null;
-  private timerInterval: number | null = null;
   private selectedAnswerIds: Set<string> = new Set();
   private timeRemaining: number = 0;
+  private timeLimit: number = 0;
   private currentQuestion: GameState['currentQuestion'] = null;
   private currentQuestionIndex: number = 0;
-  private questionStartedAt: number | null = null;
-  private serverTime: number = 0;
-  private timeLimit: number = 0;
   private hasSubmitted: boolean = false;
   private hasRenderedQuestion: boolean = false;
   private errorNavigationTimeout: number | null = null;
@@ -43,7 +40,6 @@ export class QuestionScreen extends BaseComponent {
       this.disconnectYjs();
       this.disconnectYjs = null;
     }
-    this.stopTimer();
     if (this.errorNavigationTimeout !== null) {
       clearTimeout(this.errorNavigationTimeout);
       this.errorNavigationTimeout = null;
@@ -66,88 +62,42 @@ export class QuestionScreen extends BaseComponent {
 
     if (docState.currentQuestion) {
       const timerPaused = docState.timerPaused ?? false;
-      const timerPausedAt = docState.timerPausedAt ?? null;
 
       if (!this.currentQuestion) {
         // First load
         console.log(`[PLAYER][Question] First question received: id=${docState.currentQuestion.id.slice(0,8)} "${docState.currentQuestion.text.slice(0,50)}"`);
         this.currentQuestion = docState.currentQuestion as GameState['currentQuestion'];
         this.currentQuestionIndex = (docState.currentQuestionNumber || 1) - 1;
-        this.questionStartedAt = docState.questionStartedAt ?? null;
-        this.serverTime = docState.serverTime ?? Date.now();
         this.timeLimit = docState.timeLimit ?? 20;
+        this.timeRemaining = docState.timeRemaining ?? this.timeLimit;
         this.selectedAnswerIds.clear();
         this.hasSubmitted = false;
 
         if (!this.hasRenderedQuestion) {
           this.hasRenderedQuestion = true;
           this.render();
-          if (!timerPaused) {
-            this.startTimer();
-          }
         }
       } else if (docState.currentQuestion.id !== this.currentQuestion.id) {
         // Question changed — go to waiting screen
         console.log(`[PLAYER][Question] Question changed → /waiting`);
         router.navigate(`/waiting`);
       } else {
-        // Same question — sync timer state from server
-        const newTimeLimit = docState.timeLimit ?? 20;
-        this.serverTime = docState.serverTime ?? this.serverTime;
-        this.questionStartedAt = docState.questionStartedAt ?? this.questionStartedAt;
-
-        if (newTimeLimit !== this.timeLimit) {
-          this.timeLimit = newTimeLimit;
-          const effectiveNow = timerPaused && timerPausedAt ? timerPausedAt : this.serverTime;
-          const elapsed = effectiveNow - (this.questionStartedAt || 0);
-          const serverRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
-          if (Math.abs(this.timeRemaining - serverRemaining) > 2) {
-            this.timeRemaining = serverRemaining;
-            this.updateTimerDisplay();
-          }
+        // Same question — update timeRemaining directly from server push
+        if (docState.timeLimit !== undefined && docState.timeLimit !== null) {
+          this.timeLimit = docState.timeLimit;
+        }
+        if (!timerPaused && docState.timeRemaining !== undefined && docState.timeRemaining !== null) {
+          this.timeRemaining = docState.timeRemaining;
+          this.updateTimerDisplay();
           if (this.timeRemaining <= 0 && !this.hasSubmitted) {
-            this.stopTimer();
             this.submitAnswer();
           }
-        }
-
-        if (timerPaused && this.timerInterval !== null) {
-          this.stopTimer();
+        } else if (timerPaused && docState.timeRemaining !== undefined && docState.timeRemaining !== null) {
+          // Paused — show frozen value
+          this.timeRemaining = docState.timeRemaining;
           this.updateTimerDisplay();
-        } else if (!timerPaused && this.timerInterval === null && this.timeRemaining > 0 && !this.hasSubmitted) {
-          this.resumeTimerInterval();
         }
       }
-    }
-  }
-
-  private startTimer(): void {
-    this.stopTimer();
-    const elapsed = this.serverTime - (this.questionStartedAt || 0);
-    this.timeRemaining = Math.max(0, this.timeLimit - Math.floor(elapsed / 1000));
-    this.resumeTimerInterval();
-  }
-
-  private resumeTimerInterval(): void {
-    this.stopTimer();
-    this.timerInterval = window.setInterval(() => {
-      this.timeRemaining -= 1;
-      if (this.timeRemaining <= 0) {
-        this.stopTimer();
-        if (!this.hasSubmitted) {
-          this.submitAnswer();
-        }
-      } else {
-        this.updateTimerDisplay();
-      }
-    }, 1000);
-    this.updateTimerDisplay();
-  }
-
-  private stopTimer(): void {
-    if (this.timerInterval !== null) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
     }
   }
 
@@ -155,7 +105,7 @@ export class QuestionScreen extends BaseComponent {
     const timerEl = this.querySelector('.timer');
     if (timerEl) {
       timerEl.textContent = `${this.timeRemaining}s`;
-      const percentRemaining = this.timeRemaining / this.timeLimit;
+      const percentRemaining = this.timeLimit > 0 ? this.timeRemaining / this.timeLimit : 0;
       timerEl.classList.remove('timer-warning', 'timer-caution');
       if (this.timeRemaining <= 5) {
         timerEl.classList.add('timer-warning');
@@ -246,7 +196,6 @@ export class QuestionScreen extends BaseComponent {
     if (!currentState.sessionId || !currentState.playerId || !this.currentQuestion) return;
 
     this.hasSubmitted = true;
-    this.stopTimer();
 
     const submitBtn = this.querySelector('.submit-btn');
     if (submitBtn) {

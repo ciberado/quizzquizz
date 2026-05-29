@@ -28,6 +28,7 @@ export interface SessionDocState {
   currentQuestion?: SessionQuestion | null;
   questionStartedAt?: number | null;
   timeLimit?: number | null;
+  timeRemaining?: number | null;
   timerPaused?: boolean;
   timerPausedAt?: number | null;
   allPlayersAnswered?: boolean;
