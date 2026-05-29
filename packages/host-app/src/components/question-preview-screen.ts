@@ -835,7 +835,12 @@ export class QuestionPreviewScreen extends BaseComponent {
       } else if (hasStarted && bc) {
         badgeBg = 'color-mix(in srgb, var(--color-primary) 15%, transparent)';
         badgeColor = 'var(--color-primary)';
-        badgeText = `In progress · ${bc.graduated}/${bc.total} done`;
+        const lowestActiveBox =
+          bc.box1 > 0 ? '📦 Learning' :
+          bc.box2 > 0 ? '🔄 Reviewing' :
+          bc.box3 > 0 ? '⭐ Mastering' :
+          '✅ Almost done';
+        badgeText = `${lowestActiveBox} · ${bc.graduated}/${bc.total} ✅`;
       } else {
         badgeBg = 'var(--color-bg-alt)';
         badgeColor = 'var(--color-text-muted)';
