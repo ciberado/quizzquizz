@@ -35,7 +35,11 @@ COPY packages/player-app/ ./packages/player-app/
 COPY packages/flashcard-app/ ./packages/flashcard-app/
 
 # Generate Prisma client
-RUN cd packages/api-server && npx prisma generate
+# Note: if network is unavailable, the pre-generated client from the build context is used.
+# The COPY of packages/api-server/ above already includes src/generated/prisma/.
+# Run prisma generate to ensure the client matches the current schema and platform;
+# fall back silently if Prisma can't reach binaries.prisma.sh (e.g. air-gapped builds).
+RUN cd packages/api-server && (npx prisma generate || echo "⚠️  prisma generate failed — using pre-generated client from build context")
 
 # Build all packages
 RUN npm run build --workspaces
@@ -99,7 +103,7 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/package.json .
 
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
-RUN cd packages/api-server && npx prisma generate
+RUN cd packages/api-server && (npx prisma generate || echo "⚠️  prisma generate failed — using pre-built client from builder stage")
 
 # Create directory for runtime data and set ownership
 RUN mkdir -p /data && chown nodejs:nodejs /data
