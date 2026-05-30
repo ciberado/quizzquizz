@@ -50,6 +50,8 @@ interface TopicNode {
  * Question Preview & Configuration Screen
  * Allows host to preview questions, apply filters, and configure session options
  */
+const LS_FLAGGED_QUESTIONS = 'qz-flagged-questions';
+
 export class QuestionPreviewScreen extends BaseComponent {
   private bankId: string = '';
   private bank: QuestionBank | null = null;
@@ -69,6 +71,8 @@ export class QuestionPreviewScreen extends BaseComponent {
   private selectedTopics = new Set<string>();
   private expandedTopicNodes = new Set<string>();
   private topicsExpanded = false;
+  private hideFlagged = false;
+  private flaggedQuestionIds = new Set<string>();
   
   // Pagination state
   private currentPage = 1;
@@ -87,9 +91,9 @@ export class QuestionPreviewScreen extends BaseComponent {
     this.pace = prefs.pace;
     this.autoQuestionTime = prefs.autoQuestionTime;
 
+    this.loadFlaggedQuestions();
+
     // Extract bankId from path: /preview/:bankId
-    // bankId may be URL-encoded (e.g. "science%2Fphysics%2Felectromagnetism")
-    // to preserve slashes in path-based IDs without confusing the hash router.
     const pathParts = window.location.hash.split('/');
     this.bankId = pathParts[2] ? decodeURIComponent(pathParts[2]) : '';
 
@@ -104,6 +108,16 @@ export class QuestionPreviewScreen extends BaseComponent {
 
     await this.loadBank();
     await this.loadQuestions();
+  }
+
+  private loadFlaggedQuestions(): void {
+    try {
+      const raw = localStorage.getItem(LS_FLAGGED_QUESTIONS);
+      if (raw) {
+        const obj = JSON.parse(raw) as Record<string, unknown>;
+        this.flaggedQuestionIds = new Set(Object.keys(obj));
+      }
+    } catch { /* ignore */ }
   }
 
   /** Set up a single delegated click/change/input handler on the host element. */
@@ -152,6 +166,7 @@ export class QuestionPreviewScreen extends BaseComponent {
         case 'clear-filters':
           this.selectedDifficulties.clear();
           this.selectedTopics.clear();
+          this.hideFlagged = false;
           this.currentPage = 1;
           void this.loadQuestions();
           break;
@@ -213,6 +228,12 @@ export class QuestionPreviewScreen extends BaseComponent {
         else this.selectedDifficulties.delete(difficulty);
         this.currentPage = 1;
         void this.loadQuestions();
+        return;
+      }
+
+      if (target.dataset['action'] === 'toggle-hide-flagged') {
+        this.hideFlagged = target.checked;
+        this.render();
         return;
       }
 
@@ -566,10 +587,18 @@ export class QuestionPreviewScreen extends BaseComponent {
               </div>
 
               <!-- Clear Filters Button -->
-              ${(this.selectedDifficulties.size > 0 || this.selectedTopics.size > 0) ? `
+              ${(this.selectedDifficulties.size > 0 || this.selectedTopics.size > 0 || this.hideFlagged) ? `
                 <button class="btn-secondary" data-action="clear-filters" style="margin-top: var(--spacing-md);">
                   Clear Filters
                 </button>
+              ` : ''}
+
+              <!-- Hide Flagged Toggle -->
+              ${this.flaggedQuestionIds.size > 0 ? `
+                <label style="display: flex; align-items: center; gap: var(--spacing-xs); margin-top: var(--spacing-md); cursor: pointer; font-size: var(--font-size-sm);">
+                  <input type="checkbox" data-action="toggle-hide-flagged" ${this.hideFlagged ? 'checked' : ''} />
+                  <span>🚩 Hide flagged questions <small style="color: var(--color-text-muted);">(${this.flaggedQuestionIds.size} flagged)</small></span>
+                </label>
               ` : ''}
             </div>
 
@@ -700,7 +729,9 @@ export class QuestionPreviewScreen extends BaseComponent {
                 </div>
               ` : `
                 <div class="questions-list">
-                  ${this.preview.questions.map((q, index) => this.renderQuestion(q, index)).join('')}
+                  ${this.preview.questions
+                    .filter(q => !this.hideFlagged || !this.flaggedQuestionIds.has(q.id))
+                    .map((q, index) => this.renderQuestion(q, index)).join('')}
                 </div>
 
                 <!-- Pagination -->
@@ -718,9 +749,10 @@ export class QuestionPreviewScreen extends BaseComponent {
     const isSelected = this.selectAllMode || this.selectedQuestionIds.has(question.id);
     const displayIndex = (this.currentPage - 1) * this.limit + index + 1;
     const isExpanded = this.expandedQuestions.has(question.id);
+    const isFlagged = this.flaggedQuestionIds.has(question.id);
 
     return `
-      <div class="question-preview-card ${isSelected ? 'selected' : ''}" data-question-id="${question.id}" style="padding: 10px;">
+      <div class="question-preview-card ${isSelected ? 'selected' : ''}" data-question-id="${question.id}" style="padding: 10px; ${isFlagged ? 'border-left: 3px solid #f59e0b;' : ''}">
         <div style="display: flex; gap: 10px;">
           ${!this.selectAllMode ? `
             <input 
@@ -741,8 +773,9 @@ export class QuestionPreviewScreen extends BaseComponent {
               <span style="font-size: 14px; color: var(--color-text-muted); user-select: none; flex-shrink: 0; margin-top: 2px;">
                 ${isExpanded ? '▼' : '▶'}
               </span>
-              <h4 style="margin: 0; font-size: 16px; font-weight: 500;">
+              <h4 style="margin: 0; font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                 ${displayIndex}. ${this.escapeHtml(question.text)}
+                ${isFlagged ? '<span title="This question has been flagged" style="font-size: 14px; font-weight: 400;">🚩</span>' : ''}
               </h4>
             </div>
 
