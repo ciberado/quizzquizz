@@ -608,6 +608,41 @@ export class FlashcardPlayScreen extends BaseComponent {
         background: var(--color-error);
         color: white;
       }
+
+      @media (prefers-color-scheme: dark) {
+        /* Progress stat labels */
+        .fc-stat-learning  { color: #9ca3af; }
+        .fc-stat-reviewing { color: #fbbf24; }
+        .fc-stat-mastering { color: #60a5fa; }
+
+        /* Progress bar segments */
+        .fc-seg-learning  { background: #6b7280; }
+
+        /* Correct answer revealed — dark-friendly green tint */
+        .fc-answer-card.revealed-correct {
+          background: #064e3b;
+          border-color: var(--color-success);
+        }
+        .fc-answer-card.revealed-correct .fc-answer-text {
+          color: #6ee7b7;
+        }
+
+        /* Wrong answer revealed — dark-friendly red tint */
+        .fc-answer-card.revealed-wrong {
+          background: #450a0a;
+          border-color: #f87171;
+          opacity: 0.75;
+        }
+        .fc-answer-card.revealed-wrong .fc-answer-label { background: #dc2626; }
+
+        /* Exit/flag buttons hover — lighter bg on dark */
+        .fc-top-bar-exit:hover,
+        .fc-flag-btn:hover {
+          background: rgba(255, 255, 255, 0.12);
+          color: var(--color-text);
+          border-color: var(--color-border);
+        }
+      }
     `;
     document.head.appendChild(style);
   }

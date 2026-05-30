@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file, organized b
 
 ### Fixed
 - **[api-server]** Add `y-protocols` and `lib0` as explicit production dependencies — both were imported in `ws-handler.ts` but only available transitively in dev, causing `ERR_MODULE_NOT_FOUND` on Docker production startup.
-- **[flashcard-app]** Session summary screen no longer overflows on mobile: container now fills available width, Status column uses compact icons (✓/…) instead of "Mastered"/"In Progress" text, table cell padding is reduced on narrow screens.
+- **[flashcard-app]** Dark mode now applies consistently across all screens: `play-screen` injected styles add `@media (prefers-color-scheme: dark)` overrides for answer card revealed states (correct/wrong), progress stat colours, and hover buttons; global dark-mode block adds `--color-text-secondary` and darker shadows.
 
 ## [0.16.0] — 2026-05-30
 
