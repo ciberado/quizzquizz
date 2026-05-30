@@ -5,6 +5,14 @@ import { router } from '../router';
 import type { GameState } from '@quizzquizz/common';
 import { connectToSession, type SessionDocState } from '../yjs-provider';
 
+const LS_FLAGGED_QUESTIONS = 'qz-flagged-questions';
+const LS_QUIZ_TITLE = 'qz-current-quiz-title';
+
+interface FlaggedQuestion {
+  explanation: string;
+  timestamp: number;
+}
+
 /**
  * Question Screen Component
  * Displays the current question with answers, timer, and submit button.
@@ -20,8 +28,15 @@ export class QuestionScreen extends BaseComponent {
   private hasSubmitted: boolean = false;
   private hasRenderedQuestion: boolean = false;
   private errorNavigationTimeout: number | null = null;
+  private flaggedQuestions: Map<string, FlaggedQuestion> = new Map();
+  private modalOverlay: HTMLElement | null = null;
+  private quizTitle: string = 'Quiz';
 
   protected onMount(): void {
+    this.injectStyles();
+    this.loadFlags();
+    try { this.quizTitle = localStorage.getItem(LS_QUIZ_TITLE) || 'Quiz'; } catch { /* ignore */ }
+
     const currentState = state.getState();
     if (!currentState.sessionId || !currentState.playerId) {
       router.navigate('/');
@@ -44,6 +59,174 @@ export class QuestionScreen extends BaseComponent {
       clearTimeout(this.errorNavigationTimeout);
       this.errorNavigationTimeout = null;
     }
+    this.removeModal();
+  }
+
+  private injectStyles(): void {
+    if (document.getElementById('qz-game-bar-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'qz-game-bar-styles';
+    style.textContent = `
+      .qz-game-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.4rem var(--spacing-md);
+        background: var(--color-bg);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+      }
+      .qz-exit-btn {
+        background: none;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.3rem 0.7rem;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-text-light);
+        cursor: pointer;
+        transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+        white-space: nowrap;
+      }
+      .qz-exit-btn:hover { background: rgba(0,0,0,0.6); color: white; border-color: transparent; }
+      .qz-game-bar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        min-width: 0;
+      }
+      .qz-game-title {
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-text-light);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 180px;
+      }
+      .qz-flag-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0.3rem 0.35rem;
+        border-radius: var(--radius-sm);
+        opacity: 0.35;
+        transition: opacity var(--transition-fast), background var(--transition-fast);
+        flex-shrink: 0;
+      }
+      .qz-flag-btn:hover { opacity: 1; background: rgba(0,0,0,0.6); }
+      .qz-flag-btn.qz-flagged { opacity: 1; }
+      /* Modal — shared with flashcard pattern */
+      .qz-modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.55);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9999; padding: var(--spacing-md); box-sizing: border-box;
+      }
+      .qz-modal {
+        background: var(--color-bg);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        padding: var(--spacing-lg);
+        max-width: 420px; width: 100%;
+        display: flex; flex-direction: column; gap: var(--spacing-sm);
+      }
+      .qz-modal-title { font-size: var(--font-size-lg); font-weight: 700; margin: 0; }
+      .qz-modal-desc  { font-size: var(--font-size-sm); color: var(--color-text-light); margin: 0; }
+      .qz-modal-textarea {
+        width: 100%; border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md); padding: var(--spacing-sm);
+        font-size: var(--font-size-base); font-family: inherit;
+        resize: vertical; box-sizing: border-box;
+        background: var(--color-bg-secondary); color: var(--color-text);
+      }
+      .qz-modal-textarea:focus { outline: none; border-color: var(--color-primary); }
+      .qz-modal-actions { display: flex; gap: var(--spacing-xs); justify-content: flex-end; flex-wrap: wrap; }
+      .qz-modal-btn {
+        padding: 0.5rem 1.1rem; font-size: var(--font-size-sm); font-weight: 600;
+        border: none; border-radius: var(--radius-md); cursor: pointer;
+        transition: opacity var(--transition-fast);
+      }
+      .qz-modal-btn:hover { opacity: 0.85; }
+      .qz-modal-btn-primary  { background: var(--color-primary); color: white; }
+      .qz-modal-btn-secondary { background: var(--color-bg-secondary); color: var(--color-text); border: 1px solid var(--color-border); }
+      .qz-modal-btn-danger   { background: var(--color-error); color: white; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  private loadFlags(): void {
+    try {
+      const raw = localStorage.getItem(LS_FLAGGED_QUESTIONS);
+      if (raw) {
+        const obj = JSON.parse(raw) as Record<string, FlaggedQuestion>;
+        for (const [id, f] of Object.entries(obj)) this.flaggedQuestions.set(id, f);
+      }
+    } catch { /* ignore */ }
+  }
+
+  private saveFlags(): void {
+    try {
+      const obj: Record<string, FlaggedQuestion> = {};
+      this.flaggedQuestions.forEach((f, id) => { obj[id] = f; });
+      localStorage.setItem(LS_FLAGGED_QUESTIONS, JSON.stringify(obj));
+    } catch { /* ignore */ }
+  }
+
+  private showFlagModal(questionId: string): void {
+    this.removeModal();
+    const existing = this.flaggedQuestions.get(questionId);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'qz-modal-overlay';
+    overlay.innerHTML = `
+      <div class="qz-modal" role="dialog" aria-modal="true">
+        <h3 class="qz-modal-title">${existing ? '🚩 Question Already Flagged' : '🚩 Report an Issue'}</h3>
+        <p class="qz-modal-desc">
+          ${existing
+            ? 'You can update the description or remove the flag.'
+            : 'Describe the problem with this question. This is optional.'}
+        </p>
+        <textarea class="qz-modal-textarea" id="qz-flag-reason" rows="3"
+          placeholder="E.g. Wrong answer, confusing wording, typo…"
+          maxlength="500"
+        >${existing ? this.escapeHtml(existing.explanation) : ''}</textarea>
+        <div class="qz-modal-actions">
+          ${existing ? `<button class="qz-modal-btn qz-modal-btn-danger" id="qz-flag-remove">Remove Flag</button>` : ''}
+          <button class="qz-modal-btn qz-modal-btn-secondary" id="qz-flag-cancel">Cancel</button>
+          <button class="qz-modal-btn qz-modal-btn-primary" id="qz-flag-submit">
+            ${existing ? 'Update Flag' : '🚩 Flag Question'}
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    this.modalOverlay = overlay;
+
+    const textarea = overlay.querySelector<HTMLTextAreaElement>('#qz-flag-reason');
+    overlay.querySelector('#qz-flag-cancel')?.addEventListener('click', () => this.removeModal());
+    overlay.querySelector('#qz-flag-submit')?.addEventListener('click', () => {
+      const explanation = (textarea?.value ?? '').trim();
+      this.flaggedQuestions.set(questionId, { explanation, timestamp: Date.now() });
+      this.saveFlags();
+      this.removeModal();
+      this.render();
+    });
+    overlay.querySelector('#qz-flag-remove')?.addEventListener('click', () => {
+      this.flaggedQuestions.delete(questionId);
+      this.saveFlags();
+      this.removeModal();
+      this.render();
+    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.removeModal(); });
+    setTimeout(() => textarea?.focus(), 50);
+  }
+
+  private removeModal(): void {
+    this.modalOverlay?.remove();
+    this.modalOverlay = null;
   }
 
   private handleDocState(docState: SessionDocState): void {
@@ -79,6 +262,7 @@ export class QuestionScreen extends BaseComponent {
         }
       } else if (docState.currentQuestion.id !== this.currentQuestion.id) {
         // Question changed — go to waiting screen
+        this.removeModal();
         console.log(`[PLAYER][Question] Question changed → /waiting`);
         router.navigate(`/waiting`);
       } else {
@@ -234,6 +418,8 @@ export class QuestionScreen extends BaseComponent {
   }
 
   protected render(): void {
+    const isFlagged = this.currentQuestion ? this.flaggedQuestions.has(this.currentQuestion.id) : false;
+
     const html = !this.currentQuestion ? `
         <div class="screen question-screen">
           <div class="loading">
@@ -243,6 +429,19 @@ export class QuestionScreen extends BaseComponent {
         </div>
       ` : `
       <div class="screen question-screen">
+        <div class="qz-game-bar">
+          <button class="qz-exit-btn" id="qz-exit-btn" title="Leave game">✕ Exit</button>
+          <div class="qz-game-bar-right">
+            <span class="qz-game-title">${this.escapeHtml(this.quizTitle)}</span>
+            <button
+              class="qz-flag-btn${isFlagged ? ' qz-flagged' : ''}"
+              id="qz-flag-btn"
+              title="${isFlagged ? 'Question flagged — click to edit' : 'Report an issue with this question'}"
+              aria-label="${isFlagged ? 'Flagged' : 'Report issue'}"
+            >🚩</button>
+          </div>
+        </div>
+
         <div class="question-header">
           <div class="timer">0s</div>
           <div class="question-number">
@@ -309,6 +508,19 @@ export class QuestionScreen extends BaseComponent {
     if (submitBtn) {
       submitBtn.addEventListener('click', () => {
         this.submitAnswer();
+      });
+    }
+
+    this.querySelector('#qz-exit-btn')?.addEventListener('click', () => {
+      if (confirm('Leave the quiz? Your progress will be lost.')) {
+        router.navigate('/');
+      }
+    });
+
+    const questionId = this.currentQuestion?.id;
+    if (questionId) {
+      this.querySelector('#qz-flag-btn')?.addEventListener('click', () => {
+        this.showFlagModal(questionId);
       });
     }
   }
