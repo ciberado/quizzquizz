@@ -23,6 +23,15 @@ type Phase = 'loading' | 'question' | 'answer' | 'complete';
 // Letter labels for answers: A, B, C, D, E, F
 const ANSWER_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
+const SS_FLAGGED_QUESTIONS = 'qz-flashcard-flags';
+const LS_FLAGGED_QUESTIONS = 'qz-flagged-questions';
+
+export interface FlaggedQuestion {
+  questionId: string;
+  explanation: string;
+  timestamp: number;
+}
+
 /** Fisher-Yates shuffle — returns a new array */
 function shuffle<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -40,6 +49,8 @@ export class FlashcardPlayScreen extends BaseComponent {
   private shuffledAnswers: Array<{ id: string; text: string }> = [];
   private phase: Phase = 'loading';
   private error: string | null = null;
+  private flaggedQuestions: Map<string, FlaggedQuestion> = new Map();
+  private modalOverlay: HTMLElement | null = null;
 
   protected async onMount(): Promise<void> {
     this.injectStyles();
@@ -56,8 +67,13 @@ export class FlashcardPlayScreen extends BaseComponent {
     // Read active-session info and returnUrl from hash query params (passed by the host
     // app so the data survives cross-origin navigation in dev mode).
     this.readHashParams(hash);
+    this.loadFlags();
 
     await this.loadSession();
+  }
+
+  protected onUnmount(): void {
+    this.removeModal();
   }
 
   /** Parse bankId, setIndex, and returnUrl from the hash query string and persist to sessionStorage. */
@@ -75,6 +91,112 @@ export class FlashcardPlayScreen extends BaseComponent {
       if (setIndexStr !== null) sessionStorage.setItem('qz-active-set-index', setIndexStr);
       if (returnUrl) sessionStorage.setItem('qz-flashcard-return-url', returnUrl);
     } catch { /* ignore */ }
+  }
+
+  private loadFlags(): void {
+    try {
+      const raw = sessionStorage.getItem(SS_FLAGGED_QUESTIONS);
+      if (raw) {
+        const arr = JSON.parse(raw) as FlaggedQuestion[];
+        for (const f of arr) this.flaggedQuestions.set(f.questionId, f);
+      }
+    } catch { /* ignore */ }
+  }
+
+  private saveFlags(): void {
+    try {
+      // sessionStorage: per-session quick access
+      sessionStorage.setItem(
+        SS_FLAGGED_QUESTIONS,
+        JSON.stringify([...this.flaggedQuestions.values()]),
+      );
+      // localStorage: shared across apps so host prep screen can read them
+      const existing: Record<string, { explanation: string; timestamp: number }> = {};
+      try {
+        const raw = localStorage.getItem(LS_FLAGGED_QUESTIONS);
+        if (raw) Object.assign(existing, JSON.parse(raw));
+      } catch { /* ignore */ }
+      this.flaggedQuestions.forEach((f, id) => { existing[id] = { explanation: f.explanation, timestamp: f.timestamp }; });
+      localStorage.setItem(LS_FLAGGED_QUESTIONS, JSON.stringify(existing));
+    } catch { /* ignore */ }
+  }
+
+  private exitToSummary(): void {
+    this.removeModal();
+    if (!this.engine) {
+      router.navigate('/');
+      return;
+    }
+    try {
+      sessionStorage.setItem('qz-flashcard-stats', JSON.stringify(this.engine.getStats()));
+      sessionStorage.setItem('qz-flashcard-bank-name', this.sessionState?.questionBankName || '');
+    } catch { /* ignore */ }
+    router.navigate('/summary');
+  }
+
+  private showFlagModal(cardId: string): void {
+    this.removeModal();
+    const existing = this.flaggedQuestions.get(cardId);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'fc-modal-overlay';
+    overlay.innerHTML = `
+      <div class="fc-modal" role="dialog" aria-modal="true" aria-labelledby="fc-modal-title">
+        <h3 id="fc-modal-title" class="fc-modal-title">
+          ${existing ? '🚩 Question Already Flagged' : '🚩 Report an Issue'}
+        </h3>
+        <p class="fc-modal-desc">
+          ${existing
+            ? 'You can update the description or remove the flag.'
+            : 'Describe the problem with this question. This is optional — you can flag it without a reason.'}
+        </p>
+        <textarea
+          id="fc-flag-reason"
+          class="fc-modal-textarea"
+          rows="3"
+          placeholder="E.g. Wrong answer, confusing wording, typo…"
+          maxlength="500"
+        >${existing ? this.escapeHtml(existing.explanation) : ''}</textarea>
+        <div class="fc-modal-actions">
+          ${existing ? `<button class="fc-modal-btn fc-modal-btn-danger" id="fc-flag-remove">Remove Flag</button>` : ''}
+          <button class="fc-modal-btn fc-modal-btn-secondary" id="fc-flag-cancel">Cancel</button>
+          <button class="fc-modal-btn fc-modal-btn-primary" id="fc-flag-submit">
+            ${existing ? 'Update Flag' : '🚩 Flag Question'}
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    this.modalOverlay = overlay;
+
+    const textarea = overlay.querySelector<HTMLTextAreaElement>('#fc-flag-reason');
+    overlay.querySelector('#fc-flag-cancel')?.addEventListener('click', () => this.removeModal());
+    overlay.querySelector('#fc-flag-submit')?.addEventListener('click', () => {
+      const explanation = (textarea?.value ?? '').trim();
+      this.flaggedQuestions.set(cardId, { questionId: cardId, explanation, timestamp: Date.now() });
+      this.saveFlags();
+      this.removeModal();
+      this.render();
+    });
+    overlay.querySelector('#fc-flag-remove')?.addEventListener('click', () => {
+      this.flaggedQuestions.delete(cardId);
+      this.saveFlags();
+      this.removeModal();
+      this.render();
+    });
+    // Close on backdrop click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) this.removeModal();
+    });
+
+    // Focus textarea for accessibility
+    setTimeout(() => textarea?.focus(), 50);
+  }
+
+  private removeModal(): void {
+    this.modalOverlay?.remove();
+    this.modalOverlay = null;
   }
 
   private injectStyles(): void {
@@ -328,6 +450,164 @@ export class FlashcardPlayScreen extends BaseComponent {
         .fc-answer-card { padding-left: 3rem; min-height: 52px; }
         .fc-answer-label { width: 1.75rem; height: 1.75rem; font-size: 0.78rem; }
       }
+
+      /* ── Top bar ────────────────────────────────── */
+      .fc-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+        margin-bottom: var(--spacing-xs);
+        padding: 0 0.25rem;
+      }
+
+      .fc-top-bar-exit {
+        background: none;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.35rem 0.75rem;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-text-light);
+        cursor: pointer;
+        transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .fc-top-bar-exit:hover {
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border-color: transparent;
+      }
+
+      .fc-top-bar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        min-width: 0;
+      }
+
+      .fc-top-bar-title {
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-text-light);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ── Flag button (top-bar icon only) ───────── */
+      .fc-flag-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0.3rem 0.35rem;
+        border-radius: var(--radius-sm);
+        opacity: 0.35;
+        transition: opacity var(--transition-fast), background var(--transition-fast);
+        flex-shrink: 0;
+      }
+
+      .fc-flag-btn:hover {
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.6);
+      }
+
+      .fc-flag-btn.fc-flagged { opacity: 1; }
+
+      /* ── Modal overlay ───────────────────────────── */
+      .fc-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: var(--spacing-md);
+        box-sizing: border-box;
+      }
+
+      .fc-modal {
+        background: var(--color-bg);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        padding: var(--spacing-lg);
+        max-width: 420px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+      }
+
+      .fc-modal-title {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .fc-modal-desc {
+        font-size: var(--font-size-sm);
+        color: var(--color-text-light);
+        margin: 0;
+      }
+
+      .fc-modal-textarea {
+        width: 100%;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-sm);
+        font-size: var(--font-size-base);
+        font-family: inherit;
+        resize: vertical;
+        box-sizing: border-box;
+        transition: border-color var(--transition-fast);
+        background: var(--color-bg-secondary);
+        color: var(--color-text);
+      }
+
+      .fc-modal-textarea:focus {
+        outline: none;
+        border-color: var(--color-primary);
+      }
+
+      .fc-modal-actions {
+        display: flex;
+        gap: var(--spacing-xs);
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+
+      .fc-modal-btn {
+        padding: 0.5rem 1.1rem;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: opacity var(--transition-fast);
+      }
+
+      .fc-modal-btn:hover { opacity: 0.85; }
+
+      .fc-modal-btn-primary {
+        background: var(--color-primary);
+        color: white;
+      }
+
+      .fc-modal-btn-secondary {
+        background: var(--color-bg-secondary);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+      }
+
+      .fc-modal-btn-danger {
+        background: var(--color-error);
+        color: white;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -445,9 +725,24 @@ export class FlashcardPlayScreen extends BaseComponent {
     const active = this.engine?.getActiveCount() ?? 0;
     const revealed = this.phase === 'answer';
     const isSingle = this.shuffledAnswers.length === 1;
+    const isFlagged = this.flaggedQuestions.has(card.id);
+    const bankName = this.sessionState?.questionBankName || 'Flashcards';
 
     this.patchContent(`
       <div class="fc-play-screen">
+        <div class="fc-top-bar">
+          <button class="fc-top-bar-exit" id="exit-btn" title="Exit to summary">✕ Exit</button>
+          <div class="fc-top-bar-right">
+            <span class="fc-top-bar-title">${this.escapeHtml(bankName)}</span>
+            <button
+              class="fc-flag-btn${isFlagged ? ' fc-flagged' : ''}"
+              id="flag-btn"
+              title="${isFlagged ? 'Question flagged — click to edit' : 'Report an issue with this question'}"
+              aria-label="${isFlagged ? 'Flagged' : 'Report issue'}"
+            >🚩</button>
+          </div>
+        </div>
+
         ${this.renderProgressBar(dist, total)}
 
         <div class="fc-question-card">
@@ -490,6 +785,9 @@ export class FlashcardPlayScreen extends BaseComponent {
         this.render();
       });
     }
+
+    this.qs('#exit-btn')?.addEventListener('click', () => this.exitToSummary());
+    this.qs('#flag-btn')?.addEventListener('click', () => this.showFlagModal(card.id));
   }
 
   /**
@@ -500,8 +798,15 @@ export class FlashcardPlayScreen extends BaseComponent {
    * picker can reflect current progress.
    */
   private syncAnswer(cardId: string, known: boolean): void {
+    if (!this.engine) return;
+
+    // Always persist box distribution — must run even when the host plays directly
+    // without a playerId (the host opens the play URL without going through the
+    // join screen, so state.playerId is null in that scenario).
+    this.persistBoxCounts();
+
     const playerId = state.playerId;
-    if (!playerId || !this.engine) return;
+    if (!playerId) return;
 
     // Read the post-markCard state directly from the engine's stats
     const stats = this.engine.getStats();
@@ -522,8 +827,11 @@ export class FlashcardPlayScreen extends BaseComponent {
       .catch(() => {
         // Non-blocking — local engine state is the source of truth during play
       });
+  }
 
-    // Update per-set box distribution so host-app set picker stays current
+  /** Write current box distribution to localStorage so the host-app set picker reflects progress. */
+  private persistBoxCounts(): void {
+    if (!this.engine) return;
     try {
       const bankId = sessionStorage.getItem('qz-active-bank-id');
       const setIndexStr = sessionStorage.getItem('qz-active-set-index');

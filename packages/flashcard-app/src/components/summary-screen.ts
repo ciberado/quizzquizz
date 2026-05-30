@@ -7,14 +7,16 @@ import { BaseComponent } from './base-component';
 import { router } from '../router';
 import type { LeitnerStats } from '../leitner';
 import { getActiveSession, clearActiveSession, markSetCompleted } from '../flashcard-sets';
+import type { FlaggedQuestion } from './play-screen';
 
 const RETURN_URL_KEY = 'qz-flashcard-return-url';
 // sessionStorage keys written by play-screen when it reads hash params
 const SS_BANK_ID = 'qz-active-bank-id';
 const SS_SET_INDEX = 'qz-active-set-index';
 const SS_RETURN_URL = 'qz-flashcard-return-url';
+const SS_FLAGGED_QUESTIONS = 'qz-flashcard-flags';
 
-type SortCol = 'question' | 'yes' | 'no' | 'firstTry' | 'status';
+type SortCol = 'question' | 'yes' | 'no' | 'firstTry' | 'status' | 'flag';
 type SortDir = 'asc' | 'desc';
 
 export class FlashcardSummaryScreen extends BaseComponent {
@@ -23,6 +25,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
   private returnUrl: string = '';
   private sortCol: SortCol = 'question';
   private sortDir: SortDir = 'asc';
+  private flaggedQuestions: Map<string, FlaggedQuestion> = new Map();
 
   protected onMount(): void {
     this.injectStyles();
@@ -37,6 +40,14 @@ export class FlashcardSummaryScreen extends BaseComponent {
         sessionStorage.getItem(SS_RETURN_URL) ||
         localStorage.getItem(RETURN_URL_KEY) ||
         '';
+    } catch { /* ignore */ }
+
+    try {
+      const rawFlags = sessionStorage.getItem(SS_FLAGGED_QUESTIONS);
+      if (rawFlags) {
+        const arr = JSON.parse(rawFlags) as FlaggedQuestion[];
+        for (const f of arr) this.flaggedQuestions.set(f.questionId, f);
+      }
     } catch { /* ignore */ }
 
     // Mark the active set as completed.
@@ -223,24 +234,32 @@ export class FlashcardSummaryScreen extends BaseComponent {
                     ${this.renderTh('no', '✗ No', 'center')}
                     ${this.renderTh('firstTry', 'First Try', 'center')}
                     ${this.renderTh('status', 'Status', 'center')}
+                    ${this.renderTh('flag', '🚩', 'center')}
                   </tr>
                 </thead>
                 <tbody>
                   ${this.sortedRows(s)
                     .map(
-                      (d) => `
-                    <tr style="border-bottom: 1px solid var(--color-border);">
-                      <td class="col-question" title="${this.escapeHtml(d.card.text)}">${this.escapeHtml(d.card.text)}</td>
-                      <td style="text-align: center; color: var(--color-success);">${d.yesCount}</td>
-                      <td style="text-align: center; color: var(--color-error);">${d.noCount}</td>
-                      <td style="text-align: center;">
-                        ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
-                      </td>
-                      <td style="text-align: center;">
-                        ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
-                      </td>
-                    </tr>
-                  `
+                      (d) => {
+                        const flag = this.flaggedQuestions.get(d.card.id);
+                        const flagCell = flag
+                          ? `<td style="text-align: center;" title="${this.escapeHtml(flag.explanation || 'Flagged')}" aria-label="Flagged">🚩</td>`
+                          : `<td style="text-align: center; color: var(--color-text-light); opacity: 0.3;">—</td>`;
+                        return `
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                          <td class="col-question" title="${this.escapeHtml(d.card.text)}">${this.escapeHtml(d.card.text)}</td>
+                          <td style="text-align: center; color: var(--color-success);">${d.yesCount}</td>
+                          <td style="text-align: center; color: var(--color-error);">${d.noCount}</td>
+                          <td style="text-align: center;">
+                            ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
+                          </td>
+                          <td style="text-align: center;">
+                            ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
+                          </td>
+                          ${flagCell}
+                        </tr>
+                      `;
+                      }
                     )
                     .join('')}
                 </tbody>
@@ -301,6 +320,11 @@ export class FlashcardSummaryScreen extends BaseComponent {
         }
         case 'status':
           return dir * ((a.graduated ? 1 : 0) - (b.graduated ? 1 : 0));
+        case 'flag': {
+          const aFlagged = this.flaggedQuestions.has(a.card.id) ? 1 : 0;
+          const bFlagged = this.flaggedQuestions.has(b.card.id) ? 1 : 0;
+          return dir * (aFlagged - bFlagged);
+        }
         default:
           return 0;
       }
