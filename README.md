@@ -2,26 +2,12 @@
 
 A real-time competitive quiz platform inspired by Kahoot, built with simplicity and performance in mind.
 
-## Quick Start with Docker
+## Deployment
 
-The easiest way to run QuizzQuizz is using Docker Compose:
-
-```bash
-# Start the application
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop the application
-docker compose down
-```
-
-The application will be available at:
-- **Player app**: http://localhost:3000/
-- **Host app**: http://localhost:3000/host
-- **Flashcard app**: http://localhost:3000/flashcard/
-- **API**: http://localhost:3000/api/
+| Guide | When to use |
+|-------|-------------|
+| [**Docker deployment**](docs/deployment-docker.md) | Recommended — Docker Compose runs everything in containers; includes Tailscale and EC2 proxy options |
+| [**Bare-metal deployment**](docs/deployment-bare-metal.md) | Node.js + Caddy directly on the host, no Docker required |
 
 ## Architecture
 
@@ -29,7 +15,7 @@ QuizzQuizz uses a modern, simplified architecture:
 - **Caddy**: Reverse proxy providing a single entry point
 - **API Server**: Hono-based REST API with SQLite database (Prisma ORM)
 - **Frontend Apps**: Vanilla TypeScript with Web Components (no React/Vue)
-- **Polling over WebSockets**: Simpler deployment and debugging
+- **Real-time sync**: Yjs + y-websocket for live game state (no polling)
 
 ## Features
 
@@ -60,34 +46,16 @@ QuizzQuizz uses a modern, simplified architecture:
 
 ### Prerequisites
 
-- Node.js 22+ LTS
-- npm 10+
-- Docker (for containerized deployment)
+- Node.js 22+ LTS and npm 10+
 
 ### Setup
 
 ```bash
-# Install dependencies
 npm install
-
-# Build all packages
-npm run build
-
-# Run API server
-npm run dev --workspace=@quizzquizz/api-server
-
-# Run host app (separate terminal)
-npm run dev --workspace=@quizzquizz/host-app
-
-# Run player app (separate terminal)
-npm run dev --workspace=@quizzquizz/player-app
+npm run dev   # starts all services + dev proxy on port 3000
 ```
 
-Development servers:
-- API: http://localhost:3000
-- Host app: http://localhost:3001
-- Player app: http://localhost:3002
-- Flashcard app: http://localhost:3004
+See [bare-metal deployment](docs/deployment-bare-metal.md#development-mode) for port details.
 
 ### Testing
 
@@ -109,51 +77,22 @@ quizzquizz/
 │   ├── api-server/       # REST API (Hono + SQLite + Prisma)
 │   ├── host-app/         # Host UI (Web Components + Vite)
 │   ├── player-app/       # Player UI (Web Components + Vite)
+│   ├── analytics/        # Analytics calculation logic
+│   ├── analytics-ui/     # Analytics dashboard UI
 │   └── flashcard-app/    # Flashcard self-study UI (Web Components + Vite)
 ├── question-banks/       # Sample .md files with quiz questions
+├── docs/                 # Deployment guides
 ├── vibe/                 # Project documentation and plans
 ├── Dockerfile            # Multi-stage Docker build
 ├── docker-compose.yml    # Orchestration (API + Caddy)
-└── Caddyfile             # Reverse proxy configuration
+├── docker-compose.ts.yml # Tailscale deployment variant
+├── Caddyfile             # Reverse proxy configuration (Docker)
+└── Caddyfile.proxy       # EC2 public proxy configuration
 ```
-
-## Docker Scripts
-
-```bash
-# Build Docker image
-npm run docker:build
-
-# Start containers
-npm run docker:up
-
-# View logs
-npm run docker:logs
-
-# Stop containers
-npm run docker:down
-
-# Restart containers
-npm run docker:restart
-
-# Clean up everything (containers, volumes, images)
-npm run docker:clean
-```
-
-## Configuration
-
-Environment variables (in `docker-compose.yml`):
-
-- `NODE_ENV`: `production` or `development`
-- `PORT`: API server port (default: 3000)
-- `DATABASE_URL`: SQLite database path
-- `QUESTION_BANKS_PATH`: Path to question bank files
-- `SESSION_EXPIRY_HOURS`: Session expiration time (default: 24)
-- `LOG_LEVEL`: Logging level (`error`, `warn`, `info`, `debug`)
-- `MAX_UPLOAD_KB`: Maximum quiz bank upload size in KB (default: 500)
 
 ## Question Banks
 
-Questions are stored as Markdown files in `question-banks/`. See existing samples for format.
+Questions are stored as Markdown files in `question-banks/`. See existing samples for format, or read [`vibe/QUESTION-BANK-FORMAT.md`](vibe/QUESTION-BANK-FORMAT.md).
 
 ### Uploading Questions (Browser)
 
@@ -169,26 +108,17 @@ Use the **"📋 Copy Claude Prompt"** button inside the upload modal to get a re
 
 Uploaded banks are stored under `question-banks/user-quizzes/<userId>/` and are git-ignored.
 
-### Editing Questions (Filesystem)
+### Reloading edited banks
 
-When running with Docker Compose, question bank files are mounted as a volume:
-
-1. **Edit** question bank files in `question-banks/` directory
-2. **Reload** in the Host UI:
-   - Open the host app at `http://localhost:3000`
-   - Click the **"🔄 Refresh Banks"** button (top-right corner)
-   - Your changes will appear immediately
-
-Alternatively, reload via command line:
 ```bash
 ./reload-question-banks.sh
-# Or manually:
-curl -X POST http://localhost:3000/api/question-banks/reload
+# or: curl -X POST http://localhost:3000/api/question-banks/reload
 ```
+
+Or click **🔄 Refresh Banks** in the Host UI.
 
 ### Question Format
 
-Example:
 ```markdown
 # Question 1
 ## What is the capital of France?
