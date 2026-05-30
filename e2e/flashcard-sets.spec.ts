@@ -10,11 +10,14 @@
  *   6. Cancelling the picker does not create a session
  *   7. Confirming a set creates a session with the right question IDs
  *   8. After session completion the set is marked done in localStorage
+ *   9. Box counts are persisted after answering a card as host (no playerId)
  */
 
 import { test, expect, type Page } from '@playwright/test';
 
 const HOST = 'http://localhost:3001';
+const FLASHCARD_APP = 'http://localhost:3004';
+const API_BASE = 'http://localhost:3000';
 const BANK_PATH = 'sample-general-knowledge';
 const PREVIEW_URL = `${HOST}/#/preview/${BANK_PATH}`;
 const LS_PREFIX = 'qz-fc-progress-';
@@ -270,5 +273,89 @@ test.describe('Flashcard Set Completion Tracking', () => {
 
     expect(progress).not.toBeNull();
     expect(progress.sets[0].completedAt).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: Box count persistence when host plays without a playerId
+// ---------------------------------------------------------------------------
+
+test.describe('Flashcard host-play box count persistence', () => {
+  /**
+   * Regression test for: syncAnswer returned early when state.playerId was null,
+   * preventing updateSetBoxCounts from running. The host opens the play URL
+   * directly (no join step), so state.playerId is always null.
+   *
+   * After the fix, box counts must be written to localStorage after each card
+   * answer regardless of whether a playerId is present.
+   */
+  test('box counts are persisted after answering a card as host (no playerId)', async ({
+    page,
+    request,
+  }) => {
+    // 1. Create a flashcard session via API
+    const createRes = await request.post(`${API_BASE}/api/sessions`, {
+      data: { questionBankId: BANK_PATH, mode: 'flashcard' },
+    });
+    expect(createRes.status()).toBe(201);
+    const session = await createRes.json() as { id: string; pin: string };
+
+    // 2. Navigate to the flashcard-app play URL as the host would
+    //    (with bankId + setIndex in hash params, no prior join → state.playerId is null)
+    const playUrl = `${FLASHCARD_APP}/#/play/${session.id}?bankId=${encodeURIComponent(BANK_PATH)}&setIndex=0&returnUrl=${encodeURIComponent(`${HOST}/#/`)}`;
+    await page.goto(playUrl);
+
+    // 3. Pre-seed localStorage with a full BankProgress so sameShape check succeeds
+    //    (mirrors what the host-app's openSetPicker() does before launching)
+    await page.evaluate(
+      ({ prefix, bankId }) => {
+        const existing = localStorage.getItem(prefix + bankId);
+        if (!existing) {
+          // Create a minimal BankProgress with 3 sets (30 cards, 10 each)
+          const stub = {
+            setSize: 10,
+            sets: [
+              { ids: Array.from({ length: 10 }, (_, i) => `card-${i}`), completedAt: null, boxCounts: null },
+              { ids: Array.from({ length: 10 }, (_, i) => `card-${i + 10}`), completedAt: null, boxCounts: null },
+              { ids: Array.from({ length: 10 }, (_, i) => `card-${i + 20}`), completedAt: null, boxCounts: null },
+            ],
+          };
+          localStorage.setItem(prefix + bankId, JSON.stringify(stub));
+        }
+      },
+      { prefix: LS_PREFIX, bankId: BANK_PATH },
+    );
+
+    // 4. Wait for the play screen to render (first card should appear)
+    await expect(page.locator('.fc-show-btn, .fc-yes-btn')).toBeVisible({ timeout: 15000 });
+
+    // 5. If the answer is not revealed yet, reveal it first
+    const showBtn = page.locator('.fc-show-btn');
+    if (await showBtn.isVisible()) {
+      await showBtn.click();
+    }
+
+    // 6. Click "Yes" to answer the first card
+    await expect(page.locator('.fc-yes-btn')).toBeVisible({ timeout: 5000 });
+    await page.locator('.fc-yes-btn').click();
+
+    // Small wait for synchronous localStorage write (no async needed)
+    await page.waitForTimeout(200);
+
+    // 7. Verify localStorage has boxCounts updated for set 0
+    const progress = await page.evaluate(
+      ({ prefix, bankId }) => {
+        const raw = localStorage.getItem(prefix + bankId);
+        return raw ? JSON.parse(raw) : null;
+      },
+      { prefix: LS_PREFIX, bankId: BANK_PATH },
+    );
+
+    expect(progress).not.toBeNull();
+    const bc = progress.sets[0]?.boxCounts;
+    // After one "Yes" answer, total must be > 0 and at least one box must have cards
+    expect(bc).not.toBeNull();
+    expect(bc.total).toBeGreaterThan(0);
+    expect(bc.box1 + bc.box2 + bc.box3 + bc.graduated).toBe(bc.total);
   });
 });
