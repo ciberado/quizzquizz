@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[api-server]** Add `y-protocols` and `lib0` as explicit production dependencies — both were imported in `ws-handler.ts` but only available transitively in dev, causing `ERR_MODULE_NOT_FOUND` on Docker production startup.
+
 ## [0.16.0] — 2026-05-30
 
 ### Added
