@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-05-30
+
+### Added
+- **[flashcard-app]** Top bar on the play screen with an Exit button (left) and the deck title + 🚩 flag button (right); dark background/white text on hover.
+- **[flashcard-app]** Question flagging/feedback mechanism: players can report a problem with any card via a modal that accepts an optional explanation. Flags are persisted to `sessionStorage` (per-session) and `localStorage` (shared across apps).
+- **[flashcard-app]** Summary screen shows a sortable 🚩 flag column in the card-details table so flagged questions are easy to identify.
+- **[flashcard-app]** Favicon (`/flashcard/favicon.svg`) — stacked cards with a question mark.
+- **[player-app]** Top bar on the quiz question screen with an Exit button (requires confirmation) and the quiz title + 🚩 flag button, mirroring the flashcard play-screen pattern.
+- **[player-app]** Question flagging modal identical to the flashcard version; flags saved to shared `localStorage` key `qz-flagged-questions`.
+- **[host-app]** "🚩 Hide flagged questions" checkbox filter in the question preparation screen; flagged question cards show a 🚩 badge and amber left border.
+- **[host-app]** Favicon (`/favicon.svg`).
+- **[player-app]** Favicon (`/favicon.svg`).
+- **[analytics-ui]** Favicon (`/favicon.svg`).
+
 ## [0.15.2] — 2026-05-29
 
 ### Added
