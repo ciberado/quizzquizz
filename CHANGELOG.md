@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file, organized b
 ### Fixed
 - **[api-server]** Add `y-protocols` and `lib0` as explicit production dependencies — both were imported in `ws-handler.ts` but only available transitively in dev, causing `ERR_MODULE_NOT_FOUND` on Docker production startup.
 - **[flashcard-app]** Dark mode now applies consistently across all screens: `play-screen` injected styles add `@media (prefers-color-scheme: dark)` overrides for answer card revealed states (correct/wrong), progress stat colours, and hover buttons; global dark-mode block adds `--color-text-secondary` and darker shadows.
+- **[flashcard-app]** Theme preference set in any app (host, player) is now respected: added `theme.ts` reading the shared `quizzquizz_theme` localStorage key (OS fallback when unset), `theme-toggle` Web Component, and `theme.init()` in `main.ts`; CSS dark mode uses `[data-theme="dark"]` + `prefers-color-scheme` FOUC guard.
+- **[analytics-ui]** Wired into shared theme system: added `theme.ts` (defaults dark), `theme-toggle` component, `theme.init()` in `main.ts`, and `:root[data-theme="light"]` overrides in `styles.css`.
 
 ## [0.16.0] — 2026-05-30
 

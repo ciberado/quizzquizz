@@ -1,5 +1,6 @@
 /* Analytics UI Styles */
 
+/* Default: dark theme */
 :root {
   --bg: #0f172a;
   --surface: #1e293b;
@@ -12,6 +13,16 @@
   --warning: #f59e0b;
   --error: #ef4444;
   --sidebar-w: 220px;
+}
+
+/* Light theme overrides */
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

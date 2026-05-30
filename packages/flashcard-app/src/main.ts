@@ -1,4 +1,5 @@
 import './styles.css';
+import { theme } from './theme';
 import { router } from './router';
 import { state } from './state';
 
@@ -6,6 +7,10 @@ import { state } from './state';
 import './components/join-screen';
 import './components/play-screen';
 import './components/summary-screen';
+import './components/theme-toggle';
+
+// Apply saved theme (or OS preference) before first render to avoid flash
+theme.init();
 
 // Track the currently mounted screen tag to avoid unnecessary remounts
 let currentScreenTag = '';

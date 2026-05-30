@@ -858,8 +858,12 @@ label {
 }
 
 /* Dark mode support (optional) */
+/* Dark overrides:
+   - :root:not([data-theme="light"]) inside the media query covers
+     the pre-JS FOUC window when the OS is in dark mode.
+   - :root[data-theme="dark"] is the authoritative explicit preference. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-text: #f9fafb;
     --color-text-light: #d1d5db;
     --color-text-secondary: #9ca3af;
@@ -871,6 +875,18 @@ label {
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
   }
+}
+:root[data-theme="dark"] {
+  --color-text: #f9fafb;
+  --color-text-light: #d1d5db;
+  --color-text-secondary: #9ca3af;
+  --color-bg: #1f2937;
+  --color-bg-secondary: #111827;
+  --color-border: #374151;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
 }
 /* Question Screen Styles */
 .question-screen {

@@ -3,6 +3,7 @@
  * Checks auth, sets up router, and mounts the app.
  */
 import './styles.css';
+import { theme } from './theme.js';
 import { Router } from './router.js';
 import { attachSidebarToggle } from './components/shared/ui.js';
 import { renderDashboard } from './components/player/dashboard.js';
@@ -17,8 +18,15 @@ import { renderSessionReport } from './components/host/session-report.js';
 import { renderBankHealth } from './components/host/bank-health.js';
 import { renderEngagement } from './components/host/engagement.js';
 import { renderCompare } from './components/host/comparative.js';
+import './components/theme-toggle.js';
 
 const app = document.getElementById('app')!;
+
+// Apply saved theme before first render
+theme.init();
+
+// Mount floating theme toggle
+document.body.appendChild(document.createElement('analytics-theme-toggle'));
 
 // Re-attach sidebar toggle after each render
 const observer = new MutationObserver(() => attachSidebarToggle());

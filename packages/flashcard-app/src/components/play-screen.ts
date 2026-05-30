@@ -609,40 +609,29 @@ export class FlashcardPlayScreen extends BaseComponent {
         color: white;
       }
 
+      /* Dark mode — both OS preference (pre-JS) and explicit data-theme */
       @media (prefers-color-scheme: dark) {
-        /* Progress stat labels */
-        .fc-stat-learning  { color: #9ca3af; }
-        .fc-stat-reviewing { color: #fbbf24; }
-        .fc-stat-mastering { color: #60a5fa; }
-
-        /* Progress bar segments */
-        .fc-seg-learning  { background: #6b7280; }
-
-        /* Correct answer revealed — dark-friendly green tint */
-        .fc-answer-card.revealed-correct {
-          background: #064e3b;
-          border-color: var(--color-success);
-        }
-        .fc-answer-card.revealed-correct .fc-answer-text {
-          color: #6ee7b7;
-        }
-
-        /* Wrong answer revealed — dark-friendly red tint */
-        .fc-answer-card.revealed-wrong {
-          background: #450a0a;
-          border-color: #f87171;
-          opacity: 0.75;
-        }
-        .fc-answer-card.revealed-wrong .fc-answer-label { background: #dc2626; }
-
-        /* Exit/flag buttons hover — lighter bg on dark */
-        .fc-top-bar-exit:hover,
-        .fc-flag-btn:hover {
-          background: rgba(255, 255, 255, 0.12);
-          color: var(--color-text);
-          border-color: var(--color-border);
-        }
+        :root:not([data-theme="light"]) .fc-stat-learning  { color: #9ca3af; }
+        :root:not([data-theme="light"]) .fc-stat-reviewing { color: #fbbf24; }
+        :root:not([data-theme="light"]) .fc-stat-mastering { color: #60a5fa; }
+        :root:not([data-theme="light"]) .fc-seg-learning   { background: #6b7280; }
+        :root:not([data-theme="light"]) .fc-answer-card.revealed-correct { background: #064e3b; border-color: var(--color-success); }
+        :root:not([data-theme="light"]) .fc-answer-card.revealed-correct .fc-answer-text { color: #6ee7b7; }
+        :root:not([data-theme="light"]) .fc-answer-card.revealed-wrong { background: #450a0a; border-color: #f87171; opacity: 0.75; }
+        :root:not([data-theme="light"]) .fc-answer-card.revealed-wrong .fc-answer-label { background: #dc2626; }
+        :root:not([data-theme="light"]) .fc-top-bar-exit:hover,
+        :root:not([data-theme="light"]) .fc-flag-btn:hover { background: rgba(255,255,255,0.12); color: var(--color-text); border-color: var(--color-border); }
       }
+      :root[data-theme="dark"] .fc-stat-learning  { color: #9ca3af; }
+      :root[data-theme="dark"] .fc-stat-reviewing { color: #fbbf24; }
+      :root[data-theme="dark"] .fc-stat-mastering { color: #60a5fa; }
+      :root[data-theme="dark"] .fc-seg-learning   { background: #6b7280; }
+      :root[data-theme="dark"] .fc-answer-card.revealed-correct { background: #064e3b; border-color: var(--color-success); }
+      :root[data-theme="dark"] .fc-answer-card.revealed-correct .fc-answer-text { color: #6ee7b7; }
+      :root[data-theme="dark"] .fc-answer-card.revealed-wrong { background: #450a0a; border-color: #f87171; opacity: 0.75; }
+      :root[data-theme="dark"] .fc-answer-card.revealed-wrong .fc-answer-label { background: #dc2626; }
+      :root[data-theme="dark"] .fc-top-bar-exit:hover,
+      :root[data-theme="dark"] .fc-flag-btn:hover { background: rgba(255,255,255,0.12); color: var(--color-text); border-color: var(--color-border); }
     `;
     document.head.appendChild(style);
   }
