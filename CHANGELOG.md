@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file, organized b
 
 ### Fixed
 - **[api-server]** Add `y-protocols` and `lib0` as explicit production dependencies — both were imported in `ws-handler.ts` but only available transitively in dev, causing `ERR_MODULE_NOT_FOUND` on Docker production startup.
+- **[flashcard-app]** Session summary screen no longer overflows on mobile: container now fills available width, Status column uses compact icons (✓/…) instead of "Mastered"/"In Progress" text, table cell padding is reduced on narrow screens.
 
 ## [0.16.0] — 2026-05-30
 

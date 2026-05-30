@@ -99,6 +99,14 @@ export class FlashcardSummaryScreen extends BaseComponent {
     const style = document.createElement('style');
     style.id = 'fc-summary-styles';
     style.textContent = `
+      /* Container must fill the available width so the table card
+         can't expand beyond the viewport inside a flex-centered screen. */
+      .fc-summary-container {
+        width: 100%;
+        max-width: 700px;
+        box-sizing: border-box;
+      }
+
       .fc-summary-stats {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -123,7 +131,6 @@ export class FlashcardSummaryScreen extends BaseComponent {
       .fc-summary-table-scroll {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        /* Subtle hint that the table is scrollable */
         border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
       }
 
@@ -148,7 +155,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
 
       @media (max-width: 480px) {
         .fc-summary-stats {
-          grid-template-columns: 1fr 1fr;  /* keep 2-col but allow stat cards to shrink */
+          grid-template-columns: 1fr 1fr;
         }
 
         .fc-summary-stats .card {
@@ -164,7 +171,18 @@ export class FlashcardSummaryScreen extends BaseComponent {
         }
 
         .fc-summary-table .col-question {
-          max-width: 120px;
+          max-width: 100px;
+        }
+
+        /* Tighter padding inside the table card on mobile */
+        .fc-summary-table-card {
+          padding: var(--spacing-sm) !important;
+        }
+
+        .fc-summary-table td,
+        .fc-summary-table th {
+          padding: 4px 6px;
+          font-size: 0.8rem;
         }
       }
 
@@ -195,7 +213,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
 
     this.setContent(`
       <div class="screen">
-        <div class="container" style="max-width: 700px;">
+        <div class="fc-summary-container">
           <div class="card" style="margin-bottom: var(--spacing-md); text-align: center;">
             <h1 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-xs);">Session Complete!</h1>
             <p class="text-secondary">${this.escapeHtml(this.bankName)}</p>
@@ -232,8 +250,8 @@ export class FlashcardSummaryScreen extends BaseComponent {
                     ${this.renderTh('question', 'Question', 'left')}
                     ${this.renderTh('yes', '✓ Yes', 'center')}
                     ${this.renderTh('no', '✗ No', 'center')}
-                    ${this.renderTh('firstTry', 'First Try', 'center')}
-                    ${this.renderTh('status', 'Status', 'center')}
+                    ${this.renderTh('firstTry', '1st', 'center')}
+                    ${this.renderTh('status', '⭐', 'center')}
                     ${this.renderTh('flag', '🚩', 'center')}
                   </tr>
                 </thead>
@@ -254,7 +272,7 @@ export class FlashcardSummaryScreen extends BaseComponent {
                             ${d.firstTrySuccess === true ? '✓' : d.firstTrySuccess === false ? '✗' : '—'}
                           </td>
                           <td style="text-align: center;">
-                            ${d.graduated ? '<span style="color: var(--color-success); font-weight: 600;">Mastered</span>' : '<span style="color: var(--color-warning);">In Progress</span>'}
+                            ${d.graduated ? '<span style="color: var(--color-success);" title="Mastered">✓</span>' : '<span style="color: var(--color-warning);" title="In Progress">…</span>'}
                           </td>
                           ${flagCell}
                         </tr>
