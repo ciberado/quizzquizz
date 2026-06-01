@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[admin-app]** New standalone admin management UI (`packages/admin-app`) served at `/admin/` — sign-in, forced password-change, and full user-management table (list, promote/demote admin, delete, reset password).
+- **[api-server]** `GET /api/auth/capabilities` endpoint — reports whether IMAP login is enabled so frontends can show/hide the IMAP option dynamically.
+- **[api-server]** `POST /api/auth/imap-sign-in` endpoint — validates credentials against a configurable IMAP server (`IMAP_HOST`, `IMAP_PORT`, `IMAP_TLS` env vars); auto-registers users on first login; sets session cookie for seamless session continuity.
+- **[api-server]** Admin bootstrap on startup — if `ADMIN_EMAIL` is set and no admin exists, a user is created (password from `ADMIN_PASSWORD` or auto-generated) and logged to stdout; `mustChangePassword` is set so credentials must be changed on first login.
+- **[api-server]** Admin REST API under `/api/admin/users` — list (paginated + search), PATCH, DELETE, and POST /reset-password (returns a temp password and sets mustChangePassword).
+- **[api-server]** `POST /api/auth/change-password` endpoint — changes password and clears the `mustChangePassword` flag.
+- **[api-server]** `mustChangePassword` Prisma field and migration — `requireAuth` middleware returns 403 PASSWORD_RESET_REQUIRED for all non-auth paths when this flag is set.
+- **[common]** `QuestionStatusSchema` (active | deactivated | deleted), `QuestionEditSchema`, and `QuestionMarkdownEditSchema` Zod types for structured question editing.
+- **[question-bank]** Parser now reads `**Status**:` and `**Flag**:` attributes from question sections; `serializer.ts` added for writing Markdown back from a Question object.
+- **[api-server]** Session utility filters out deactivated and deleted questions when building quiz question lists.
+- **[host-app]** Question bank editor — in-place editing of question text, answers, difficulty, status, and flag from the bank browser.
+- **[host-app, player-app]** IMAP login mode on the sign-in screen: capabilities are checked on mount; an IMAP toggle button appears when enabled.
+
+### Fixed
+- **[host-app, player-app]** Login/register screens now properly centered on all screen sizes (scoped `login-screen .screen` CSS rule).
+
 ## [0.16.1] — 2026-05-30
 
 ### Added
