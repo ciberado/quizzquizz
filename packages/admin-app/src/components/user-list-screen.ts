@@ -5,6 +5,7 @@ import {
   deleteUser,
   resetUserPassword,
   signOut,
+  getSession,
   AdminUser,
   ApiError,
 } from '../api-client';
@@ -18,6 +19,7 @@ export class UserListScreen extends BaseComponent {
   private search = '';
   private loading = false;
   private error = '';
+  private currentUserId = '';
 
   // Modal state
   private modal: null | { type: 'delete'; user: AdminUser } | { type: 'resetDone'; tempPassword: string; username: string } = null;
@@ -76,7 +78,7 @@ export class UserListScreen extends BaseComponent {
                       <button class="btn-secondary btn-sm reset-pw-btn" data-id="${u.id}">
                         Reset pwd
                       </button>
-                      <button class="btn-danger btn-sm delete-btn" data-id="${u.id}">
+                      <button class="btn-danger btn-sm delete-btn" data-id="${u.id}" ${u.id === this.currentUserId ? 'disabled title="Cannot delete yourself"' : ''}>
                         Delete
                       </button>
                     </td>
@@ -237,6 +239,8 @@ export class UserListScreen extends BaseComponent {
   }
 
   protected async onMount(): Promise<void> {
+    const session = await getSession();
+    this.currentUserId = session?.user.id ?? '';
     await this.loadUsers();
   }
 

@@ -1,5 +1,5 @@
 import { BaseComponent } from './base-component';
-import { signIn, ApiError } from '../api-client';
+import { signIn, getSession, ApiError } from '../api-client';
 import { navigate } from '../router';
 
 export class LoginScreen extends BaseComponent {
@@ -47,9 +47,13 @@ export class LoginScreen extends BaseComponent {
     this.render();
 
     try {
-      const { user } = await signIn(email, password);
+      await signIn(email, password);
 
-      if (!user.isAdmin) {
+      // Fetch augmented session (includes isAdmin and mustChangePassword from DB)
+      const session = await getSession();
+      const user = session?.user;
+
+      if (!user?.isAdmin) {
         this.error = 'Access denied — this account does not have admin privileges.';
         this.loading = false;
         this.render();
