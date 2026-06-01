@@ -257,6 +257,12 @@ auth-header {
   margin: 0;
 }
 
+/* Center the login card and allow vertical scroll on short viewports */
+login-screen .screen {
+  overflow-y: auto;
+  text-align: left;
+}
+
 /* Screen Layout */
 .screen {
   flex: 1;
