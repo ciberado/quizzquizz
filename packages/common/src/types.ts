@@ -14,6 +14,9 @@ export type Answer = z.infer<typeof AnswerSchema>;
 export const DifficultySchema = z.enum(['easy', 'medium', 'hard']);
 export type Difficulty = z.infer<typeof DifficultySchema>;
 
+export const QuestionStatusSchema = z.enum(['active', 'deactivated', 'deleted']);
+export type QuestionStatus = z.infer<typeof QuestionStatusSchema>;
+
 export const QuestionSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -23,9 +26,35 @@ export const QuestionSchema = z.object({
   topics: z.array(z.string()),
   tags: z.array(z.string()),
   timeLimit: z.number().optional(),
+  status: QuestionStatusSchema.default('active'),
+  flag: z.string().optional(), // non-empty string = flagged; value is the comment
 });
 
 export type Question = z.infer<typeof QuestionSchema>;
+
+/** Schema used for the question-edit API request body (form-based update). */
+export const QuestionEditSchema = z.object({
+  text: z.string().min(1),
+  answers: z.array(z.object({
+    text: z.string().min(1),
+    isCorrect: z.boolean(),
+  })).min(2),
+  difficulty: DifficultySchema,
+  topics: z.array(z.string()),
+  tags: z.array(z.string()),
+  timeLimit: z.number().optional(),
+  status: QuestionStatusSchema.optional(),
+  flag: z.string().optional(),
+});
+
+export type QuestionEdit = z.infer<typeof QuestionEditSchema>;
+
+/** Schema used for raw-Markdown editing of a question section body. */
+export const QuestionMarkdownEditSchema = z.object({
+  markdown: z.string().min(1), // The full section body (attrs + text + answers), without the ### ID header line
+});
+
+export type QuestionMarkdownEdit = z.infer<typeof QuestionMarkdownEditSchema>;
 
 export const QuestionBankMetadataSchema = z.object({
   name: z.string(),
