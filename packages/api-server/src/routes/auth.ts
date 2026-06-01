@@ -181,6 +181,39 @@ authRoutes.post(
 );
 
 /**
+ * GET /api/auth/get-session
+ * Augments the Better Auth session response with custom DB fields
+ * (isAdmin, mustChangePassword) that are not part of the core Better Auth schema.
+ */
+authRoutes.get('/get-session', async (c) => {
+  let session: Awaited<ReturnType<typeof auth.api.getSession>>;
+  try {
+    session = await auth.api.getSession({ headers: c.req.raw.headers });
+  } catch {
+    return c.json({ session: null, user: null });
+  }
+
+  if (!session?.user?.id) {
+    return c.json({ session: session?.session ?? null, user: null });
+  }
+
+  const prisma = getPrisma();
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isAdmin: true, mustChangePassword: true },
+  });
+
+  return c.json({
+    session: session.session,
+    user: {
+      ...session.user,
+      isAdmin: dbUser?.isAdmin ?? false,
+      mustChangePassword: dbUser?.mustChangePassword ?? false,
+    },
+  });
+});
+
+/**
  * All other /api/auth/* requests are delegated to Better Auth.
  * IMPORTANT: keep this last so custom routes above take precedence.
  */

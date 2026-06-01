@@ -459,8 +459,8 @@ describe('Authentication Routes', () => {
       });
 
       const data = await response.json();
-      // Better Auth returns null when session is invalid, not {session: null, user: null}
-      expect(data).toBeNull();
+      // Our get-session interceptor returns { session: null, user: null } for invalid tokens
+      expect(data).toEqual({ session: null, user: null });
     });
 
     it('should return null without authentication', async () => {
@@ -469,8 +469,8 @@ describe('Authentication Routes', () => {
       });
 
       const data = await response.json();
-      // Better Auth returns null when no session, not {session: null, user: null}
-      expect(data).toBeNull();
+      // Our get-session interceptor returns { session: null, user: null } for unauthenticated requests
+      expect(data).toEqual({ session: null, user: null });
     });
 
     it('should include session metadata', async () => {
@@ -534,8 +534,8 @@ describe('Authentication Routes', () => {
       });
       
       const afterData = await afterResponse.json();
-      // After sign-out, Better Auth returns null
-      expect(afterData).toBeNull();
+      // After sign-out, our get-session interceptor returns { session: null, user: null }
+      expect(afterData).toEqual({ session: null, user: null });
     });
 
     it('should delete session from database', async () => {
