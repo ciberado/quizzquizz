@@ -15,6 +15,7 @@ npm run dev -w @quizzquizz/host-app       # Host UI     (port 3001)
 npm run dev -w @quizzquizz/player-app     # Player UI   (port 3002)
 npm run dev -w @quizzquizz/analytics-ui   # Analytics   (port 3003)
 npm run dev -w @quizzquizz/flashcard-app  # Flashcard   (port 3004)
+npm run dev -w @quizzquizz/admin-app       # Admin UI    (port 3005)
 node scripts/dev-proxy.mjs               # Proxy       (port 3000)
 
 # Start all services + proxy in one terminal (foreground concurrently)
@@ -124,6 +125,7 @@ npm run docker:clean
 | Player App           | 3002 | :3000/                        | Player participation UI       |
 | Analytics UI         | 3003 | :3000/analytics/              | Analytics dashboard           |
 | Flashcard App        | 3004 | :3000/flashcard/              | Flashcard study sessions      |
+| Admin App            | 3005 | :3000/admin/                  | Admin management UI           |
 | Docker/Caddy (prod)  | 3000 | http://localhost:3000         | Production reverse proxy      |
 
 > In development, access **everything through port 3000** — the proxy routes to the right service.
@@ -139,6 +141,7 @@ npm run docker:clean
 - Player App: `http://localhost:3002`
 - Host App: `http://localhost:3001`
 - Flashcard App: `http://localhost:3004`
+- Admin App: `http://localhost:3005`
 
 ### Production (Docker)
 

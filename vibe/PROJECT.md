@@ -107,6 +107,62 @@ quizzquizz/
 - Personal score and ranking display
 - Waiting/lobby screens
 
+#### `@quizzquizz/admin-app`
+- Standalone Vite + TypeScript + Web Components SPA served at `/admin/`
+- Screens: sign-in, forced password-change, and full user-management table
+- Per-row actions: toggle admin, delete (with confirmation), reset password (displays temp password)
+- Auth guard: unauthenticated → /login; mustChangePassword → /change-password; non-admin → Access Denied
+
+---
+
+## Authentication & Authorization
+
+### Overview
+Authentication is **opt-in** for regular users but **required** for hosts using the bank editor.
+The system supports two sign-in methods:
+
+| Method | When to use |
+|---|---|
+| Email/password | Default; credentials stored with Better Auth (bcrypt-hashed) |
+| IMAP | When `IMAP_HOST` env var is set; server validates against your IMAP server; no password stored locally |
+
+### User Roles
+
+| Flag | Description |
+|---|---|
+| (none) | Regular user — can play and host quizzes |
+| `isAdmin` | Can access `/admin/` and manage all users |
+| `mustChangePassword` | Must change password before any non-auth endpoint is usable (HTTP 403 PASSWORD_RESET_REQUIRED) |
+
+### Global Admin Bootstrap
+If `ADMIN_EMAIL` is set at startup and no admin user exists, the server creates one automatically:
+- Uses `ADMIN_PASSWORD` if set; otherwise auto-generates a random password and logs it to stdout
+- Sets `mustChangePassword= first sign-in forces a password changetrue` 
+- Env vars: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+
+### IMAP Configuration
+Set these env vars to enable the IMAP login toggle on all sign-in screens:
+- `IMAP_HOST` — IMAP server hostname (e.g. `mail.example.com`)
+- `IMAP_PORT` — port (default `993`)
+- `IMAP_TLS` — `true`/`false` (default `true`)
+
+### Auth Endpoints (custom, in addition to Better Auth defaults)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/auth/capabilities` | Returns `{ imapEnabled: boolean }` |
+| POST | `/api/auth/imap-sign-in` | IMAP credential validation + session creation |
+| POST | `/api/auth/change-password` | Change password + clear mustChangePassword |
+
+### Admin REST API (all require `isAdmin=true`)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/admin/users` | List users; supports `?page`, `?limit`, `?search` |
+| PATCH | `/api/admin/users/:id` | Update name, email, username, isAdmin |
+| DELETE | `/api/admin/users/:id` | Delete user (self-delete and last-admin guarded) |
+| POST | `/api/admin/users/:id/reset-password` | Generate temp password; set mustChangePassword |
+
 ---
 
 ## Technology Stack
@@ -295,13 +351,17 @@ Which of the following are parts of a cell? (Select all that apply)
 
 ---
 
-## Future Enhancements (Out of Initial Scope)
+## Future Enhancements
 
-- User accounts and authentication
-- Persistent quiz history and statistics
 - Additional question types (true/false, open-ended, ordering)
 - Team mode
 - Custom themes and branding
-- Question bank editor UI
 - Import from other formats (CSV, JSON)
 - Mobile app versions
+
+## Implemented Features (formerly out of scope)
+
+- ✅ User accounts and authentication (Better Auth, email/password + IMAP)
+- ✅ Persistent quiz history and statistics (per-user analytics)
+- ✅ Question bank editor UI (in-place editing in host-app)
+- ✅ Admin user management (admin-app at /admin/)
