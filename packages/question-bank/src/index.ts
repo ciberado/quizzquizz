@@ -6,6 +6,7 @@ import {
   QuestionSchema,
   QuestionBankSchema,
   DifficultySchema,
+  QuestionStatusSchema,
 } from '@quizzquizz/common';
 
 interface ParsedMetadata {
@@ -23,6 +24,8 @@ interface ParsedQuestion {
   topics: string[];
   tags: string[];
   timeLimit?: number;
+  status?: 'active' | 'deactivated' | 'deleted';
+  flag?: string;
 }
 
 /**
@@ -147,6 +150,19 @@ function parseQuestion(
         question.timeLimit = parseInt(timeMatch[1], 10);
       }
       textStartIdx = i + 1;
+    } else if (line.startsWith('**Status**:')) {
+      const statusVal = line.substring(line.indexOf(':') + 1).trim();
+      const result = QuestionStatusSchema.safeParse(statusVal);
+      if (result.success) {
+        question.status = result.data;
+      }
+      textStartIdx = i + 1;
+    } else if (line.startsWith('**Flag**:')) {
+      const flagVal = line.substring(line.indexOf(':') + 1).trim();
+      if (flagVal) {
+        question.flag = flagVal;
+      }
+      textStartIdx = i + 1;
     } else if (!line.startsWith('**')) {
       break;
     }
@@ -199,8 +215,17 @@ function parseQuestion(
 
 /**
  * Parse a markdown question bank file
+ * @param content    Raw Markdown content
+ * @param bankId     Bank identifier
+ * @param options.includeInactive  When true, include deactivated/deleted questions (for editor use).
+ *                                 Default: false (only active questions are returned).
  */
-export function parseQuestionBank(content: string, bankId: string): QuestionBank {
+export function parseQuestionBank(
+  content: string,
+  bankId: string,
+  options: { includeInactive?: boolean } = {},
+): QuestionBank {
+  const { includeInactive = false } = options;
   const metadata = parseMetadata(content);
 
   // Split into question sections
@@ -229,11 +254,15 @@ export function parseQuestionBank(content: string, bankId: string): QuestionBank
       topics: parsed.topics,
       tags: parsed.tags,
       timeLimit: parsed.timeLimit,
+      status: parsed.status ?? 'active',
+      flag: parsed.flag,
     };
 
     // Validate with Zod
     const result = QuestionSchema.safeParse(question);
     if (result.success) {
+      // Skip deactivated/deleted questions unless explicitly requested
+      if (!includeInactive && result.data.status !== 'active') continue;
       questions.push(result.data);
     } else {
       console.warn(`Invalid question ${parsed.id}:`, result.error);
@@ -503,3 +532,12 @@ export function getRandomQuestions(
   const shuffled = [...questions].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(count, questions.length));
 }
+
+// Re-export serializer utilities
+export {
+  serializeQuestion,
+  serializeQuestionEdit,
+  serializeQuestionBody,
+  updateQuestionInFile,
+  replaceQuestionBody,
+} from './serializer.js';

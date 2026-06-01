@@ -246,6 +246,7 @@ describe('filterQuestions', () => {
       difficulty: 'easy',
       topics: ['science'],
       tags: ['physics'],
+      status: 'active',
     },
     {
       id: 'Q2',
@@ -255,6 +256,7 @@ describe('filterQuestions', () => {
       difficulty: 'hard',
       topics: ['math'],
       tags: ['algebra'],
+      status: 'active',
     },
     {
       id: 'Q3',
@@ -264,6 +266,7 @@ describe('filterQuestions', () => {
       difficulty: 'medium',
       topics: ['science'],
       tags: ['biology'],
+      status: 'active',
     },
   ];
 
@@ -315,6 +318,7 @@ describe('getRandomQuestions', () => {
       difficulty: 'easy',
       topics: ['test'],
       tags: [],
+      status: 'active',
     },
     {
       id: 'Q2',
@@ -324,6 +328,7 @@ describe('getRandomQuestions', () => {
       difficulty: 'easy',
       topics: ['test'],
       tags: [],
+      status: 'active',
     },
     {
       id: 'Q3',
@@ -333,6 +338,7 @@ describe('getRandomQuestions', () => {
       difficulty: 'easy',
       topics: ['test'],
       tags: [],
+      status: 'active',
     },
   ];
 
