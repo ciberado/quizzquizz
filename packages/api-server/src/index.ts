@@ -10,13 +10,16 @@ import playerRoutes from './routes/players.js';
 import gameRoutes from './routes/game.js';
 import questionBankRoutes from './routes/question-banks.js';
 import authRoutes from './routes/auth.js';
+import adminRoutes from './routes/admin.js';
 import userRoutes from './routes/users.js';
 import analyticsRoutes from './routes/analytics.js';
 import userBankRoutes from './routes/user-banks.js';
 import flashcardProgressRoutes from './routes/flashcard-progress.js';
+import questionEditRoutes from './routes/question-edit.js';
 import { startCleanupJob } from './session-cleanup.js';
 import { createWsServer } from './ws-handler.js';
 import { updateDoc, getActiveSessionIds } from './session-doc-manager.js';
+import { bootstrapAdminUser } from './auth/bootstrap.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -39,6 +42,8 @@ const allowedOrigins = [
   'http://localhost:3001',
   'http://localhost:3002',
   'http://localhost:3003',
+  'http://localhost:3004',
+  'http://localhost:3005', // Admin app
   'https://quizzquizz.snow-burbot.ts.net',
 ];
 
@@ -67,6 +72,7 @@ app.get('/health', (c) => {
 // API routes
 // AUTH ROUTES: Mount first to handle /api/auth/* before anything else
 app.route('/api/auth', authRoutes);
+app.route('/api/admin', adminRoutes);
 app.route('/api/users', userRoutes);
 
 // GAME ROUTES: Mount before sessionRoutes to ensure specific routes match first
@@ -79,6 +85,7 @@ app.route('/api/sessions', playerRoutes); // Player routes use /api/sessions/joi
 app.route('/api/question-banks', questionBankRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/user-banks', userBankRoutes);
+app.route('/api/question-edit', questionEditRoutes);
 
 // In production, static files are served by Caddy reverse proxy
 // This simplifies the Node.js server - no need for static file serving
@@ -121,6 +128,9 @@ async function initialize() {
   
   console.log(`✅ Loaded ${banks.size} question bank(s)`);
   
+  // Bootstrap global admin user from env vars (no-op if already exists or not configured)
+  await bootstrapAdminUser();
+
   // Start session cleanup job (runs every 60 minutes by default)
   const cleanupIntervalMinutes = parseInt(process.env.CLEANUP_INTERVAL_MINUTES || '60', 10);
   startCleanupJob(cleanupIntervalMinutes);

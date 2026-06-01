@@ -89,6 +89,7 @@ export async function initDatabase() {
         email TEXT NOT NULL UNIQUE,
         email_verified INTEGER NOT NULL DEFAULT 0,
         image TEXT,
+        is_admin INTEGER NOT NULL DEFAULT 0,
         created_at BIGINT NOT NULL,
         updated_at BIGINT NOT NULL
       )

@@ -11,6 +11,7 @@ type Variables = {
     email: string;
     username: string;
     name?: string;
+    isAdmin: boolean;
   } | null;
 };
 

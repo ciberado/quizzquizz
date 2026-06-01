@@ -39,6 +39,7 @@ describe('Session Routes', () => {
           difficulty: 'easy',
           topics: [],
           tags: [],
+          status: 'active' as const,
         },
         {
           id: 'q2',
@@ -51,6 +52,7 @@ describe('Session Routes', () => {
           difficulty: 'easy',
           topics: [],
           tags: [],
+          status: 'active' as const,
         },
       ],
     };

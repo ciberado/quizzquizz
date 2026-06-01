@@ -22,6 +22,8 @@ model User {
   username      String    @unique
   name          String?
   image         String?   // Avatar URL
+  isAdmin       Boolean   @default(false) @map("is_admin")
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   

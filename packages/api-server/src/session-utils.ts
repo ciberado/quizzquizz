@@ -34,14 +34,16 @@ export function getSessionQuestions(session: {
     try {
       const ids: string[] = JSON.parse(session.questionIds);
       const questionMap = new Map(questionBank.questions.map(q => [q.id, q]));
-      questions = ids.map(id => questionMap.get(id)).filter((q): q is Question => q !== undefined);
+      questions = ids
+        .map(id => questionMap.get(id))
+        .filter((q): q is Question => q !== undefined && (q.status === 'active' || q.status === undefined));
     } catch (error) {
       console.error('Error parsing questionIds:', error);
-      questions = questionBank.questions;
+      questions = questionBank.questions.filter(q => q.status === 'active' || q.status === undefined);
     }
   } else {
-    // Use all questions from the bank
-    questions = [...questionBank.questions];
+    // Use all active questions from the bank
+    questions = questionBank.questions.filter(q => q.status === 'active' || q.status === undefined);
   }
 
   // Shuffle questions if randomOrder is true - use session ID as seed for deterministic shuffle
