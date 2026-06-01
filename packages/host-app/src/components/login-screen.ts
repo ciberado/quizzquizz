@@ -6,16 +6,19 @@ import { router } from '../router';
  * Login/Signup screen for host authentication
  */
 export class LoginScreen extends BaseComponent {
-  private mode: 'login' | 'signup' = 'login';
+  private mode: 'login' | 'signup' | 'imap' = 'login';
   private error: string = '';
   private loading: boolean = false;
+  private imapEnabled: boolean = false;
 
-  connectedCallback() {
+  async connectedCallback() {
+    const { imapEnabled } = await api.getAuthCapabilities();
+    this.imapEnabled = imapEnabled;
     this.render();
   }
 
-  toggleMode() {
-    this.mode = this.mode === 'login' ? 'signup' : 'login';
+  toggleMode(newMode: 'login' | 'signup' | 'imap') {
+    this.mode = newMode;
     this.error = '';
     this.render();
   }
@@ -42,6 +45,8 @@ export class LoginScreen extends BaseComponent {
         }
 
         await api.signUp(email, password, username, name);
+      } else if (this.mode === 'imap') {
+        await api.imapSignIn(email, password);
       } else {
         await api.signIn(email, password);
       }
@@ -58,14 +63,17 @@ export class LoginScreen extends BaseComponent {
   }
 
   render() {
+    const isImap = this.mode === 'imap';
+    const isSignup = this.mode === 'signup';
+
     const html = `
       <div class="screen">
         <div class="login-card">
           <h1 style="color: var(--color-primary); margin-bottom: 0.5rem; text-align: center; font-size: var(--font-size-large);">
-            ${this.mode === 'login' ? 'Welcome Back' : 'Create Account'}
+            ${isSignup ? 'Create Account' : isImap ? 'IMAP Sign In' : 'Welcome Back'}
           </h1>
           <p style="color: var(--color-text-secondary); text-align: center; margin-bottom: 2rem; font-size: var(--font-size-base);">
-            ${this.mode === 'login' ? 'Sign in to manage your quizzes' : 'Sign up to save your quiz history'}
+            ${isSignup ? 'Sign up to save your quiz history' : isImap ? 'Sign in with your corporate email' : 'Sign in to manage your quizzes'}
           </p>
 
           ${this.error ? `
@@ -75,7 +83,7 @@ export class LoginScreen extends BaseComponent {
           ` : ''}
 
           <form class="auth-form">
-            ${this.mode === 'signup' ? `
+            ${isSignup ? `
               <div style="margin-bottom: 1rem;">
                 <label>Full Name</label>
                 <input type="text" name="name" required placeholder="John Doe" />
@@ -93,7 +101,7 @@ export class LoginScreen extends BaseComponent {
 
             <div style="margin-bottom: 1.5rem;">
               <label>Password</label>
-              <input type="password" name="password" required minlength="8" placeholder="••••••••" />
+              <input type="password" name="password" required ${!isImap ? 'minlength="8"' : ''} placeholder="••••••••" />
             </div>
 
             <button
@@ -102,15 +110,26 @@ export class LoginScreen extends BaseComponent {
               ${this.loading ? 'disabled' : ''}
               style="width: 100%; margin-bottom: 1rem; font-size: var(--font-size-base);"
             >
-              ${this.loading ? 'Please wait...' : (this.mode === 'login' ? 'Sign In' : 'Sign Up')}
+              ${this.loading ? 'Please wait...' : isSignup ? 'Sign Up' : 'Sign In'}
             </button>
           </form>
 
           <hr class="login-card-divider" style="margin-bottom: 1rem;" />
           <div style="text-align: center; display: flex; flex-direction: column; gap: 0.5rem;">
-            <button class="toggle-mode-btn secondary" style="font-size: var(--font-size-small); min-height: auto; padding: 6px 12px;">
-              ${this.mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-            </button>
+            ${!isSignup ? `
+              <button class="btn-toggle-signup secondary" style="font-size: var(--font-size-small); min-height: auto; padding: 6px 12px;">
+                Don't have an account? Sign up
+              </button>
+            ` : `
+              <button class="btn-toggle-login secondary" style="font-size: var(--font-size-small); min-height: auto; padding: 6px 12px;">
+                Already have an account? Sign in
+              </button>
+            `}
+            ${this.imapEnabled && !isSignup ? `
+              <button class="btn-toggle-imap secondary" style="font-size: var(--font-size-small); min-height: auto; padding: 6px 12px;">
+                ${isImap ? 'Use email + password instead' : 'Sign in with IMAP (corporate)'}
+              </button>
+            ` : ''}
             <button class="skip-btn secondary" style="font-size: var(--font-size-small); min-height: auto; padding: 6px 12px;">
               Continue without account →
             </button>
@@ -121,15 +140,15 @@ export class LoginScreen extends BaseComponent {
 
     this.patchContent(html);
 
-    // Attach event listeners
     const form = this.querySelector('.auth-form') as HTMLFormElement;
     form?.addEventListener('submit', (e) => this.handleSubmit(e));
 
-    const toggleBtn = this.querySelector('.toggle-mode-btn');
-    toggleBtn?.addEventListener('click', () => this.toggleMode());
-
-    const skipBtn = this.querySelector('.skip-btn');
-    skipBtn?.addEventListener('click', () => router.navigate('/'));
+    this.querySelector('.btn-toggle-signup')?.addEventListener('click', () => this.toggleMode('signup'));
+    this.querySelector('.btn-toggle-login')?.addEventListener('click', () => this.toggleMode('login'));
+    this.querySelector('.btn-toggle-imap')?.addEventListener('click', () =>
+      this.toggleMode(this.mode === 'imap' ? 'login' : 'imap')
+    );
+    this.querySelector('.skip-btn')?.addEventListener('click', () => router.navigate('/'));
   }
 }
 

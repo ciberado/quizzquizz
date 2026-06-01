@@ -73,6 +73,9 @@ export class QuestionPreviewScreen extends BaseComponent {
   private topicsExpanded = false;
   private hideFlagged = false;
   private flaggedQuestionIds = new Set<string>();
+
+  // Auth: track if current user can edit this bank
+  private canEditBank = false;
   
   // Pagination state
   private currentPage = 1;
@@ -106,8 +109,28 @@ export class QuestionPreviewScreen extends BaseComponent {
     // re-attaching per-render listeners would stack duplicates on the same nodes.
     this.setupDelegatedEvents();
 
+    // Check auth (non-blocking — determines if "Edit bank" button is shown)
+    void this.checkCanEdit();
+
     await this.loadBank();
     await this.loadQuestions();
+  }
+
+  private async checkCanEdit(): Promise<void> {
+    try {
+      const session = await api.getAuthSession();
+      const user = session?.user;
+      if (user) {
+        this.canEditBank =
+          this.bankId.startsWith(`user-quizzes/${user.id}/`) ||
+          (user.isAdmin === true);
+      } else {
+        this.canEditBank = false;
+      }
+    } catch {
+      this.canEditBank = false;
+    }
+    if (this.bank && this.preview) this.render();
   }
 
   private loadFlaggedQuestions(): void {
@@ -533,6 +556,10 @@ export class QuestionPreviewScreen extends BaseComponent {
               <button class="btn-secondary" data-action="back">
                 ← Back
               </button>
+              ${this.canEditBank ? `
+              <a href="#/edit/${encodeURIComponent(this.bankId)}" class="btn-secondary" style="text-decoration: none; margin-left: var(--spacing-sm);">
+                ✏️ Edit Bank
+              </a>` : ''}
             </div>
 
             <!-- Filter Panel -->

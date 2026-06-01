@@ -36,6 +36,20 @@ export interface QuestionBankFolder {
   banks: QuestionBankSummary[];
 }
 
+/** Question as returned by the /api/question-edit endpoints (includes status + flag) */
+export interface QuestionForEdit {
+  id: string;
+  text: string;
+  answers: Array<{ id: string; text: string }>;
+  correctAnswerIds: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
+  topics: string[];
+  tags: string[];
+  timeLimit?: number;
+  status: 'active' | 'deactivated' | 'deleted';
+  flag?: string;
+}
+
 // API base URL (configurable via environment)
 function getApiBaseUrl(): string {
   // In development with Vite proxy, use relative URL so /api is proxied to localhost:3000
@@ -483,6 +497,7 @@ export const api = {
       email: string;
       username: string;
       name: string;
+      isAdmin?: boolean;
     } | null;
     session: unknown | null;
   } | null> {
@@ -497,5 +512,126 @@ export const api = {
       }
       throw error;
     }
+  },
+
+  /**
+   * Get auth capabilities (e.g. whether IMAP login is enabled server-side)
+   */
+  async getAuthCapabilities(): Promise<{ imapEnabled: boolean }> {
+    try {
+      return await apiRequest('/api/auth/capabilities', {}, false);
+    } catch {
+      return { imapEnabled: false };
+    }
+  },
+
+  /**
+   * Sign in using IMAP credentials
+   */
+  async imapSignIn(email: string, password: string): Promise<{
+    user: {
+      id: string;
+      email: string;
+      username: string;
+      name: string | null;
+      isAdmin: boolean;
+      mustChangePassword: boolean;
+    };
+  }> {
+    return apiRequest('/api/auth/imap-sign-in', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    }, false);
+  },
+
+  // ===== Question Edit Methods =====
+
+  /**
+   * List all questions in a bank for editing (includes deactivated/deleted).
+   * Requires authentication and ownership or admin.
+   */
+  async getEditableQuestions(bankId: string): Promise<{
+    questions: QuestionForEdit[];
+    bankName: string;
+  }> {
+    return apiRequest(`/api/question-edit/questions?bankId=${encodeURIComponent(bankId)}`);
+  },
+
+  /**
+   * Get a single question for editing.
+   */
+  async getEditableQuestion(bankId: string, questionId: string): Promise<{ question: QuestionForEdit }> {
+    return apiRequest(`/api/question-edit/questions/${encodeURIComponent(questionId)}?bankId=${encodeURIComponent(bankId)}`);
+  },
+
+  /**
+   * Update a question using structured form data.
+   */
+  async updateQuestion(
+    bankId: string,
+    questionId: string,
+    data: {
+      text: string;
+      answers: Array<{ text: string; isCorrect: boolean }>;
+      difficulty: 'easy' | 'medium' | 'hard';
+      topics: string[];
+      tags: string[];
+      timeLimit?: number;
+      status?: 'active' | 'deactivated' | 'deleted';
+      flag?: string;
+    },
+  ): Promise<{ success: boolean; question: QuestionForEdit | null }> {
+    return apiRequest(
+      `/api/question-edit/questions/${encodeURIComponent(questionId)}?bankId=${encodeURIComponent(bankId)}`,
+      { method: 'PUT', body: JSON.stringify(data) },
+      false,
+    );
+  },
+
+  /**
+   * Update a question using raw Markdown.
+   */
+  async updateQuestionMarkdown(
+    bankId: string,
+    questionId: string,
+    markdown: string,
+  ): Promise<{ success: boolean; question: QuestionForEdit | null }> {
+    return apiRequest(
+      `/api/question-edit/questions/${encodeURIComponent(questionId)}?bankId=${encodeURIComponent(bankId)}`,
+      { method: 'PUT', body: JSON.stringify({ markdown }) },
+      false,
+    );
+  },
+
+  /**
+   * Change the status of a question (active / deactivated / deleted).
+   */
+  async setQuestionStatus(
+    bankId: string,
+    questionId: string,
+    status: 'active' | 'deactivated' | 'deleted',
+  ): Promise<{ success: boolean; status: string }> {
+    return apiRequest(
+      `/api/question-edit/questions/${encodeURIComponent(questionId)}/status?bankId=${encodeURIComponent(bankId)}`,
+      { method: 'PATCH', body: JSON.stringify({ status }) },
+      false,
+    );
+  },
+
+  /**
+   * Set or clear the flag on a question.
+   * Pass empty string to clear the flag.
+   */
+  async setQuestionFlag(
+    bankId: string,
+    questionId: string,
+    flag: string,
+  ): Promise<{ success: boolean; flagged: boolean; flag: string | null }> {
+    return apiRequest(
+      `/api/question-edit/questions/${encodeURIComponent(questionId)}/flag?bankId=${encodeURIComponent(bankId)}`,
+      { method: 'PATCH', body: JSON.stringify({ flag }) },
+      false,
+    );
   },
 };

@@ -64,6 +64,7 @@ function makeQuestion(overrides: Partial<Question> & { id: string }): Question {
     difficulty: 'medium',
     topics: [],
     tags: [],
+    status: 'active',
     ...overrides,
   };
 }

@@ -28,7 +28,7 @@ export class BankBrowser extends BaseComponent {
   /** The full tree fetched from the API */
   private rootTree: QuestionBankFolder | null = null;
   /** Authenticated user (null = anonymous) */
-  private authUser: { id: string; email: string; username: string } | null = null;
+  private authUser: { id: string; email: string; username: string; isAdmin?: boolean } | null = null;
 
   private hashChangeHandler = (): void => {
     this.onHashChange();
@@ -290,6 +290,14 @@ export class BankBrowser extends BaseComponent {
   }
 
   private renderBankCard(bank: QuestionBankSummary): string {
+    const canEdit = this.authUser && (
+      bank.id.startsWith(`user-quizzes/${this.authUser.id}/`) ||
+      this.authUser.isAdmin
+    );
+    const editBtn = canEdit
+      ? `<button class="btn-sm outline" style="margin-top: var(--spacing-sm);"
+           onclick="event.stopPropagation(); window.location.hash='/edit/${encodeURIComponent(bank.id)}'">✏️ Edit Bank</button>`
+      : '';
     return `
       <div class="question-bank-card" data-bank-id="${this.escapeHtml(bank.id)}" style="cursor: pointer;">
         <h3>${this.escapeHtml(bank.name)}</h3>
@@ -297,6 +305,7 @@ export class BankBrowser extends BaseComponent {
         <div class="bank-meta">
           <span>📚 ${bank.questionCount} questions</span>
         </div>
+        ${editBtn}
       </div>
     `;
   }

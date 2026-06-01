@@ -19,6 +19,7 @@ import './components/leaderboard-screen';
 import './components/final-results-screen';
 import './components/question-stats-table';
 import './components/flashcard-lobby-screen';
+import './components/question-bank-editor';
 
 /**
  * QuizzQuizz Host App
@@ -76,6 +77,10 @@ router.on('/results', () => {
 
 router.on('/flashcard-lobby/:sessionId', () => {
   showScreen('flashcard-lobby-screen');
+});
+
+router.on('/edit/:bankId', () => {
+  showScreen('qz-question-bank-editor');
 });
 
 // Helper function to show a screen

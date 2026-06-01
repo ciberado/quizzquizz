@@ -235,6 +235,14 @@
   margin: 0;
 }
 
+/* Center the login card within its screen — scoped to avoid affecting other screens */
+login-screen .screen {
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  overflow-y: auto;
+}
+
 html {
   height: 100%;
   scroll-behavior: smooth;
@@ -2153,6 +2161,292 @@ body:has(question-display-screen) #app {
     flex-direction: column !important;
     gap: var(--spacing-sm) !important;
   }
+}
+
+/* ============================================
+   Question Bank Editor
+   ============================================ */
+
+.question-editor {
+  padding-top: var(--spacing-lg);
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.editor-header h2 {
+  margin: 0;
+  font-size: var(--font-size-xlarge);
+}
+
+.editor-legend {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-md);
+}
+
+.editor-table-wrapper {
+  overflow-x: auto;
+}
+
+.editor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-base);
+}
+
+.editor-table th,
+.editor-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.editor-table th {
+  background: var(--color-bg-alt);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.question-row--inactive td {
+  opacity: 0.6;
+}
+
+.question-id {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.question-text {
+  max-width: 320px;
+}
+
+.question-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Small action buttons */
+.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  min-height: 28px;
+  transition: filter 0.15s;
+}
+
+.btn-sm:hover { filter: brightness(1.15); }
+.btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-sm.primary {
+  background: var(--color-primary);
+  color: #000;
+  border-color: var(--color-primary);
+}
+
+.btn-sm.secondary {
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-sm.danger {
+  background: rgba(245, 101, 101, 0.15);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.btn-sm.warning {
+  background: rgba(237, 137, 54, 0.15);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.btn-sm.outline {
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+
+/* Status badges for the editor */
+.badge-success {
+  background: rgba(72, 187, 120, 0.2);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.badge-warning {
+  background: rgba(237, 137, 54, 0.2);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+}
+
+.badge-danger {
+  background: rgba(245, 101, 101, 0.2);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+/* Modal overlay */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-lg) var(--spacing-md);
+  overflow-y: auto;
+}
+
+.modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  max-width: 680px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-large);
+}
+
+.modal-header code {
+  font-family: monospace;
+  font-size: 0.85em;
+  background: var(--color-bg-alt);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  overflow-y: auto;
+  max-height: calc(90vh - 80px);
+}
+
+.modal-section {
+  background: var(--color-bg-alt);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+}
+
+.modal-section h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-base);
+}
+
+.status-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.flag-display {
+  margin-bottom: var(--spacing-sm);
+}
+
+.flag-comment {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+}
+
+.flag-input-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.flag-input-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Form layout within modal */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.answer-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.answer-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.markdown-editor {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
+
+.success-message {
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  margin: 0;
 }
 
 /* Extra small phones */
