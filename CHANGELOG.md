@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
+### Added
+- **[api-server]** Exhaustive test suite for admin user management (`admin.test.ts`): 42 tests covering all routes (auth guards, list/pagination/search, PATCH, DELETE, reset-password), business rules (last-admin protection, self-delete guard), and DB side-effects.
+- **[docs]** `PROJECT.md` updated with Authentication & Authorization section: sign-in methods, user roles, admin bootstrap, IMAP configuration, and full admin REST API reference table.
+- **[docs]** `QUICK-REFERENCE.md` updated with admin-app port 3005 and dev command.
+
 - **[admin-app]** New standalone admin management UI (`packages/admin-app`) served at `/admin/` — sign-in, forced password-change, and full user-management table (list, promote/demote admin, delete, reset password).
 - **[api-server]** `GET /api/auth/capabilities` endpoint — reports whether IMAP login is enabled so frontends can show/hide the IMAP option dynamically.
 - **[api-server]** `POST /api/auth/imap-sign-in` endpoint — validates credentials against a configurable IMAP server (`IMAP_HOST`, `IMAP_PORT`, `IMAP_TLS` env vars); auto-registers users on first login; sets session cookie for seamless session continuity.
