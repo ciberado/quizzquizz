@@ -327,18 +327,18 @@ class ApiClient {
       }
       throw error;
     }
-  },
+  }
 
   /**
    * Get auth capabilities (e.g. whether IMAP login is enabled server-side)
    */
   async getAuthCapabilities(): Promise<{ imapEnabled: boolean }> {
     try {
-      return await apiRequest('/api/auth/capabilities', {}, false);
+      return await this.fetch('/api/auth/capabilities', {}, false);
     } catch {
       return { imapEnabled: false };
     }
-  },
+  }
 
   /**
    * Sign in using IMAP credentials
@@ -353,12 +353,12 @@ class ApiClient {
       mustChangePassword: boolean;
     };
   }> {
-    return apiRequest('/api/auth/imap-sign-in', {
+    return this.fetch('/api/auth/imap-sign-in', {
       method: 'POST',
       credentials: 'include',
       body: JSON.stringify({ email, password }),
     }, false);
-  },
+  }
 }
 
 /**
