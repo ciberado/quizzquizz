@@ -24,6 +24,10 @@ All notable changes to this project will be documented in this file, organized b
 - **[host-app, player-app]** IMAP login mode on the sign-in screen: capabilities are checked on mount; an IMAP toggle button appears when enabled.
 
 ### Fixed
+- **[api-server]** `GET /api/auth/get-session` now augments the Better Auth response with `isAdmin` and `mustChangePassword` from Prisma, because Better Auth's built-in session endpoints only return core user fields.
+- **[admin-app]** Login screen calls `getSession()` after sign-in to obtain augmented session fields (`isAdmin`, `mustChangePassword`) instead of relying on the sign-in response.
+- **[admin-app]** User list screen disables the Delete button for the currently logged-in user to prevent self-deletion from the UI (backend also enforces this with a 403).
+- **[player-app]** `getAuthCapabilities` and `imapSignIn` methods in `api-client.ts` corrected: changed object-literal terminators to class method syntax and replaced undefined `apiRequest` calls with `this.fetch`.
 - **[host-app, player-app]** Login/register screens now properly centered on all screen sizes (scoped `login-screen .screen` CSS rule).
 
 ## [0.16.1] — 2026-05-30
