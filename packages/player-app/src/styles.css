@@ -114,6 +114,12 @@ auth-header {
   flex-shrink: 0;
 }
 
+login-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 #app {
   flex: 1;
   display: flex;
