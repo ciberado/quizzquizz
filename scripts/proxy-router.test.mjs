@@ -13,6 +13,7 @@ const PORTS = {
   PLAYER_PORT:    3002,
   ANALYTICS_PORT: 3003,
   FLASHCARD_PORT: 3004,
+  ADMIN_PORT:     3005,
 };
 
 const resolve = buildRouter(PORTS);
@@ -70,6 +71,20 @@ describe('proxy router — buildRouter()', () => {
     });
   });
 
+  describe('admin-app routes', () => {
+    it('routes /admin/ to admin port', () => {
+      assert.equal(resolve('/admin/'), 3005);
+    });
+
+    it('routes /admin/login to admin port', () => {
+      assert.equal(resolve('/admin/login'), 3005);
+    });
+
+    it('routes /admin/assets/index.js to admin port', () => {
+      assert.equal(resolve('/admin/assets/index.js'), 3005);
+    });
+  });
+
   describe('player-app routes (catch-all)', () => {
     it('routes / to player port', () => {
       assert.equal(resolve('/'), 3002);
@@ -97,6 +112,11 @@ describe('proxy router — buildRouter()', () => {
       assert.notEqual(resolve('/flashcard/'), resolve('/host/'));
       assert.equal(resolve('/flashcard/'), 3004);
     });
+
+    it('/admin path takes priority over catch-all', () => {
+      assert.equal(resolve('/admin'), 3005);
+      assert.equal(resolve('/admin/'), 3005);
+    });
   });
 
   describe('custom port configuration', () => {
@@ -107,12 +127,14 @@ describe('proxy router — buildRouter()', () => {
         PLAYER_PORT: 9002,
         ANALYTICS_PORT: 9003,
         FLASHCARD_PORT: 9004,
+        ADMIN_PORT: 9005,
       });
       assert.equal(customResolve('/api/test'), 9010);
       assert.equal(customResolve('/host/'), 9001);
       assert.equal(customResolve('/'), 9002);
       assert.equal(customResolve('/analytics/'), 9003);
       assert.equal(customResolve('/flashcard/'), 9004);
+      assert.equal(customResolve('/admin/'), 9005);
     });
   });
 });

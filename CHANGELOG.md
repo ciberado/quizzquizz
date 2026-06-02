@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[infra]** Dev proxy (`scripts/proxy-router.mjs`, `scripts/dev-proxy.mjs`) was missing the `/admin*` → admin-app (port 3005) route, causing `/admin/` to fall through to the player app. Added the route between `/flashcard*` and the `/*` catch-all, added `DEV_ADMIN_PORT` env var support, and updated the startup log line.
+
 ### Added
 - **[docs]** `docs/admin-app.md` — full reference for the admin app: screens (login, change-password, user-list), all user actions and their server-side guards, client-side router guard logic, package structure, dev setup, and per-screen API call table.
 - **[docs]** `docs/authentication.md` — added cross-reference link to `docs/admin-app.md` in the Admin App Screens section.
