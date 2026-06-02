@@ -42,6 +42,13 @@ export function navSidebar(activeRoute: string): string {
   const hostLinks = [
     { href: '#/host/sessions/compare', label: 'Compare Sessions' },
   ];
+  const appLinks = [
+    { href: '/', label: '🎮 Player' },
+    { href: '/host', label: '📽️ Host' },
+    { href: '/flashcard', label: '🃏 Flashcard' },
+    { href: '/analytics', label: '📊 Analytics' },
+    { href: '/admin', label: '⚙️ Admin' },
+  ];
 
   const renderLinks = (items: typeof links) =>
     items
@@ -50,6 +57,9 @@ export function navSidebar(activeRoute: string): string {
           `<a href="${l.href}" class="nav-link${activeRoute === l.href ? ' active' : ''}">${l.label}</a>`,
       )
       .join('');
+
+  const renderAppLinks = (items: typeof appLinks) =>
+    items.map((l) => `<a href="${l.href}" class="nav-link">${l.label}</a>`).join('');
 
   return `
     <nav class="sidebar">
@@ -61,6 +71,13 @@ export function navSidebar(activeRoute: string): string {
       <div class="nav-section">
         <div class="nav-section-title">Host</div>
         ${renderLinks(hostLinks)}
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Switch App</div>
+        ${renderAppLinks(appLinks)}
+      </div>
+      <div class="nav-section">
+        <a href="https://github.com/ciberado/quizzquizz" target="_blank" rel="noopener noreferrer" class="nav-link">❓ About</a>
       </div>
     </nav>`;
 }
