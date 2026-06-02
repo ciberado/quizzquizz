@@ -130,6 +130,18 @@ npm run docker:clean
 
 > In development, access **everything through port 3000** — the proxy routes to the right service.
 
+### Dev admin credentials
+
+The dev `.env` ships with a bootstrap admin account for local development:
+
+| Field | Value |
+|-------|-------|
+| URL | `http://localhost:3000/admin/` |
+| Email | `admin@example.com` |
+| Password | `Admin1234!` |
+
+> ⚠️ Change these before deploying to production (set `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `packages/api-server/.env`).
+
 ---
 
 ## API Base URLs

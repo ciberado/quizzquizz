@@ -72,6 +72,12 @@ ADMIN_PASSWORD=ChangeMe!
 
 ## Setting Up the Admin Account
 
+> **Development defaults** — The repository ships a sample `.env` for `packages/api-server` with:
+> - `ADMIN_EMAIL=admin@example.com`
+> - `ADMIN_PASSWORD=Admin1234!`
+>
+> These credentials are active when you run `npm run dev`. Change them before deploying to production.
+
 ### 1. Set environment variables
 
 Add `ADMIN_EMAIL` (and optionally `ADMIN_PASSWORD`) to `packages/api-server/.env` or your deployment environment before starting the server.
