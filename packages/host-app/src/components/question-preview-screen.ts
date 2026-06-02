@@ -547,19 +547,23 @@ export class QuestionPreviewScreen extends BaseComponent {
           <div class="card">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-              <div>
+              <div style="flex: 1; margin-right: var(--spacing-lg);">
                 <h1>${this.escapeHtml(this.bank.name)}</h1>
                 <p style="color: var(--color-text-muted); margin: 0;">
                   ${this.escapeHtml(this.bank.description || '')}
                 </p>
               </div>
-              <button class="btn-secondary" data-action="back">
-                ← Back
-              </button>
-              ${this.canEditBank ? `
-              <a href="#/edit/${encodeURIComponent(this.bankId)}" class="btn-secondary" style="text-decoration: none; margin-left: var(--spacing-sm);">
-                ✏️ Edit Bank
-              </a>` : ''}
+              <div style="display: flex; gap: var(--spacing-sm); flex-shrink: 0;">
+                <button class="btn-secondary btn-icon-top" data-action="back">
+                  <span class="btn-icon">←</span>
+                  <span>Back</span>
+                </button>
+                ${this.canEditBank ? `
+                <a href="#/edit/${encodeURIComponent(this.bankId)}" class="btn-secondary btn-icon-top" style="text-decoration: none;">
+                  <span class="btn-icon">✏️</span>
+                  <span>Edit</span>
+                </a>` : ''}
+              </div>
             </div>
 
             <!-- Filter Panel -->

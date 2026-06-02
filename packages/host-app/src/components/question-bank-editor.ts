@@ -7,19 +7,15 @@ type EditMode = 'form' | 'markdown';
 
 interface EditState {
   question: QuestionForEdit;
-  // form fields
   text: string;
   answers: Array<{ text: string; isCorrect: boolean }>;
   difficulty: 'easy' | 'medium' | 'hard';
   topics: string;
   tags: string;
   timeLimit: string;
-  // markdown field
   markdownText: string;
-  // edit mode
   mode: EditMode;
-  // flag field
-  newFlag: string;
+  flagText: string;
   saving: boolean;
   error: string | null;
   success: string | null;
@@ -28,9 +24,9 @@ interface EditState {
 /**
  * <qz-question-bank-editor>
  *
- * Full question bank editor screen reached via #/edit/:bankId.
- * Lists all questions (active, deactivated, deleted) and lets the owner or an
- * admin edit, deactivate/delete/restore, flag, or resolve flags.
+ * Inline question bank editor reached via #/edit/:bankId.
+ * Lists all questions and lets the owner or admin edit, change status, and
+ * manage flags directly — no modal, editing expands inline within each card.
  */
 export class QuestionBankEditor extends BaseComponent {
   private bankId = '';
@@ -39,29 +35,24 @@ export class QuestionBankEditor extends BaseComponent {
   private loading = true;
   private pageError: string | null = null;
 
-  // Currently opened question edit modal state
+  private editingQid: string | null = null;
   private editState: EditState | null = null;
 
   protected async onMount(): Promise<void> {
     const hash = window.location.hash;
-    // Route: #/edit/<bankId>  (bankId may contain slashes after URL-encoding)
     const editPrefix = '#/edit/';
     if (hash.startsWith(editPrefix)) {
       this.bankId = decodeURIComponent(hash.slice(editPrefix.length));
     }
-
     if (!this.bankId) {
       router.navigate('/create');
       return;
     }
-
     this.setupDelegatedEvents();
     await this.loadQuestions();
   }
 
-  protected onUnmount(): void {
-    // Nothing async to clean up
-  }
+  protected onUnmount(): void {}
 
   private setupDelegatedEvents(): void {
     this.addEventListener('click', (e) => {
@@ -76,7 +67,10 @@ export class QuestionBankEditor extends BaseComponent {
           router.navigate(`/preview/${encodeURIComponent(this.bankId)}`);
           break;
         case 'edit-question':
-          this.openEditModal(qid);
+          if (this.editingQid !== qid) this.openInlineEdit(qid);
+          break;
+        case 'cancel-edit':
+          this.closeInlineEdit();
           break;
         case 'set-active':
           void this.changeStatus(qid, 'active');
@@ -87,14 +81,8 @@ export class QuestionBankEditor extends BaseComponent {
         case 'set-deleted':
           void this.changeStatus(qid, 'deleted');
           break;
-        case 'open-flag-modal':
-          this.openFlagModal(qid);
-          break;
         case 'resolve-flag':
           void this.resolveFlag(qid);
-          break;
-        case 'close-modal':
-          this.closeEditModal();
           break;
         case 'save-form':
           void this.saveForm();
@@ -102,8 +90,8 @@ export class QuestionBankEditor extends BaseComponent {
         case 'save-markdown':
           void this.saveMarkdown();
           break;
-        case 'submit-flag':
-          void this.submitFlag();
+        case 'save-flag':
+          void this.saveFlag();
           break;
         case 'switch-mode-form':
           if (this.editState) {
@@ -146,26 +134,25 @@ export class QuestionBankEditor extends BaseComponent {
       }
     });
 
-    // Input/change events (for form fields)
     this.addEventListener('input', (e) => {
       if (!this.editState) return;
       const target = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-      const field = (target as HTMLElement).dataset['field'];
-      if (!field) return;
+      const el = target as HTMLElement;
       const value = target.value;
+      const field = el.dataset['field'];
+      const answerIdx = el.dataset['answerIdx'];
 
-      switch (field) {
-        case 'text': this.editState.text = value; break;
-        case 'difficulty': this.editState.difficulty = value as 'easy' | 'medium' | 'hard'; break;
-        case 'topics': this.editState.topics = value; break;
-        case 'tags': this.editState.tags = value; break;
-        case 'timeLimit': this.editState.timeLimit = value; break;
-        case 'markdownText': this.editState.markdownText = value; break;
-        case 'newFlag': this.editState.newFlag = value; break;
+      if (field) {
+        switch (field) {
+          case 'text': this.editState.text = value; break;
+          case 'difficulty': this.editState.difficulty = value as 'easy' | 'medium' | 'hard'; break;
+          case 'topics': this.editState.topics = value; break;
+          case 'tags': this.editState.tags = value; break;
+          case 'timeLimit': this.editState.timeLimit = value; break;
+          case 'markdownText': this.editState.markdownText = value; break;
+          case 'flagText': this.editState.flagText = value; break;
+        }
       }
-
-      // Answer text fields
-      const answerIdx = (target as HTMLElement).dataset['answerIdx'];
       if (answerIdx !== undefined) {
         const idx = parseInt(answerIdx, 10);
         const answer = this.editState.answers[idx];
@@ -189,10 +176,10 @@ export class QuestionBankEditor extends BaseComponent {
     this.render();
   }
 
-  private openEditModal(questionId: string): void {
+  private openInlineEdit(questionId: string): void {
     const q = this.questions.find((q) => q.id === questionId);
     if (!q) return;
-
+    this.editingQid = questionId;
     this.editState = {
       question: q,
       text: q.text,
@@ -203,40 +190,19 @@ export class QuestionBankEditor extends BaseComponent {
       timeLimit: q.timeLimit != null ? String(q.timeLimit) : '',
       markdownText: '',
       mode: 'form',
-      newFlag: '',
+      flagText: q.flag ?? '',
       saving: false,
       error: null,
       success: null,
     };
     this.render();
+    setTimeout(() => {
+      this.querySelector('.q-card--editing')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   }
 
-  private openFlagModal(questionId: string): void {
-    const q = this.questions.find((q) => q.id === questionId);
-    if (!q) return;
-
-    // Reuse editState with a special mode to show the flag modal
-    this.editState = {
-      question: q,
-      text: q.text,
-      answers: q.answers.map((a) => ({ text: a.text, isCorrect: q.correctAnswerIds.includes(a.id) })),
-      difficulty: q.difficulty,
-      topics: q.topics.join(', '),
-      tags: q.tags.join(', '),
-      timeLimit: q.timeLimit != null ? String(q.timeLimit) : '',
-      markdownText: '',
-      mode: 'form',  // flag modal is separate section, not a mode
-      newFlag: '',
-      saving: false,
-      error: null,
-      success: null,
-    };
-    this.render();
-    // Scroll flag section into view
-    setTimeout(() => this.qs('[data-flag-modal]')?.scrollIntoView({ behavior: 'smooth' }), 50);
-  }
-
-  private closeEditModal(): void {
+  private closeInlineEdit(): void {
+    this.editingQid = null;
     this.editState = null;
     this.render();
   }
@@ -271,9 +237,8 @@ export class QuestionBankEditor extends BaseComponent {
     const topics = this.editState.topics.split(',').map(t => t.trim()).filter(Boolean);
     const tags = this.editState.tags.split(',').map(t => t.trim()).filter(Boolean);
     const timeLimit = this.editState.timeLimit ? parseInt(this.editState.timeLimit, 10) : undefined;
-
-    // Validate
     const validAnswers = this.editState.answers.filter(a => a.text.trim());
+
     if (!this.editState.text.trim()) {
       this.editState.saving = false;
       this.editState.error = 'Question text is required.';
@@ -288,7 +253,7 @@ export class QuestionBankEditor extends BaseComponent {
     }
     if (!validAnswers.some(a => a.isCorrect)) {
       this.editState.saving = false;
-      this.editState.error = 'At least one answer must be marked as correct.';
+      this.editState.error = 'At least one answer must be marked correct.';
       this.render();
       return;
     }
@@ -306,10 +271,10 @@ export class QuestionBankEditor extends BaseComponent {
         const idx = this.questions.findIndex(q => q.id === result.question!.id);
         if (idx !== -1) this.questions[idx] = result.question;
         this.editState.question = result.question;
-        this.editState.success = 'Question saved.';
+        this.editState.success = 'Saved.';
       }
     } catch (err) {
-      this.editState.error = err instanceof Error ? err.message : 'Failed to save question';
+      this.editState.error = err instanceof Error ? err.message : 'Failed to save';
     }
     this.editState.saving = false;
     this.render();
@@ -332,10 +297,30 @@ export class QuestionBankEditor extends BaseComponent {
         const idx = this.questions.findIndex(q => q.id === result.question!.id);
         if (idx !== -1) this.questions[idx] = result.question;
         this.editState.question = result.question;
-        this.editState.success = 'Question saved.';
+        this.editState.success = 'Saved.';
       }
     } catch (err) {
-      this.editState.error = err instanceof Error ? err.message : 'Failed to save question';
+      this.editState.error = err instanceof Error ? err.message : 'Failed to save';
+    }
+    this.editState.saving = false;
+    this.render();
+  }
+
+  private async saveFlag(): Promise<void> {
+    if (!this.editState) return;
+    this.editState.saving = true;
+    this.editState.error = null;
+    this.render();
+
+    try {
+      const flagText = this.editState.flagText.trim();
+      await api.setQuestionFlag(this.bankId, this.editState.question.id, flagText);
+      const q = this.questions.find(q => q.id === this.editState!.question.id);
+      if (q) q.flag = flagText || undefined;
+      this.editState.question.flag = flagText || undefined;
+      this.editState.success = flagText ? 'Flag saved.' : 'Flag cleared.';
+    } catch (err) {
+      this.editState.error = err instanceof Error ? err.message : 'Failed to save flag';
     }
     this.editState.saving = false;
     this.render();
@@ -355,27 +340,6 @@ export class QuestionBankEditor extends BaseComponent {
     this.render();
   }
 
-  private async submitFlag(): Promise<void> {
-    if (!this.editState) return;
-    const flagText = this.editState.newFlag.trim();
-    if (!flagText) return;
-    this.editState.saving = true;
-    this.render();
-
-    try {
-      await api.setQuestionFlag(this.bankId, this.editState.question.id, flagText);
-      const q = this.questions.find(q => q.id === this.editState!.question.id);
-      if (q) q.flag = flagText;
-      this.editState.question.flag = flagText;
-      this.editState.newFlag = '';
-      this.editState.success = 'Flag added.';
-    } catch (err) {
-      this.editState.error = err instanceof Error ? err.message : 'Failed to add flag';
-    }
-    this.editState.saving = false;
-    this.render();
-  }
-
   private async resolveFlag(questionId: string): Promise<void> {
     try {
       await api.setQuestionFlag(this.bankId, questionId, '');
@@ -383,6 +347,7 @@ export class QuestionBankEditor extends BaseComponent {
       if (q) q.flag = undefined;
       if (this.editState?.question.id === questionId) {
         this.editState.question.flag = undefined;
+        this.editState.flagText = '';
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to resolve flag');
@@ -393,146 +358,108 @@ export class QuestionBankEditor extends BaseComponent {
   protected render(): void {
     if (this.loading) {
       this.setContent(`
-        <div class="screen">
-          <div class="container">
-            <div class="loading-container">
-              <div class="spinner"></div>
-              <p>Loading questions…</p>
-            </div>
-          </div>
-        </div>
-      `);
+        <div class="screen"><div class="container">
+          <div class="loading-container"><div class="spinner"></div><p>Loading questions…</p></div>
+        </div></div>`);
       return;
     }
-
     if (this.pageError) {
       this.setContent(`
-        <div class="screen">
-          <div class="container">
-            <p class="error-message">${this.escapeHtml(this.pageError)}</p>
-            <button class="secondary" data-action="back">← Back</button>
-          </div>
-        </div>
-      `);
+        <div class="screen"><div class="container">
+          <p class="error-message">${this.escapeHtml(this.pageError)}</p>
+          <button class="secondary" data-action="back">← Back</button>
+        </div></div>`);
       return;
     }
 
-    const modal = this.editState ? this.renderModal(this.editState) : '';
-
-    const rows = this.questions.map((q) => {
-      const statusBadge = this.statusBadge(q.status);
-      const flagBadge = q.flag
-        ? `<span class="badge badge-warning" title="${this.escapeHtml(q.flag)}">🚩 Flagged</span>`
-        : '';
-      return `
-        <tr class="question-row ${q.status !== 'active' ? 'question-row--inactive' : ''}">
-          <td class="question-id">${this.escapeHtml(q.id)}</td>
-          <td class="question-text">${this.escapeHtml(q.text.slice(0, 80))}${q.text.length > 80 ? '…' : ''}</td>
-          <td>${this.escapeHtml(q.difficulty)}</td>
-          <td>${statusBadge} ${flagBadge}</td>
-          <td class="question-actions">
-            <button class="btn-sm primary" data-action="edit-question" data-qid="${this.escapeHtml(q.id)}">Edit</button>
-            ${q.status !== 'active'
-              ? `<button class="btn-sm secondary" data-action="set-active" data-qid="${this.escapeHtml(q.id)}">Activate</button>`
-              : `<button class="btn-sm secondary" data-action="set-deactivated" data-qid="${this.escapeHtml(q.id)}">Deactivate</button>`}
-            ${q.status !== 'deleted'
-              ? `<button class="btn-sm danger" data-action="set-deleted" data-qid="${this.escapeHtml(q.id)}">Delete</button>`
-              : `<button class="btn-sm secondary" data-action="set-active" data-qid="${this.escapeHtml(q.id)}">Restore</button>`}
-            ${q.flag
-              ? `<button class="btn-sm warning" data-action="resolve-flag" data-qid="${this.escapeHtml(q.id)}">Resolve Flag</button>`
-              : `<button class="btn-sm outline" data-action="open-flag-modal" data-qid="${this.escapeHtml(q.id)}">🚩 Flag</button>`}
-          </td>
-        </tr>`;
-    }).join('');
+    const cards = this.questions.map(q => this.renderCard(q)).join('');
 
     this.setContent(`
       <div class="screen">
         <div class="container question-editor">
           <div class="editor-header">
             <button class="secondary" data-action="back">← Back</button>
-            <h2>Edit Bank: ${this.escapeHtml(this.bankName)}</h2>
+            <h2>Edit: ${this.escapeHtml(this.bankName)}</h2>
           </div>
-
-          <p class="editor-legend">
-            <span class="badge badge-success">Active</span> questions appear in quizzes.
-            <span class="badge badge-warning">Deactivated</span> are hidden from quizzes.
-            <span class="badge badge-danger">Deleted</span> are soft-deleted.
-            🚩 Flagged questions have a comment requiring attention.
-          </p>
-
-          <div class="editor-table-wrapper">
-            <table class="editor-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Question</th>
-                  <th>Difficulty</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows || '<tr><td colspan="5" style="text-align:center">No questions found.</td></tr>'}
-              </tbody>
-            </table>
+          <div class="q-list">
+            ${cards || '<p style="color:var(--color-text-muted)">No questions found.</p>'}
           </div>
         </div>
-
-        ${modal}
-      </div>
-    `);
+      </div>`);
   }
 
-  private statusBadge(status: 'active' | 'deactivated' | 'deleted'): string {
-    const map = {
-      active: '<span class="badge badge-success">Active</span>',
-      deactivated: '<span class="badge badge-warning">Deactivated</span>',
-      deleted: '<span class="badge badge-danger">Deleted</span>',
-    };
-    return map[status] ?? '';
+  private renderCard(q: QuestionForEdit): string {
+    const isEditing = this.editingQid === q.id;
+    const isInactive = q.status !== 'active';
+
+    const diffClass =
+      q.difficulty === 'easy' ? 'badge-diff-easy' :
+      q.difficulty === 'hard' ? 'badge-diff-hard' : 'badge-diff-medium';
+
+    const statusIcon =
+      q.status === 'deactivated' ? '<span class="q-status-icon" title="Deactivated">🚫</span>' :
+      q.status === 'deleted' ? '<span class="q-status-icon" title="Deleted">🗑️</span>' : '';
+
+    const editBtn = isEditing
+      ? `<button class="q-icon-btn q-icon-btn--cancel" data-action="cancel-edit" data-qid="${this.escapeHtml(q.id)}" title="Close">✕</button>`
+      : `<button class="q-icon-btn" data-action="edit-question" data-qid="${this.escapeHtml(q.id)}" title="Edit">✏️</button>`;
+
+    const statusBtn = q.status !== 'active'
+      ? `<button class="q-icon-btn" data-action="set-active" data-qid="${this.escapeHtml(q.id)}" title="Activate">✅</button>`
+      : `<button class="q-icon-btn" data-action="set-deactivated" data-qid="${this.escapeHtml(q.id)}" title="Deactivate">🚫</button>`;
+
+    const deleteBtn = q.status !== 'deleted'
+      ? `<button class="q-icon-btn q-icon-btn--danger" data-action="set-deleted" data-qid="${this.escapeHtml(q.id)}" title="Delete">🗑️</button>`
+      : `<button class="q-icon-btn" data-action="set-active" data-qid="${this.escapeHtml(q.id)}" title="Restore">♻️</button>`;
+
+    const flagBtn = q.flag
+      ? `<button class="q-icon-btn q-icon-btn--warn" data-action="resolve-flag" data-qid="${this.escapeHtml(q.id)}" title="Resolve: ${this.escapeHtml(q.flag)}">✅🚩</button>`
+      : '';
+
+    const answers = q.answers.map(a => {
+      const isCorrect = q.correctAnswerIds.includes(a.id);
+      return `<div class="q-answer ${isCorrect ? 'q-answer--correct' : ''}">
+        <span class="q-answer-mark">${isCorrect ? '✓' : '○'}</span>
+        <span class="q-answer-text">${this.escapeHtml(a.text)}</span>
+      </div>`;
+    }).join('');
+
+    const editPanel = isEditing && this.editState ? this.renderEditPanel(this.editState) : '';
+
+    return `
+      <div class="q-card ${isInactive ? 'q-card--inactive' : ''} ${isEditing ? 'q-card--editing' : ''}">
+        <div class="q-meta">
+          <span class="badge badge-diff ${diffClass}">${q.difficulty}</span>
+          ${statusIcon}
+          ${q.flag ? `<span class="badge badge-diff badge-diff--flag" title="${this.escapeHtml(q.flag)}">🚩 ${this.escapeHtml(q.flag.slice(0, 50))}${q.flag.length > 50 ? '…' : ''}</span>` : ''}
+          <span class="q-id">${this.escapeHtml(q.id)}</span>
+          <div class="q-actions">
+            ${editBtn}
+            ${statusBtn}
+            ${deleteBtn}
+            ${flagBtn}
+          </div>
+        </div>
+        <div class="q-text" data-action="edit-question" data-qid="${this.escapeHtml(q.id)}">${this.escapeHtml(q.text)}</div>
+        <div class="q-answers">${answers}</div>
+        ${editPanel}
+      </div>`;
   }
 
-  private renderModal(s: EditState): string {
-    const flagSection = `
-      <div class="modal-section" data-flag-modal>
-        <h4>Flag</h4>
-        ${s.question.flag
-          ? `<div class="flag-display">
-              <p class="flag-comment">🚩 <strong>Current flag:</strong> ${this.escapeHtml(s.question.flag)}</p>
-              <button class="btn-sm warning" data-action="resolve-flag" data-qid="${this.escapeHtml(s.question.id)}">Resolve Flag</button>
-            </div>`
-          : ''}
-        <div class="flag-input-row">
-          <input type="text" class="input" data-field="newFlag" value="${this.escapeHtml(s.newFlag)}" placeholder="Add a flag comment…" />
-          <button class="btn-sm primary" data-action="submit-flag" ${s.saving ? 'disabled' : ''}>Add Flag</button>
-        </div>
-        ${s.error ? `<p class="error-message">${this.escapeHtml(s.error)}</p>` : ''}
-        ${s.success ? `<p class="success-message">${this.escapeHtml(s.success)}</p>` : ''}
-      </div>`;
-
-    const statusSection = `
-      <div class="modal-section">
-        <h4>Status: ${this.statusBadge(s.question.status)}</h4>
-        <div class="status-buttons">
-          ${s.question.status !== 'active' ? `<button class="btn-sm secondary" data-action="set-active" data-qid="${this.escapeHtml(s.question.id)}">Activate</button>` : ''}
-          ${s.question.status !== 'deactivated' ? `<button class="btn-sm secondary" data-action="set-deactivated" data-qid="${this.escapeHtml(s.question.id)}">Deactivate</button>` : ''}
-          ${s.question.status !== 'deleted' ? `<button class="btn-sm danger" data-action="set-deleted" data-qid="${this.escapeHtml(s.question.id)}">Delete</button>` : `<button class="btn-sm secondary" data-action="set-active" data-qid="${this.escapeHtml(s.question.id)}">Restore</button>`}
-        </div>
-      </div>`;
-
+  private renderEditPanel(s: EditState): string {
     const modeSwitcher = `
-      <div class="mode-switcher">
+      <div class="q-mode-switcher">
         <button class="btn-sm ${s.mode === 'form' ? 'primary' : 'outline'}" data-action="switch-mode-form">Form</button>
         <button class="btn-sm ${s.mode === 'markdown' ? 'primary' : 'outline'}" data-action="switch-mode-markdown">Markdown</button>
       </div>`;
 
     const formBody = s.mode === 'form' ? `
-      <div class="form-group">
-        <label>Question text</label>
+      <div class="q-edit-field">
+        <label>Question</label>
         <textarea class="input" rows="3" data-field="text">${this.escapeHtml(s.text)}</textarea>
       </div>
-      <div class="form-row">
-        <div class="form-group">
+      <div class="q-edit-row">
+        <div class="q-edit-field">
           <label>Difficulty</label>
           <select class="input" data-field="difficulty">
             <option value="easy" ${s.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
@@ -540,58 +467,60 @@ export class QuestionBankEditor extends BaseComponent {
             <option value="hard" ${s.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Time limit (s)</label>
-          <input type="number" class="input" data-field="timeLimit" value="${this.escapeHtml(s.timeLimit)}" placeholder="Bank default" min="5" max="120" />
+        <div class="q-edit-field">
+          <label>Time (s)</label>
+          <input type="number" class="input" data-field="timeLimit" value="${this.escapeHtml(s.timeLimit)}" placeholder="Default" min="5" max="120" />
+        </div>
+        <div class="q-edit-field q-edit-field--grow">
+          <label>Topics</label>
+          <input type="text" class="input" data-field="topics" value="${this.escapeHtml(s.topics)}" placeholder="comma-separated" />
+        </div>
+        <div class="q-edit-field q-edit-field--grow">
+          <label>Tags</label>
+          <input type="text" class="input" data-field="tags" value="${this.escapeHtml(s.tags)}" placeholder="comma-separated" />
         </div>
       </div>
-      <div class="form-group">
-        <label>Topics (comma-separated)</label>
-        <input type="text" class="input" data-field="topics" value="${this.escapeHtml(s.topics)}" />
-      </div>
-      <div class="form-group">
-        <label>Tags (comma-separated)</label>
-        <input type="text" class="input" data-field="tags" value="${this.escapeHtml(s.tags)}" />
-      </div>
-      <div class="form-group">
-        <label>Answers <button class="btn-sm outline" data-action="add-answer" type="button">+ Add</button></label>
+      <div class="q-edit-field">
+        <label>Answers <button class="btn-sm outline" data-action="add-answer" type="button" style="margin-left:8px">+ Add</button></label>
         ${s.answers.map((a, i) => `
           <div class="answer-row">
-            <button class="btn-sm ${a.isCorrect ? 'primary' : 'outline'}" data-action="toggle-correct" data-idx="${i}" title="${a.isCorrect ? 'Correct' : 'Incorrect'}">
+            <button class="btn-sm ${a.isCorrect ? 'primary' : 'outline'}" data-action="toggle-correct" data-idx="${i}" title="${a.isCorrect ? 'Correct' : 'Mark correct'}">
               ${a.isCorrect ? '✓' : '○'}
             </button>
             <input type="text" class="input answer-input" data-answer-idx="${i}" value="${this.escapeHtml(a.text)}" placeholder="Answer text…" />
-            ${s.answers.length > 2 ? `<button class="btn-sm danger" data-action="remove-answer" data-idx="${i}">✕</button>` : ''}
+            ${s.answers.length > 2 ? `<button class="btn-sm danger" data-action="remove-answer" data-idx="${i}" title="Remove">✕</button>` : ''}
           </div>`).join('')}
       </div>
-      ${s.error ? `<p class="error-message">${this.escapeHtml(s.error)}</p>` : ''}
-      ${s.success ? `<p class="success-message">${this.escapeHtml(s.success)}</p>` : ''}
-      <button class="primary" data-action="save-form" ${s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save Changes'}</button>
-    ` : `
-      <div class="form-group">
-        <label>Raw Markdown (question body — without the ### ID header)</label>
-        <textarea class="input markdown-editor" rows="14" data-field="markdownText">${this.escapeHtml(s.markdownText)}</textarea>
+      <div class="q-edit-field">
+        <label>Flag comment <span style="font-weight:400;color:var(--color-text-muted)">(empty to clear)</span></label>
+        <div class="q-edit-flag-row">
+          <input type="text" class="input" data-field="flagText" value="${this.escapeHtml(s.flagText)}" placeholder="Add a flag comment…" />
+          <button class="btn-sm outline" data-action="save-flag" ${s.saving ? 'disabled' : ''}>Save flag</button>
+        </div>
       </div>
-      ${s.error ? `<p class="error-message">${this.escapeHtml(s.error)}</p>` : ''}
-      ${s.success ? `<p class="success-message">${this.escapeHtml(s.success)}</p>` : ''}
-      <button class="primary" data-action="save-markdown" ${s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save Markdown'}</button>
+      ${s.error ? `<p class="error-message" style="margin:4px 0">${this.escapeHtml(s.error)}</p>` : ''}
+      ${s.success ? `<p style="color:var(--color-success,#22c55e);margin:4px 0;font-size:0.9rem">${this.escapeHtml(s.success)}</p>` : ''}
+      <div class="q-edit-actions">
+        <button class="primary" data-action="save-form" ${s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save'}</button>
+        <button class="secondary" data-action="cancel-edit">Cancel</button>
+      </div>
+    ` : `
+      <div class="q-edit-field">
+        <label>Raw Markdown <span style="font-weight:400;color:var(--color-text-muted)">(body — without the ### ID header)</span></label>
+        <textarea class="input markdown-editor" rows="12" data-field="markdownText">${this.escapeHtml(s.markdownText)}</textarea>
+      </div>
+      ${s.error ? `<p class="error-message" style="margin:4px 0">${this.escapeHtml(s.error)}</p>` : ''}
+      ${s.success ? `<p style="color:var(--color-success,#22c55e);margin:4px 0;font-size:0.9rem">${this.escapeHtml(s.success)}</p>` : ''}
+      <div class="q-edit-actions">
+        <button class="primary" data-action="save-markdown" ${s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save'}</button>
+        <button class="secondary" data-action="cancel-edit">Cancel</button>
+      </div>
     `;
 
     return `
-      <div class="modal-backdrop" data-action="close-modal">
-        <div class="modal" role="dialog" aria-modal="true" aria-label="Edit question ${this.escapeHtml(s.question.id)}" onclick="event.stopPropagation()">
-          <div class="modal-header">
-            <h3>Edit Question: <code>${this.escapeHtml(s.question.id)}</code></h3>
-            <button class="btn-sm outline" data-action="close-modal" aria-label="Close">✕</button>
-          </div>
-          <div class="modal-body">
-            ${statusSection}
-            ${flagSection}
-            <hr />
-            ${modeSwitcher}
-            ${formBody}
-          </div>
-        </div>
+      <div class="q-edit-panel">
+        ${modeSwitcher}
+        ${formBody}
       </div>`;
   }
 }
