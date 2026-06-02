@@ -19,10 +19,8 @@ What is the capital of France?
 - [x] Paris
 - [ ] London
 - [ ] Berlin
-- [ ] Madrid
-
+- [ ] Torremolinos
 ---
-
 ### Q002
 **Difficulty**: medium
 **Topics**: science
