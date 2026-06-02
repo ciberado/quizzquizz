@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-06-02
+
+### Added
+- **[host-app]** Hamburger menu (☰) in the top bar — opens a slide-in navigation drawer with cross-app links (Player, Host, Flashcard, Analytics, Admin) and an About link to the project repository.
+- **[player-app]** Hamburger menu (☰) in the top bar — same navigation drawer as host-app.
+- **[flashcard-app]** New `<nav-header>` web component providing a top bar with hamburger navigation drawer and cross-app links.
+- **[admin-app]** New `<nav-header>` web component providing a top bar with hamburger navigation drawer and cross-app links.
+- **[analytics]** Cross-app navigation section added to the analytics-ui sidebar with links to all five apps plus an About link.
+
+### Fixed
+- **[player-app]** `components.test.ts` mock question object was missing the required `status` field introduced in the `QuestionStatusSchema`.
+
+### Changed
+- **[host-app]** `question-bank-editor.ts` — internal refactor (`newFlag` → `flagText`, comment cleanup).
+- **[host-app]** `question-preview-screen.ts` — minor layout adjustment (header flexbox spacing).
+- **[question-banks]** `sample-general-knowledge.md` — replaced Madrid answer option with Torremolinos.
+
 ### Fixed
 - **[infra]** Dev proxy (`scripts/proxy-router.mjs`, `scripts/dev-proxy.mjs`) was missing the `/admin*` → admin-app (port 3005) route, causing `/admin/` to fall through to the player app. Added the route between `/flashcard*` and the `/*` catch-all, added `DEV_ADMIN_PORT` env var support, and updated the startup log line.
 
