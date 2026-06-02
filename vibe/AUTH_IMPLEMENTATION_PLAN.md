@@ -1,7 +1,8 @@
 # Authentication & Authorization Implementation Plan
 
 **Date**: February 21-22, 2026  
-**Status**: Phase 9E Complete ✅  
+**Updated**: June 2026 (IMAP + Admin Revamp)  
+**Status**: ✅ Phase 9 Complete + IMAP + Admin App + Auth Fixes  
 **Target Phase**: Phase 9 - User Accounts & Persistence
 
 ---
@@ -16,7 +17,14 @@ Add optional user authentication to QuizzQuizz while keeping anonymous play full
 
 **Key Principle**: Authentication is **opt-in**. Anonymous hosting and playing remain the default experience.
 
-**Implementation Status**: Phase 9A-9E completed. Authentication fully functional for both host and player apps with comprehensive test coverage.
+**Implementation Status**: Complete.
+- Phase 9A-9E: Better Auth email/password authentication for host and player apps ✅
+- IMAP sign-in: `POST /api/auth/imap-sign-in` with `IMAP_HOST`/`IMAP_PORT`/`IMAP_TLS` env vars ✅
+- Admin bootstrap: `ADMIN_EMAIL`/`ADMIN_PASSWORD` creates a global admin on startup ✅
+- Admin REST API: `/api/admin/users` — list, PATCH, DELETE, reset-password ✅
+- Admin app: standalone SPA at `/admin/` — sign-in, forced password change, user management ✅
+- `GET /api/auth/get-session` augments Better Auth session with `isAdmin`/`mustChangePassword` ✅
+- 42/42 admin route tests, 27/29 auth route tests (2 skipped — rate limiting) ✅
 
 ---
 

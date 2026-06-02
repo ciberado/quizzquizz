@@ -150,6 +150,7 @@ npm run docker:clean
   - `/host` → Host app
   - `/flashcard` → Flashcard app
   - `/analytics` → Analytics UI
+  - `/admin` → Admin management UI
   - `/api/*` → API endpoints
 
 ---
@@ -189,7 +190,13 @@ packages/
 │   │   ├── upload-mutex.ts   # Async mutex for upload serialization
 │   │   ├── session-doc-manager.ts # In-memory Yjs doc registry (getOrCreateSession, updateDoc, destroySession)
 │   │   ├── ws-handler.ts     # y-websocket sync handler; auth via ?playerId= / ?hostToken=
+│   │   ├── auth/
+│   │   │   ├── config.ts     # Better Auth instance (Prisma adapter, emailAndPassword, username plugin)
+│   │   │   ├── bootstrap.ts  # Admin user seeding on startup (ADMIN_EMAIL / ADMIN_PASSWORD env vars)
+│   │   │   └── middleware.ts # authMiddleware, requireAuth, requireAdmin helpers
 │   │   ├── routes/
+│   │   │   ├── auth.ts       # Custom auth routes (capabilities, get-session, imap-sign-in, change-password) + Better Auth catch-all
+│   │   │   ├── admin.ts      # Admin user management (/api/admin/users — list, PATCH, DELETE, reset-password)
 │   │   │   ├── sessions.ts   # Session endpoints (quiz + flashcard)
 │   │   │   ├── players.ts    # Player endpoints
 │   │   │   ├── game.ts       # Game state/answer endpoints
@@ -256,6 +263,18 @@ packages/
 │   │       ├── join-screen.ts        # PIN + nickname entry
 │   │       ├── play-screen.ts        # Card display + Yes/No
 │   │       └── summary-screen.ts     # Session summary + download
+│   └── index.html
+│
+├── admin-app/            # Standalone admin UI at /admin/
+│   ├── src/
+│   │   ├── main.ts           # App entry point
+│   │   ├── router.ts         # Hash-based routing (#/login, #/change-password, #/users)
+│   │   ├── api-client.ts     # Admin API client (listUsers, updateUser, deleteUser, resetPassword, signIn, getSession)
+│   │   └── components/
+│   │       ├── base-component.ts
+│   │       ├── login-screen.ts       # Sign-in form; calls getSession() after sign-in for isAdmin check
+│   │       ├── change-password-screen.ts  # Forced first-login password change
+│   │       └── user-list-screen.ts   # Paginated user table; toggle admin, reset password, delete
 │   └── index.html
 │
 ├── analytics/
@@ -495,6 +514,9 @@ docker push your-registry/quizzquizz:latest
 ---
 
 ## Common Issues & Solutions
+
+### Issue: Admin app shows "Access Denied" after login
+**Solution**: The admin bootstrap (`ADMIN_EMAIL`/`ADMIN_PASSWORD` env vars) must be set in `packages/api-server/.env`. On first login the admin sees a forced password-change screen. The sign-in endpoint does not return `isAdmin` — use `GET /api/auth/get-session` which augments the response with `isAdmin` and `mustChangePassword`.
 
 ### Issue: "Port already in use"
 **Solution**: `npm stop` to kill the dev stack (if started with `npm start`). Otherwise kill the specific port: `lsof -ti:3000 | xargs kill`

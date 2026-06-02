@@ -137,7 +137,7 @@ The system supports two sign-in methods:
 ### Global Admin Bootstrap
 If `ADMIN_EMAIL` is set at startup and no admin user exists, the server creates one automatically:
 - Uses `ADMIN_PASSWORD` if set; otherwise auto-generates a random password and logs it to stdout
-- Sets `mustChangePassword= first sign-in forces a password changetrue` 
+- Sets `mustChangePassword=true` on creation; first sign-in forces a password change
 - Env vars: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 
 ### IMAP Configuration
@@ -151,6 +151,7 @@ Set these env vars to enable the IMAP login toggle on all sign-in screens:
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/auth/capabilities` | Returns `{ imapEnabled: boolean }` |
+| GET | `/api/auth/get-session` | Augmented session endpoint — wraps Better Auth's session with `isAdmin` and `mustChangePassword` from Prisma; returns `{ session, user }` (or `{ session: null, user: null }` when unauthenticated) |
 | POST | `/api/auth/imap-sign-in` | IMAP credential validation + session creation |
 | POST | `/api/auth/change-password` | Change password + clear mustChangePassword |
 

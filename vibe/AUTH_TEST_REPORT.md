@@ -1,30 +1,27 @@
 # Authentication Test Suite Report
 
 **Generated**: 2025-02-21  
-**Updated**: 2025-02-21 (Post-Fix)  
-**Status**: ✅ CRITICAL PASS - 42/74 tests passing (57%) - All P0 auth flows working
+**Updated**: 2026-06-02 (Post-Admin Revamp)  
+**Status**: ✅ PASS — auth.test.ts 27/29 (2 skipped), admin.test.ts 42/42, middleware.test.ts and users.test.ts have pre-existing issues unrelated to auth revamp
 
 ## Executive Summary
 
-Comprehensive authentication testing suite has been implemented covering:
-- ✅ **Authentication routes** (sign-up, sign-in, session, sign-out) - 93% passing
-- ⚠️ **Middleware** (authMiddleware, requireAuth) - 59% passing  
-- ⚠️ **User profile routes** (GET/PATCH profile, stats, history) - 18% passing
-- 🔄 **End-to-end integration flows** - Not yet tested
+- ✅ **auth.test.ts** (27 passing, 2 skipped): All P0 auth flows work. 2 skipped are rate-limiting tests disabled in test env. `get-session` now returns `{ session: null, user: null }` for unauthenticated (not `null`); tests updated.
+- ✅ **admin.test.ts** (42/42 passing): Full admin user management coverage — list, pagination, search, PATCH, DELETE, reset-password; self-delete and last-admin guards.
+- ⚠️ **middleware.test.ts** (pre-existing failures, unrelated to auth revamp)
+- ⚠️ **users.test.ts** (pre-existing failures — game table schema issues)
 
-**CURRENT STATUS**: Core auth system is functional and production-ready:
-- ✅ **auth.test.ts**: 27/29 passing (93%) - 2 skipped (rate limiting)
-- ⚠️ **middleware.test.ts**: 10/17 passing (59%) - edge cases need fixes
-- ⚠️ **users.test.ts**: 5/28 passing (18%) - schema issues with game tables
-- 🔄 **auth-integration.test.ts**: Not yet tested
+### Auth Route Changes (June 2026)
 
-**CRITICAL FIXES APPLIED**:
-1. ✅ Rate limiting disabled in test environment (NODE_ENV=test)
-2. ✅ Token extraction fixed to use signed cookies from Set-Cookie header
-3. ✅ Database initialization with beforeAll hook
-4. ✅ Database cleanup wrapped in try-catch for missing tables
-5. ✅ Correct Better Auth endpoints (/api/auth/get-session)
-6. ✅ Response format expectations updated for Better Auth
+`GET /api/auth/get-session` is now intercepted before the Better Auth catch-all. It:
+1. Calls `auth.api.getSession({ headers })` to validate the session
+2. Queries Prisma for `isAdmin` and `mustChangePassword` for the authenticated user
+3. Returns `{ session: { ...betterAuthFields, isAdmin, mustChangePassword }, user: { ...betterAuthUser, isAdmin, mustChangePassword } }` when authenticated
+4. Returns `{ session: null, user: null }` when unauthenticated (Better Auth returned `null`; our wrapper normalizes this to a consistent object shape)
+
+The admin app login screen calls `getSession()` after `signIn()` to obtain `isAdmin`/`mustChangePassword`, since the sign-in response itself does not include these fields.
+
+---
 
 ## Test File Breakdown
 

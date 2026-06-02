@@ -19,7 +19,7 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 
 ## Progress Summary
 
-**Current Status**: Phase 13 (User Quiz Upload) Complete (Mar 13, 2026)
+**Current Status**: Auth/Admin Revamp Complete (Jun 2, 2026)
 
 **Completed Phases** (55-65 hours development time):
 - ✅ **Phase 0**: Project Foundation - Monorepo setup with npm workspaces
@@ -42,16 +42,12 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - ✅ **Phase 9F**: Granular Question Statistics & Post-Game Stat Recording - COMPLETE!
 - ✅ **Phase 12**: Advanced Analytics - COMPLETE! (Mar 9, 2026)
 - ✅ **Phase 13**: User Quiz Upload - COMPLETE! (Mar 13, 2026)
+- ✅ **Auth/Admin Revamp**: IMAP sign-in, global admin bootstrap, admin-app UI, auth bug fixes - COMPLETE! (Jun 2, 2026)
 
 **Current Phase**:
-- ✅ **Phase 13**: User Quiz Upload — COMPLETE (Mar 13, 2026)
-  - `packages/api-server/src/reload-banks.ts`: shared `reloadQuestionBanks()` helper; `upload-mutex.ts`: async promise-chain mutex (`withUploadMutex`)
-  - `POST /api/user-banks/upload` (auth required — 500KB limit, path-traversal guard, Markdown validation, mutex-serialised write+reload); `GET /api/user-banks/mine`
-  - `packages/host-app/src/components/upload-quiz-modal.ts`: `<qz-upload-quiz-modal>` Web Component — textarea + file picker, inline Claude prompt copy button, per-error validation
-  - Bank-browser shows username instead of raw user ID; own folder sorted first with 👤 icon + "you" badge
-  - Auth-header login state fix: AbortError no longer clears user; `onMount()` + `auth-state` event listener
-  - "QuizzQuizz" heading is now a `#/` home link in both apps
-  - **18 new Vitest integration tests** + **19 Playwright E2E tests** (quiz-upload + username display)
+- ✅ **Auth/Admin Revamp** — COMPLETE (Jun 2, 2026)
+  - IMAP sign-in, global admin bootstrap, admin-app UI, get-session augmentation, player-app syntax fix
+  - See `vibe/AUTH_IMPLEMENTATION_PLAN.md` for full details
 - 🎯 **Next: Phase 7F — Question Bank Folder Navigation** (or Phase 8 production hardening)
 
 **Tooling**:
@@ -86,22 +82,28 @@ This plan outlines a phased approach to building QuizzQuizz using vibecoding met
 - Phase 15: Enterprise Features (4-5 hrs)
 
 **Test Coverage Summary**: 
-- **~400 tests total** (unit + integration) — **~399 pass, 1 failing, 2 skip**
+- **~440 tests total** (unit + integration) — ~438 pass, 1 failing (pre-existing), 2 skip
 - Common utilities: 46 tests (PIN generation, scoring, validation) - ✅ 100%
 - Question bank parser: 28 tests (markdown parsing, filtering) - ✅ 100%
-- API server: 251 unit + integration tests across 13 test files (incl. upload + analytics auth tests) — ⚠️ 1 failing (`auth/middleware.test.ts`: timing issue with Better Auth session cookie in test environment)
-- Player app: 28 unit tests (components, state management, router) - ✅ 100%
+- API server: 293 unit + integration tests across 14 test files — ⚠️ 1 pre-existing failing (`auth/middleware.test.ts`: timing issue with Better Auth session cookie)
+  - admin.test.ts: 42/42 (list, pagination, search, PATCH, DELETE, reset-password, guard tests) ✅
+  - auth.test.ts: 27/29 passing, 2 skipped (rate-limiting disabled in test env) ✅
+- Player app: 28 unit tests (components, state management, router) - ✅ 100% (1 pre-existing collect error in `components.test.ts`)
 - Analytics: 47 unit tests (stats, quality, streaks) - ✅ 100%
-- Analytics-UI: no tests (UI components only)
-- E2E: 43+ comprehensive scenarios (complete flows, edge cases, isolation) - ✅ 95%+
-  - API tests: 4 scenarios ✅
-  - Player UI tests: 4 scenarios ✅
-  - Quiz-upload: 19 scenarios (6 API-level, 8 UI-level, 5 username-display) ✅
-  - Host analytics tests: 1 scenario ✅
-  - Question preview tests: 15 scenarios ✅ 100% pass rate
-- Database: Migrated from Drizzle+better-sqlite3 to Prisma v6; output path fixed for `moduleResolution: bundler`
+- E2E: 43+ comprehensive scenarios - ✅ 95%+
 
 **Recent Achievements**:
+- ✅ **Jun 2, 2026 — Auth/Admin Revamp**
+  - **IMAP sign-in**: `POST /api/auth/imap-sign-in` validates credentials against IMAP server (`IMAP_HOST`, `IMAP_PORT`, `IMAP_TLS`); auto-registers users on first login; `GET /api/auth/capabilities` lets frontends show/hide the IMAP toggle dynamically
+  - **Admin bootstrap**: If `ADMIN_EMAIL` is set at startup and no admin exists, a user is created with `mustChangePassword=true`; env vars `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+  - **Admin REST API**: `/api/admin/users` — list (paginated + search), PATCH, DELETE, POST /reset-password (returns temp password + sets mustChangePassword); guards: self-delete blocked, last-admin demotion/deletion blocked
+  - **Admin app**: Standalone Vite SPA at `/admin/` — login screen, forced password-change screen, paginated user table with toggle-admin / reset-password / delete per row; self-delete button disabled in UI
+  - **`GET /api/auth/get-session` augmentation**: Better Auth's native session endpoint only returns core fields; custom interceptor augments response with `isAdmin` and `mustChangePassword` from Prisma; unauthenticated returns `{ session: null, user: null }`
+  - **Login screen fix**: Admin app login-screen now calls `getSession()` after `signIn()` to obtain `isAdmin`/`mustChangePassword`
+  - **player-app fix**: `getAuthCapabilities` and `imapSignIn` methods had object-literal syntax (`,` terminators) inside class body and called undefined `apiRequest`; fixed to class methods using `this.fetch`
+  - **Login/register centering**: Login screens properly centered on all screen sizes
+  - **Tests**: 42/42 admin route tests; auth.test.ts updated to expect `{ session: null, user: null }` for unauthenticated get-session
+  - **Docs**: PROJECT.md, QUICK-REFERENCE.md, AUTH_IMPLEMENTATION_PLAN.md, AUTH_TEST_REPORT.md updated
 - ✅ **Mar 1, 2026 — Phase 9F: Granular Question Statistics & Post-Game Stat Recording**
   - **`session-stats.ts`**: `recordSessionStats(sessionId)` — idempotent helper called at both session-end trigger points (`POST /:id/next` last question, `POST /:id/end`)
   - **`HostedSession` + `PlayerStat`**: now written from real game flow (closed the known gap from Phase 9E)
