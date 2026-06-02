@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file, organized b
 ## [Unreleased]
 
 ### Added
-- **[docs]** `docs/authentication.md` — comprehensive auth configuration guide covering sign-in methods (email+password, IMAP), user roles, admin bootstrap env vars, the admin app workflow, all auth/admin API endpoints, `get-session` response shape, and security notes.
-- **[docs]** `docs/deployment-bare-metal.md` and `docs/deployment-docker.md` — added `IMAP_HOST`, `IMAP_PORT`, `IMAP_TLS`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` env var rows to the reference tables; updated `.env` examples; added link to `docs/authentication.md`.
-- **[config]** `AGENTS.md` and `.github/copilot-instructions.md` — added `docs/authentication.md` to Read First links; added `admin-app` to Project Shape; added `/admin*` route to Docker routing table.
+- **[docs]** `docs/admin-app.md` — full reference for the admin app: screens (login, change-password, user-list), all user actions and their server-side guards, client-side router guard logic, package structure, dev setup, and per-screen API call table.
+- **[docs]** `docs/authentication.md` — added cross-reference link to `docs/admin-app.md` in the Admin App Screens section.
+- **[docs]** `docs/deployment-bare-metal.md` — added `admin-app` to the architecture diagram, build output table, both Caddyfile examples (`/admin*` route), verify URLs, and dev mode ports table.
+- **[docs]** `docs/deployment-docker.md` — added `admin-app` to the architecture diagram and Quick start URL table.
+- **[config]** `AGENTS.md` and `.github/copilot-instructions.md` — added `docs/admin-app.md` to Read First links.
 
-### Added
-### Added
+
 - **[api-server]** Exhaustive test suite for admin user management (`admin.test.ts`): 42 tests covering all routes (auth guards, list/pagination/search, PATCH, DELETE, reset-password), business rules (last-admin protection, self-delete guard), and DB side-effects.
 - **[docs]** `PROJECT.md` updated with Authentication & Authorization section: sign-in methods, user roles, admin bootstrap, IMAP configuration, and full admin REST API reference table.
 - **[docs]** `QUICK-REFERENCE.md` updated with admin-app port 3005 and dev command.

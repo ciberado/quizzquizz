@@ -103,6 +103,10 @@ Open `http://localhost:3000/admin/` (or your domain's `/admin/` path). Use the c
 
 ## Admin App Screens
 
+The admin app is a standalone SPA served at `/admin/`. For a full walkthrough of every screen, all user actions, the router guard logic, and development setup, see **[`docs/admin-app.md`](admin-app.md)**.
+
+Quick summary:
+
 | Route | Screen |
 |-------|--------|
 | `#/login` | Email + password sign-in |

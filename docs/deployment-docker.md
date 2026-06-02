@@ -13,6 +13,7 @@ Caddy (port 3000 → container :80)
   ├── /host*       → static files (host-app)
   ├── /analytics*  → static files (analytics-ui)
   ├── /flashcard*  → static files (flashcard-app)
+  ├── /admin*      → static files (admin-app)
   └── /*           → static files (player-app)
 ```
 
@@ -39,6 +40,7 @@ The application is then available at:
 | Host app | http://localhost:3000/host |
 | Flashcard app | http://localhost:3000/flashcard/ |
 | Analytics | http://localhost:3000/analytics |
+| Admin app | http://localhost:3000/admin/ |
 | API | http://localhost:3000/api/ |
 
 ## Using a pre-built image

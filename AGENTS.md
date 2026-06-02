@@ -5,7 +5,7 @@
 - Start with [`vibe/PROJECT.md`](vibe/PROJECT.md) for architecture and core product decisions.
 - Use [`vibe/PLAN.md`](vibe/PLAN.md) for roadmap and feature-phase context.
 - Use [`vibe/QUICK-REFERENCE.md`](vibe/QUICK-REFERENCE.md) for commands, ports, and troubleshooting shortcuts.
-- Link to detailed docs instead of repeating them. Important references include [`vibe/QUESTION-BANK-FORMAT.md`](vibe/QUESTION-BANK-FORMAT.md), [`vibe/ANALYTICS-PACKAGE.md`](vibe/ANALYTICS-PACKAGE.md), [`docs/analytics/README.md`](docs/analytics/README.md), [`docs/authentication.md`](docs/authentication.md), [`EC2_PROXY_SETUP.md`](EC2_PROXY_SETUP.md), and [`EC2_TROUBLESHOOTING.md`](EC2_TROUBLESHOOTING.md).
+- Link to detailed docs instead of repeating them. Important references include [`vibe/QUESTION-BANK-FORMAT.md`](vibe/QUESTION-BANK-FORMAT.md), [`vibe/ANALYTICS-PACKAGE.md`](vibe/ANALYTICS-PACKAGE.md), [`docs/analytics/README.md`](docs/analytics/README.md), [`docs/authentication.md`](docs/authentication.md), [`docs/admin-app.md`](docs/admin-app.md), [`EC2_PROXY_SETUP.md`](EC2_PROXY_SETUP.md), and [`EC2_TROUBLESHOOTING.md`](EC2_TROUBLESHOOTING.md).
 
 ## Skills
 

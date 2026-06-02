@@ -13,6 +13,7 @@ Caddy (port 80/443)
   ├── /host*       → static files (host-app/dist)
   ├── /analytics*  → static files (analytics-ui/dist)
   ├── /flashcard*  → static files (flashcard-app/dist)
+  ├── /admin*      → static files (admin-app/dist)
   └── /*           → static files (player-app/dist)
 ```
 
@@ -47,6 +48,7 @@ This compiles every workspace package in the correct dependency order (`common` 
 | `packages/player-app/dist/` | Player UI static files |
 | `packages/analytics-ui/dist/` | Analytics UI static files |
 | `packages/flashcard-app/dist/` | Flashcard UI static files |
+| `packages/admin-app/dist/` | Admin UI static files |
 
 ## 3. Set up the database
 
@@ -226,6 +228,13 @@ Create or edit your Caddyfile (you can use the repo's `Caddyfile` as a starting 
         file_server
     }
 
+    handle /admin* {
+        root * /opt/quizzquizz/packages/admin-app/dist
+        uri strip_prefix /admin
+        try_files {path} /index.html
+        file_server
+    }
+
     handle /* {
         root * /opt/quizzquizz/packages/player-app/dist
         try_files {path} /index.html
@@ -289,6 +298,13 @@ your-domain.com {
         file_server
     }
 
+    handle /admin* {
+        root * /opt/quizzquizz/packages/admin-app/dist
+        uri strip_prefix /admin
+        try_files {path} /index.html
+        file_server
+    }
+
     handle /* {
         root * /opt/quizzquizz/packages/player-app/dist
         try_files {path} /index.html
@@ -336,6 +352,9 @@ curl https://your-domain.com/api/question-banks
 # Open in browser
 https://your-domain.com/        # player app
 https://your-domain.com/host    # host app
+https://your-domain.com/analytics  # analytics dashboard
+https://your-domain.com/flashcard/ # flashcard player
+https://your-domain.com/admin/     # admin app
 ```
 
 ## Updating
@@ -378,5 +397,6 @@ npm run dev
 | Player app (Vite) | 3002 |
 | Analytics UI (Vite) | 3003 |
 | Flashcard app (Vite) | 3004 |
+| Admin app (Vite) | 3005 |
 
 Hot-module replacement works on all frontend apps. The dev proxy is not needed in Docker — Caddy handles routing there.
