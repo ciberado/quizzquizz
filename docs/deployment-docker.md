@@ -68,6 +68,13 @@ All variables are set in `docker-compose.yml` under `environment:`. You can over
 | `BETTER_AUTH_BASE_URL` | `http://localhost:3000` | Public base URL seen by the auth library |
 | `CORS_ORIGIN` | *(empty)* | Allowed CORS origin, e.g. `https://my-domain.com` |
 | `PRODUCTION_HTTPS` | `false` | Set to `true` when serving over HTTPS |
+| `IMAP_HOST` | *(empty)* | IMAP server hostname — enables IMAP sign-in when set |
+| `IMAP_PORT` | `993` | IMAP port |
+| `IMAP_TLS` | `true` | `false` for STARTTLS or plain IMAP |
+| `ADMIN_EMAIL` | *(empty)* | Bootstrap admin email — creates admin account on first startup if no admin exists |
+| `ADMIN_PASSWORD` | *(empty)* | Bootstrap admin password — auto-generated and printed to stdout if omitted |
+
+See [`docs/authentication.md`](../docs/authentication.md) for a full authentication configuration guide.
 
 ### Minimal `.env` for production
 
@@ -76,6 +83,15 @@ BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 BETTER_AUTH_BASE_URL=https://your-domain.com
 CORS_ORIGIN=https://your-domain.com
 PRODUCTION_HTTPS=true
+
+# Admin bootstrap (creates an admin account on first startup if no admin exists)
+ADMIN_EMAIL=admin@your-domain.com
+# ADMIN_PASSWORD=ChangeMe!   # omit to auto-generate and print to stdout
+
+# IMAP sign-in (optional)
+# IMAP_HOST=mail.your-domain.com
+# IMAP_PORT=993
+# IMAP_TLS=true
 ```
 
 ## Data persistence

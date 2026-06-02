@@ -84,6 +84,15 @@ BETTER_AUTH_BASE_URL=https://your-domain.com
 # CORS (set when Caddy and the API are on different origins)
 CORS_ORIGIN=https://your-domain.com
 PRODUCTION_HTTPS=true
+
+# IMAP sign-in (optional — enables the IMAP login toggle on all sign-in screens)
+# IMAP_HOST=mail.example.com
+# IMAP_PORT=993
+# IMAP_TLS=true
+
+# Admin bootstrap (optional — creates an admin account on first startup)
+# ADMIN_EMAIL=admin@example.com
+# ADMIN_PASSWORD=ChangeMe!
 ```
 
 > **Note**: The API server runs on port `3010` here to avoid conflict with Caddy, which will listen on port `80`/`443`. Adjust the port in the Caddy configuration below if you use a different value.
@@ -103,6 +112,13 @@ PRODUCTION_HTTPS=true
 | `BETTER_AUTH_BASE_URL` | `http://localhost:3000` | Public base URL seen by the auth library |
 | `CORS_ORIGIN` | *(empty)* | Allowed CORS origin |
 | `PRODUCTION_HTTPS` | `false` | Set to `true` when serving over HTTPS |
+| `IMAP_HOST` | *(empty)* | IMAP server hostname — enables IMAP sign-in when set |
+| `IMAP_PORT` | `993` | IMAP port |
+| `IMAP_TLS` | `true` | `false` for STARTTLS or plain IMAP |
+| `ADMIN_EMAIL` | *(empty)* | Bootstrap admin email — creates admin account on first startup if no admin exists |
+| `ADMIN_PASSWORD` | *(empty)* | Bootstrap admin password — auto-generated and printed to stdout if omitted |
+
+See [`docs/authentication.md`](../docs/authentication.md) for a full authentication configuration guide.
 
 ## 5. Start the API server
 

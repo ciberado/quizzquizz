@@ -10,7 +10,7 @@
 - Start with [`vibe/PROJECT.md`](vibe/PROJECT.md) for architecture and core product decisions.
 - Use [`vibe/PLAN.md`](vibe/PLAN.md) for roadmap and feature-phase context.
 - Use [`vibe/QUICK-REFERENCE.md`](vibe/QUICK-REFERENCE.md) for commands, ports, and troubleshooting shortcuts.
-- Link to detailed docs instead of repeating them. Important references include [`vibe/QUESTION-BANK-FORMAT.md`](vibe/QUESTION-BANK-FORMAT.md), [`vibe/ANALYTICS-PACKAGE.md`](vibe/ANALYTICS-PACKAGE.md), [`docs/analytics/README.md`](docs/analytics/README.md), [`EC2_PROXY_SETUP.md`](EC2_PROXY_SETUP.md), and [`EC2_TROUBLESHOOTING.md`](EC2_TROUBLESHOOTING.md).
+- Link to detailed docs instead of repeating them. Important references include [`vibe/QUESTION-BANK-FORMAT.md`](vibe/QUESTION-BANK-FORMAT.md), [`vibe/ANALYTICS-PACKAGE.md`](vibe/ANALYTICS-PACKAGE.md), [`docs/analytics/README.md`](docs/analytics/README.md), [`docs/authentication.md`](docs/authentication.md), [`EC2_PROXY_SETUP.md`](EC2_PROXY_SETUP.md), and [`EC2_TROUBLESHOOTING.md`](EC2_TROUBLESHOOTING.md).
 
 ## Skills
 
@@ -32,6 +32,7 @@ QuizzQuizz is a Kahoot-style quiz platform in an npm workspaces monorepo.
 - `packages/host-app`: host UI built with Web Components and Vite — quiz host interface (projector display)
 - `packages/player-app`: player UI built with Web Components and Vite — quiz player interface (mobile)
 - `packages/flashcard-app`: flashcard player UI built with Web Components and Vite — standalone self-study mode served at `/flashcard/`
+- `packages/admin-app`: admin UI built with Web Components and Vite — user management, served at `/admin/`; login, forced password change, and user CRUD (toggle admin, reset password, delete)
 - `packages/analytics`: analytics calculation and aggregation logic
 - `packages/analytics-ui`: analytics dashboard UI
 - `question-banks/`: built-in and user-uploaded quiz banks
@@ -79,6 +80,7 @@ In Docker, Caddy proxies everything through port 3000:
 | `/host*`      | host-app       |
 | `/analytics*` | analytics-ui   |
 | `/flashcard*` | flashcard-app  |
+| `/admin*`     | admin-app      |
 | `/*`          | player-app     |
 
 ## Implementation Guidance
