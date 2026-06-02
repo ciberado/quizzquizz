@@ -4,6 +4,7 @@ import { router } from './router';
 import { state } from './state';
 
 // Import screen components
+import './components/nav-header';
 import './components/join-screen';
 import './components/play-screen';
 import './components/summary-screen';
