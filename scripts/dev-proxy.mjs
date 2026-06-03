@@ -46,8 +46,23 @@ function rewriteLocation(location, proxyHost) {
   return location;
 }
 
+/** Paths that Vite serves under a sub-base (e.g. base: '/host/').
+ *  A request for the exact path without trailing slash gets a 404 from Vite,
+ *  so we redirect it ourselves before forwarding. */
+const TRAILING_SLASH_PATHS = ['/host', '/analytics', '/flashcard', '/admin'];
+
 const server = http.createServer((req, res) => {
   const url   = new URL(req.url ?? '/', `http://localhost`);
+
+  // Redirect sub-app base paths that are missing the required trailing slash.
+  if (TRAILING_SLASH_PATHS.includes(url.pathname)) {
+    const proxyHost = req.headers.host ?? `localhost:${PROXY_PORT}`;
+    const qs = url.search ?? '';
+    res.writeHead(301, { location: `http://${proxyHost}${url.pathname}/${qs}` });
+    res.end();
+    return;
+  }
+
   const port  = resolveTarget(url.pathname);
 
   const options = {
