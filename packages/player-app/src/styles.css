@@ -2277,8 +2277,11 @@ label {
   cursor: pointer;
   border-radius: 6px;
   font-size: 0.9rem;
+  font-weight: normal;
+  min-height: auto;
+  width: 100%;
   transition: background var(--transition-fast);
   text-align: left;
 }
-.about-drawer-link:hover { background: var(--color-bg-secondary); }
+.about-drawer-link:hover { background: var(--color-bg-secondary); transform: none; box-shadow: none; }
 
