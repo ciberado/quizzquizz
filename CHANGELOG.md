@@ -4,8 +4,29 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Added
+- **[auth-ui]** New `@quizzquizz/auth-ui` package with `LoginScreenBase` — an abstract `HTMLElement` with **concrete** implementations of all auth fetch calls (`signIn`, `signUp`, `imapSignIn`, `getAuthCapabilities`) using shared `authRequest()` helper against `/api/auth/*`. Apps only need to implement `navigateHome()` plus optional subtitle overrides.
+- **[auth-ui]** 17-test Vitest/happy-dom suite for `LoginScreenBase` covering sign-in, sign-up, IMAP toggle, error display, auth-changed event, and navigation.
+- **[flashcard-app]** Login/logout button added to the nav header; shows user name when authenticated, Login button when not. Dispatches and listens to `auth-changed` window events.
+- **[flashcard-app]** New `flashcard-login-screen` web component extending `LoginScreenBase`.
+- **[flashcard-app]** `/login` route registered in `main.ts`.
+- **[e2e]** New `Authentication - Flashcard App` test suite covering login button visibility, navigation to login screen, sign up, sign in + logout, and skip auth.
+- **[docs]** Added "Auth UI Package" section to `docs/authentication.md` documenting `LoginScreenBase` usage and extension pattern.
+
+### Changed
+- **[host-app]** Refactored `login-screen.ts` to extend `LoginScreenBase` from `@quizzquizz/auth-ui`; removed all duplicated fetch logic (~130 lines removed).
+- **[player-app]** Same refactor as host-app.
+- **[auth-ui]** Fixed `auth-changed` event dispatch order: event now fires **before** `navigateHome()` so nav headers update before the new screen renders.
+- **[e2e]** Fixed `button.toggle-mode-btn` selector → `button.btn-toggle-signup` (correct class name) in `auth.spec.ts`.
+- **[e2e]** Fixed error selector `div[style*="background: #ff4444"]` → `.auth-error` in `auth.spec.ts`.
+
+### Removed
+- **[host-app]** Removed `about-btn` (ℹ️) from the top bar — About is accessible via the hamburger menu drawer.
+- **[player-app]** Removed `about-btn` (ℹ️) from the top bar.
+- **[flashcard-app]** Removed `about-btn-nav` (ℹ️) from the nav header.
+- **[admin-app]** Removed `about-btn-nav` (ℹ️) from the nav header.
+
 ### Fixed
-- **[host-app]** About drawer button was not left-aligned due to missing `width: 100%` on `.about-drawer-link`; also reset `min-height` and `transform` overrides from the global `button {}` rule.
 - **[host-app]** Theme system now falls back to OS `prefers-color-scheme` when no explicit preference is stored in localStorage, so light-mode browsers are respected automatically.
 - **[player-app]** Same About drawer button alignment fix as host-app.
 - **[flashcard-app]** About dialog was semi-transparent because `--color-surface` is undefined in flashcard-app; background now uses `var(--color-bg)`. Same button alignment fix applied.
