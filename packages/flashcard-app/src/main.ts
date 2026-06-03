@@ -8,6 +8,7 @@ import './components/nav-header';
 import './components/join-screen';
 import './components/play-screen';
 import './components/summary-screen';
+import './components/login-screen';
 import './components/theme-toggle';
 
 // Apply saved theme (or OS preference) before first render to avoid flash
@@ -45,5 +46,6 @@ router.on('/play/:sessionId', () => {
 });
 
 router.on('/summary', () => showScreen('flashcard-summary-screen'));
+router.on('/login', () => showScreen('flashcard-login-screen'));
 
 console.log('🃏 QuizzQuizz Flashcard App initialized');

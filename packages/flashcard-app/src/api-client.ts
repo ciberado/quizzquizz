@@ -93,6 +93,72 @@ export interface RecordAnswerPayload {
 }
 
 export const api = {
+  /** Get current auth session (returns null when not logged in) */
+  async getAuthSession(): Promise<{
+    user: { id: string; email: string; username: string; name: string } | null;
+    session: unknown | null;
+  } | null> {
+    try {
+      return await apiRequest<{
+        user: { id: string; email: string; username: string; name: string } | null;
+        session: unknown | null;
+      }>('/api/auth/get-session', { credentials: 'include' });
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 404)) return null;
+      throw err;
+    }
+  },
+
+  /** Sign out the current user */
+  async signOut(): Promise<void> {
+    await apiRequest<void>('/api/auth/sign-out', {
+      method: 'POST',
+      body: JSON.stringify({}),
+      credentials: 'include',
+    });
+  },
+
+  /** Sign in with email and password */
+  async signIn(email: string, password: string): Promise<unknown> {
+    return apiRequest<unknown>('/api/auth/sign-in/email', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+    });
+  },
+
+  /** Register a new account */
+  async signUp(
+    email: string,
+    password: string,
+    username: string,
+    name: string,
+  ): Promise<unknown> {
+    return apiRequest<unknown>('/api/auth/sign-up/email', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, username, name }),
+      credentials: 'include',
+    });
+  },
+
+  /** Sign in with IMAP credentials */
+  async imapSignIn(email: string, password: string): Promise<unknown> {
+    return apiRequest<unknown>('/api/auth/imap-sign-in', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+    });
+  },
+
+  /** Check which auth capabilities are enabled server-side */
+  async getAuthCapabilities(): Promise<{ imapEnabled: boolean }> {
+    try {
+      return await apiRequest<{ imapEnabled: boolean }>('/api/auth/capabilities');
+    } catch {
+      return { imapEnabled: false };
+    }
+  },
+
   /** Join a flashcard session via PIN */
   async joinSession(pin: string, nickname: string): Promise<JoinResponse> {
     return apiRequest<JoinResponse>('/api/sessions/join', {

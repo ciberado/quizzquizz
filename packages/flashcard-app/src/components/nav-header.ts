@@ -1,15 +1,56 @@
 /**
  * Nav Header — top bar with hamburger menu for cross-app navigation.
+ * Shows a login/logout button in the top bar and an about dialog via the drawer.
  */
+import { api } from '../api-client';
+import { theme } from '../theme';
+
 export class NavHeader extends HTMLElement {
   private menuOpen = false;
   private aboutDialogOpen = false;
+  private user: { name: string; email: string } | null = null;
+
+  private readonly boundCheckAuth = (): void => { void this.checkAuth(); };
+  private readonly boundRender = (): void => { this.render(); };
 
   connectedCallback(): void {
+    void this.checkAuth();
+    window.addEventListener('auth-changed', this.boundCheckAuth);
+    window.addEventListener('theme-changed', this.boundRender);
+  }
+
+  disconnectedCallback(): void {
+    window.removeEventListener('auth-changed', this.boundCheckAuth);
+    window.removeEventListener('theme-changed', this.boundRender);
+  }
+
+  private async checkAuth(): Promise<void> {
+    try {
+      const session = await api.getAuthSession();
+      this.user = session?.user ?? null;
+    } catch {
+      this.user = null;
+    }
     this.render();
   }
 
+  private async handleLogout(): Promise<void> {
+    try {
+      await api.signOut();
+      this.user = null;
+      window.dispatchEvent(new CustomEvent('auth-changed'));
+      window.location.hash = '/';
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  }
+
   private render(): void {
+    const currentTheme = theme.load();
+    const isDark = currentTheme === 'dark';
+    const themeIcon = isDark ? '☀️' : '🌙';
+    const themeLabel = isDark ? 'Switch to light theme' : 'Switch to dark theme';
+
     this.innerHTML = `
       <header class="app-nav-bar">
         <button class="app-nav-hamburger" aria-label="Open navigation menu" title="Menu">☰</button>
@@ -17,7 +58,14 @@ export class NavHeader extends HTMLElement {
           <a href="/" class="app-nav-title">🎯 QuizzQuizz</a>
           <span class="app-nav-label">Flashcard</span>
         </div>
-        <button class="about-btn-nav" aria-label="About QuizzQuizz" title="About">ℹ️</button>
+        <div class="app-nav-actions">
+          ${this.user
+            ? `<span class="app-nav-user">👤 ${this.user.name || this.user.email}</span>
+               <button class="app-nav-logout-btn app-nav-action-btn">Logout</button>`
+            : `<button class="app-nav-login-btn app-nav-action-btn">Login</button>`
+          }
+          <button class="app-nav-theme-btn" aria-label="${themeLabel}" title="${themeLabel}">${themeIcon}</button>
+        </div>
       </header>
       <div class="nav-drawer-overlay${this.menuOpen ? ' open' : ''}"></div>
       <nav class="nav-drawer${this.menuOpen ? ' open' : ''}" aria-label="App navigation">
@@ -62,10 +110,7 @@ export class NavHeader extends HTMLElement {
       this.menuOpen = false;
       this.render();
     });
-    this.querySelector('.about-btn-nav')?.addEventListener('click', () => {
-      this.aboutDialogOpen = true;
-      this.render();
-    });
+    this.querySelector('.app-nav-theme-btn')?.addEventListener('click', () => theme.toggle());
     this.querySelector('.about-drawer-link')?.addEventListener('click', () => {
       this.menuOpen = false;
       this.aboutDialogOpen = true;
@@ -78,6 +123,12 @@ export class NavHeader extends HTMLElement {
     this.querySelector('.about-dialog-overlay')?.addEventListener('click', () => {
       this.aboutDialogOpen = false;
       this.render();
+    });
+    this.querySelector('.app-nav-login-btn')?.addEventListener('click', () => {
+      window.location.hash = '/login';
+    });
+    this.querySelector('.app-nav-logout-btn')?.addEventListener('click', () => {
+      void this.handleLogout();
     });
   }
 }
