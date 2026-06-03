@@ -2015,8 +2015,8 @@ nav-header {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: var(--color-surface);
-  background-color: var(--color-surface);
+  background: var(--color-bg);
+  background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.5rem;
@@ -2122,8 +2122,11 @@ nav-header {
   cursor: pointer;
   border-radius: 6px;
   font-size: 0.9rem;
+  font-weight: normal;
+  min-height: auto;
+  width: 100%;
   transition: background var(--transition-fast);
   text-align: left;
 }
-.about-drawer-link:hover { background: var(--color-bg-alt); }
+.about-drawer-link:hover { background: var(--color-bg-alt); transform: none; box-shadow: none; }
 
