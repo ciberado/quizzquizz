@@ -88,7 +88,6 @@ export class AuthHeader extends BaseComponent {
             aria-label="${themeLabel}"
             title="${themeLabel}"
           >${themeIcon}</button>
-          <button class="about-btn top-bar-btn" aria-label="About QuizzQuizz" title="About">ℹ️</button>
         </div>
       </div>
       <div class="nav-drawer-overlay${this.menuOpen ? ' open' : ''}"></div>
@@ -151,11 +150,6 @@ export class AuthHeader extends BaseComponent {
     const overlay = this.querySelector('.nav-drawer-overlay');
     if (overlay) {
       overlay.addEventListener('click', () => { this.menuOpen = false; this.render(); });
-    }
-
-    const aboutBtn = this.querySelector('.about-btn');
-    if (aboutBtn) {
-      aboutBtn.addEventListener('click', () => { this.aboutDialogOpen = true; this.render(); });
     }
 
     const aboutDrawerLink = this.querySelector('.about-drawer-link');
