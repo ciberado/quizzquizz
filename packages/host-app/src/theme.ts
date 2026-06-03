@@ -1,21 +1,29 @@
 /**
- * Theme management — persisted in localStorage.
- * Host app defaults to dark theme.
+ * Theme management — persisted in localStorage under the shared key
+ * 'quizzquizz_theme' so the preference set in any frontend is honoured here.
+ * Falls back to the OS colour-scheme preference when nothing is stored.
  */
 
 export type Theme = 'dark' | 'light';
 
 const STORAGE_KEY = 'quizzquizz_theme';
-const DEFAULT: Theme = 'dark';
+
+function osPreference(): Theme {
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return 'dark'; // Host app defaults to dark
+  }
+}
 
 function load(): Theme {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === 'light' || raw === 'dark') return raw;
   } catch {
-    // Storage unavailable — fall back to default
+    // Storage unavailable — fall back to OS preference
   }
-  return DEFAULT;
+  return osPreference();
 }
 
 function save(theme: Theme): void {
@@ -41,6 +49,14 @@ function toggle(): Theme {
 
 function init(): void {
   apply(load());
+  // Keep in sync when OS preference changes and no explicit preference is stored
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      try {
+        if (!localStorage.getItem(STORAGE_KEY)) apply(e.matches ? 'dark' : 'light');
+      } catch { /* ignore */ }
+    });
+  } catch { /* matchMedia unavailable */ }
 }
 
 export const theme = { load, save, apply, toggle, init };
