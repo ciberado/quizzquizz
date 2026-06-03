@@ -9,6 +9,7 @@ import { theme } from '../theme';
 export class AuthHeader extends BaseComponent {
   private user: { name: string; email: string } | null = null;
   private menuOpen = false;
+  private aboutDialogOpen = false;
 
   constructor() {
     super();
@@ -70,6 +71,7 @@ export class AuthHeader extends BaseComponent {
 
     this.innerHTML = `
       <div class="top-bar">
+        <button class="top-bar-hamburger-btn" aria-label="Open navigation menu" title="Menu">☰</button>
         <div class="top-bar-brand">
           <a href="#/">QuizzQuizz</a>
           <span class="top-bar-label">Host</span>
@@ -86,7 +88,7 @@ export class AuthHeader extends BaseComponent {
             aria-label="${themeLabel}"
             title="${themeLabel}"
           >${themeIcon}</button>
-          <button class="top-bar-hamburger-btn" aria-label="Open navigation menu" title="Menu">☰</button>
+          <button class="about-btn top-bar-btn" aria-label="About QuizzQuizz" title="About">ℹ️</button>
         </div>
       </div>
       <div class="nav-drawer-overlay${this.menuOpen ? ' open' : ''}"></div>
@@ -102,8 +104,22 @@ export class AuthHeader extends BaseComponent {
         <a href="/analytics" class="nav-drawer-link">📊 Analytics</a>
         <a href="/admin" class="nav-drawer-link">⚙️ Admin</a>
         <hr class="nav-drawer-divider" />
-        <a href="https://github.com/ciberado/quizzquizz" target="_blank" rel="noopener noreferrer" class="nav-drawer-link">❓ About</a>
+        <button class="about-drawer-link" aria-label="About QuizzQuizz">❓ About</button>
       </nav>
+      <div class="about-dialog-overlay${this.aboutDialogOpen ? ' open' : ''}"></div>
+      <div class="about-dialog${this.aboutDialogOpen ? ' open' : ''}" role="dialog" aria-label="About QuizzQuizz">
+        <div class="about-dialog-header">
+          <h2>About QuizzQuizz</h2>
+          <button class="about-dialog-close" aria-label="Close">✕</button>
+        </div>
+        <div class="about-dialog-content">
+          <p class="about-version">Version ${this.getVersion()}</p>
+          <p class="about-text">A real-time competitive quiz platform for engaging classroom experiences. Teachers create quizzes, students compete on their devices, and everyone has fun.</p>
+          <a href="https://github.com/ciberado/quizzquizz" target="_blank" rel="noopener noreferrer" class="about-link">
+            View on GitHub →
+          </a>
+        </div>
+      </div>
     `;
 
     // Attach event listeners
@@ -136,6 +152,34 @@ export class AuthHeader extends BaseComponent {
     if (overlay) {
       overlay.addEventListener('click', () => { this.menuOpen = false; this.render(); });
     }
+
+    const aboutBtn = this.querySelector('.about-btn');
+    if (aboutBtn) {
+      aboutBtn.addEventListener('click', () => { this.aboutDialogOpen = true; this.render(); });
+    }
+
+    const aboutDrawerLink = this.querySelector('.about-drawer-link');
+    if (aboutDrawerLink) {
+      aboutDrawerLink.addEventListener('click', () => { 
+        this.menuOpen = false;
+        this.aboutDialogOpen = true;
+        this.render();
+      });
+    }
+
+    const aboutDialogClose = this.querySelector('.about-dialog-close');
+    if (aboutDialogClose) {
+      aboutDialogClose.addEventListener('click', () => { this.aboutDialogOpen = false; this.render(); });
+    }
+
+    const aboutDialogOverlay = this.querySelector('.about-dialog-overlay');
+    if (aboutDialogOverlay) {
+      aboutDialogOverlay.addEventListener('click', () => { this.aboutDialogOpen = false; this.render(); });
+    }
+  }
+
+  private getVersion(): string {
+    return '0.17.0';
   }
 }
 

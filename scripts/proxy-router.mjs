@@ -29,7 +29,7 @@ export function buildRouter(ports) {
     { test: (p) => p.startsWith('/host'),                    port: HOST_PORT,      label: 'host' },
     { test: (p) => p.startsWith('/analytics'),               port: ANALYTICS_PORT, label: 'analytics' },
     { test: (p) => p.startsWith('/flashcard'),               port: FLASHCARD_PORT, label: 'flashcard' },
-    { test: (p) => p.startsWith('/admin'),                   port: ADMIN_PORT,     label: 'admin' },
+    { test: (p) => p === '/admin' || p.startsWith('/admin/'), port: ADMIN_PORT,    label: 'admin' },
     { test: () => true,                                      port: PLAYER_PORT,    label: 'player' },
   ];
 

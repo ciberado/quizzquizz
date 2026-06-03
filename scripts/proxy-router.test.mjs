@@ -76,6 +76,10 @@ describe('proxy router — buildRouter()', () => {
       assert.equal(resolve('/admin/'), 3005);
     });
 
+    it('routes /admin to admin port (without trailing slash)', () => {
+      assert.equal(resolve('/admin'), 3005);
+    });
+
     it('routes /admin/login to admin port', () => {
       assert.equal(resolve('/admin/login'), 3005);
     });
