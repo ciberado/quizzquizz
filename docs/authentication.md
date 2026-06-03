@@ -4,6 +4,57 @@ QuizzQuizz uses [Better Auth](https://better-auth.com) for session-based authent
 
 ---
 
+## Auth UI Package
+
+Shared login/signup UI logic lives in **`packages/auth-ui`** (`@quizzquizz/auth-ui`). This package exports `LoginScreenBase`, an abstract `HTMLElement` subclass that provides the complete login/signup/IMAP form, loading states, and error display.
+
+### How to use `LoginScreenBase`
+
+Extend it in your app's login screen and implement the five abstract methods:
+
+```typescript
+import { LoginScreenBase } from '@quizzquizz/auth-ui';
+import { api } from '../api-client';
+import { router } from '../router';
+
+class MyLoginScreen extends LoginScreenBase {
+  protected navigateHome(): void { router.navigate('/'); }
+  protected async signIn(email: string, password: string): Promise<void> {
+    await api.signIn(email, password);
+    window.dispatchEvent(new CustomEvent('auth-changed'));
+  }
+  protected async signUp(email: string, password: string, username: string, name: string): Promise<void> {
+    await api.signUp(email, password, username, name);
+    window.dispatchEvent(new CustomEvent('auth-changed'));
+  }
+  protected async imapSignIn(email: string, password: string): Promise<void> {
+    await api.imapSignIn(email, password);
+    window.dispatchEvent(new CustomEvent('auth-changed'));
+  }
+  protected async getAuthCapabilities(): Promise<{ imapEnabled: boolean }> {
+    return api.getAuthCapabilities();
+  }
+  // Optional: override for app-specific subtitle text
+  protected getSignInSubtitle(): string { return 'Sign in to your account'; }
+  protected getSignUpSubtitle(): string { return 'Create a new account'; }
+}
+customElements.define('my-login-screen', MyLoginScreen);
+```
+
+Each app dispatches an `auth-changed` CustomEvent on `window` after a successful auth action so nav headers can update their UI without polling.
+
+Apps that use `LoginScreenBase`:
+
+| App | Custom element | Notes |
+|-----|----------------|-------|
+| `host-app` | `login-screen` | |
+| `player-app` | `login-screen` | |
+| `flashcard-app` | `flashcard-login-screen` | |
+
+The **admin-app** login is intentionally separate (admin-only, no register, no IMAP option).
+
+---
+
 ## Sign-in Methods
 
 | Method | When active | Notes |
