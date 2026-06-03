@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[host-app]** About drawer button was not left-aligned due to missing `width: 100%` on `.about-drawer-link`; also reset `min-height` and `transform` overrides from the global `button {}` rule.
+- **[host-app]** Theme system now falls back to OS `prefers-color-scheme` when no explicit preference is stored in localStorage, so light-mode browsers are respected automatically.
+- **[player-app]** Same About drawer button alignment fix as host-app.
+- **[flashcard-app]** About dialog was semi-transparent because `--color-surface` is undefined in flashcard-app; background now uses `var(--color-bg)`. Same button alignment fix applied.
+- **[admin-app]** Added full light/dark theme system: new `theme.ts`, `theme.init()` call in `main.ts`, theme toggle button (☀️/🌙) in the nav header, and `[data-theme="light"]` CSS variables. Also added missing `--transition-fast` / `--transition-base` CSS variables. Same About drawer button alignment fix applied.
+- **[infra]** Dev proxy now rewrites `Location` headers on redirect responses so Vite's trailing-slash redirects (e.g. `/host` → `http://localhost:3001/host/`) go back through the proxy instead of leaking the backend port to the browser.
+
 ## [0.17.0] — 2026-06-02
 
 ### Added

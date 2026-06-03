@@ -26,6 +26,26 @@ const ADMIN_PORT     = parseInt(process.env.DEV_ADMIN_PORT     ?? '3005');
 
 const resolveTarget = buildRouter({ API_PORT, HOST_PORT, PLAYER_PORT, ANALYTICS_PORT, FLASHCARD_PORT, ADMIN_PORT });
 
+const BACKEND_PORTS = [API_PORT, HOST_PORT, PLAYER_PORT, ANALYTICS_PORT, FLASHCARD_PORT, ADMIN_PORT];
+
+/**
+ * Rewrite a Location header so redirects from backend servers (e.g. Vite's
+ * "GET /host → 301 http://localhost:3001/host/") are transparently rewritten
+ * to go back through this proxy instead of directly to the Vite port.
+ * @param {string} location
+ * @param {string} proxyHost  Value of the incoming request's Host header
+ * @returns {string}
+ */
+function rewriteLocation(location, proxyHost) {
+  for (const bp of BACKEND_PORTS) {
+    const prefix = `http://localhost:${bp}`;
+    if (location.startsWith(prefix)) {
+      return `http://${proxyHost}${location.slice(prefix.length)}`;
+    }
+  }
+  return location;
+}
+
 const server = http.createServer((req, res) => {
   const url   = new URL(req.url ?? '/', `http://localhost`);
   const port  = resolveTarget(url.pathname);
@@ -39,7 +59,11 @@ const server = http.createServer((req, res) => {
   };
 
   const proxy = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+    const headers = { ...proxyRes.headers };
+    if (typeof headers.location === 'string') {
+      headers.location = rewriteLocation(headers.location, req.headers.host ?? `localhost:${PROXY_PORT}`);
+    }
+    res.writeHead(proxyRes.statusCode ?? 502, headers);
     proxyRes.pipe(res, { end: true });
   });
 
