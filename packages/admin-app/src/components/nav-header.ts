@@ -27,7 +27,6 @@ export class NavHeader extends HTMLElement {
         </div>
         <div class="app-nav-actions">
           <button class="app-nav-theme-btn" aria-label="${themeLabel}" title="${themeLabel}">${themeIcon}</button>
-          <button class="about-btn-nav" aria-label="About QuizzQuizz" title="About">ℹ️</button>
         </div>
       </header>
       <div class="nav-drawer-overlay${this.menuOpen ? ' open' : ''}"></div>
@@ -74,10 +73,6 @@ export class NavHeader extends HTMLElement {
       this.render();
     });
     this.querySelector('.app-nav-theme-btn')?.addEventListener('click', () => theme.toggle());
-    this.querySelector('.about-btn-nav')?.addEventListener('click', () => {
-      this.aboutDialogOpen = true;
-      this.render();
-    });
     this.querySelector('.about-drawer-link')?.addEventListener('click', () => {
       this.menuOpen = false;
       this.aboutDialogOpen = true;
