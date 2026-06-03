@@ -51,7 +51,7 @@ test.describe('Authentication - Host App', () => {
     await page.waitForSelector('login-screen');
     
     // Toggle to signup mode
-    const toggleButton = page.locator('login-screen button.toggle-mode-btn');
+    const toggleButton = page.locator('login-screen button.btn-toggle-signup');
     await toggleButton.click();
     
     // Should show signup form
@@ -81,7 +81,7 @@ test.describe('Authentication - Host App', () => {
     await page.goto('http://localhost:3001/host/#/login');
     await page.waitForSelector('login-screen');
     
-    const toggleButton = page.locator('login-screen button.toggle-mode-btn');
+    const toggleButton = page.locator('login-screen button.btn-toggle-signup');
     await toggleButton.click();
     
     await page.locator('input[name="name"]').fill('Test Host User');
@@ -127,7 +127,7 @@ test.describe('Authentication - Host App', () => {
     await page.goto('http://localhost:3001/host/#/login');
     await page.waitForSelector('login-screen');
     
-    const toggleButton = page.locator('login-screen button.toggle-mode-btn');
+    const toggleButton = page.locator('login-screen button.btn-toggle-signup');
     await toggleButton.click();
     
     await page.locator('input[name="name"]').fill('Test Host User');
@@ -182,7 +182,7 @@ test.describe('Authentication - Host App', () => {
     await page.locator('login-screen button[type="submit"]').click();
     
     // Should show error message
-    const errorDiv = page.locator('login-screen div[style*="background: #ff4444"]');
+    const errorDiv = page.locator('login-screen .auth-error');
     await expect(errorDiv).toBeVisible({ timeout: 5000 });
     
     console.log('✓ Shows error for invalid credentials');
@@ -193,7 +193,7 @@ test.describe('Authentication - Host App', () => {
     await page.waitForSelector('login-screen');
     
     // Toggle to signup
-    const toggleButton = page.locator('login-screen button.toggle-mode-btn');
+    const toggleButton = page.locator('login-screen button.btn-toggle-signup');
     await toggleButton.click();
     
     // Try short password
@@ -259,7 +259,7 @@ test.describe('Authentication - Player App', () => {
     await page.waitForSelector('login-screen');
     
     // Toggle to signup mode
-    const toggleButton = page.locator('login-screen button.toggle-mode-btn');
+    const toggleButton = page.locator('login-screen button.btn-toggle-signup');
     await toggleButton.click();
     
     // Fill in signup form
@@ -286,7 +286,7 @@ test.describe('Authentication - Player App', () => {
     await page.goto('http://localhost:3002/#/login');
     await page.waitForSelector('login-screen');
     
-    const toggleButton = page.locator('login-screen button.toggle-mode-btn');
+    const toggleButton = page.locator('login-screen button.btn-toggle-signup');
     await toggleButton.click();
     
     await page.locator('input[name="name"]').fill('Test Player User');
@@ -374,7 +374,7 @@ test.describe('Authentication - Cross-App Compatibility', () => {
       await hostPage.goto('http://localhost:3001/host/#/login');
       await hostPage.waitForSelector('login-screen');
       
-      const toggleButton = hostPage.locator('login-screen button.toggle-mode-btn');
+      const toggleButton = hostPage.locator('login-screen button.btn-toggle-signup');
       await toggleButton.click();
       
       await hostPage.locator('input[name="name"]').fill('Cross App User');
@@ -412,5 +412,119 @@ test.describe('Authentication - Cross-App Compatibility', () => {
       await hostContext.close();
       await playerContext.close();
     }
+  });
+});
+
+test.describe('Authentication - Flashcard App', () => {
+  let testEmail: string;
+  let testUsername: string;
+
+  test.beforeEach(() => {
+    const timestamp = Date.now();
+    testEmail = `flashcard-test-${timestamp}@example.com`;
+    testUsername = `flashcarduser${timestamp}`;
+  });
+
+  test('should display login button in nav when not authenticated', async ({ page }) => {
+    await page.goto('http://localhost:3004/flashcard/');
+
+    await page.waitForSelector('nav-header');
+
+    const loginButton = page.locator('nav-header button.app-nav-login-btn');
+    await expect(loginButton).toBeVisible();
+    await expect(loginButton).toHaveText('Login');
+
+    console.log('✓ Flashcard nav shows login button for unauthenticated user');
+  });
+
+  test('should navigate to login screen when clicking login button', async ({ page }) => {
+    await page.goto('http://localhost:3004/flashcard/');
+
+    const loginButton = page.locator('nav-header button.app-nav-login-btn');
+    await loginButton.click();
+
+    await page.waitForSelector('flashcard-login-screen');
+    await expect(page.locator('flashcard-login-screen h1')).toHaveText('Welcome Back');
+
+    console.log('✓ Flashcard navigates to login screen');
+  });
+
+  test('should allow user to sign up and see name in nav', async ({ page }) => {
+    await page.goto('http://localhost:3004/flashcard/#/login');
+
+    await page.waitForSelector('flashcard-login-screen');
+
+    const toggleButton = page.locator('flashcard-login-screen button.btn-toggle-signup');
+    await toggleButton.click();
+
+    await expect(page.locator('flashcard-login-screen h1')).toHaveText('Create Account');
+
+    await page.locator('input[name="name"]').fill('Flashcard User');
+    await page.locator('input[name="username"]').fill(testUsername);
+    await page.locator('input[name="email"]').fill(testEmail);
+    await page.locator('input[name="password"]').fill('testpass123');
+
+    await page.locator('flashcard-login-screen button[type="submit"]').click();
+
+    await page.waitForURL('http://localhost:3004/flashcard/#/', { timeout: 5000 });
+
+    const userSpan = page.locator('nav-header span.app-nav-user');
+    await expect(userSpan).toBeVisible({ timeout: 5000 });
+
+    console.log('✓ Flashcard user signed up and name visible in nav');
+  });
+
+  test('should allow user to sign in and log out', async ({ page }) => {
+    // Sign up first
+    await page.goto('http://localhost:3004/flashcard/#/login');
+    await page.waitForSelector('flashcard-login-screen');
+
+    const toggleButton = page.locator('flashcard-login-screen button.btn-toggle-signup');
+    await toggleButton.click();
+
+    await page.locator('input[name="name"]').fill('Flashcard User');
+    await page.locator('input[name="username"]').fill(testUsername);
+    await page.locator('input[name="email"]').fill(testEmail);
+    await page.locator('input[name="password"]').fill('testpass123');
+    await page.locator('flashcard-login-screen button[type="submit"]').click();
+    await page.waitForURL('http://localhost:3004/flashcard/#/', { timeout: 5000 });
+
+    // Log out
+    const logoutButton = page.locator('nav-header button.app-nav-logout-btn');
+    await logoutButton.click();
+
+    await page.waitForTimeout(1000);
+
+    // Should show login button again
+    const loginButton = page.locator('nav-header button.app-nav-login-btn');
+    await expect(loginButton).toBeVisible();
+
+    // Log back in
+    await page.goto('http://localhost:3004/flashcard/#/login');
+    await page.waitForSelector('flashcard-login-screen');
+    await page.locator('input[name="email"]').fill(testEmail);
+    await page.locator('input[name="password"]').fill('testpass123');
+    await page.locator('flashcard-login-screen button[type="submit"]').click();
+    await page.waitForURL('http://localhost:3004/flashcard/#/', { timeout: 5000 });
+
+    const userSpan = page.locator('nav-header span.app-nav-user');
+    await expect(userSpan).toBeVisible({ timeout: 5000 });
+
+    console.log('✓ Flashcard user signed in and logged out successfully');
+  });
+
+  test('should allow skipping authentication', async ({ page }) => {
+    await page.goto('http://localhost:3004/flashcard/#/login');
+    await page.waitForSelector('flashcard-login-screen');
+
+    const skipButton = page.locator('flashcard-login-screen button.skip-btn');
+    await skipButton.click();
+
+    await page.waitForURL('http://localhost:3004/flashcard/#/', { timeout: 5000 });
+
+    const loginButton = page.locator('nav-header button.app-nav-login-btn');
+    await expect(loginButton).toBeVisible();
+
+    console.log('✓ Flashcard user can skip authentication');
   });
 });
