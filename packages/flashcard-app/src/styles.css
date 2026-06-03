@@ -2002,8 +2002,12 @@ nav-header {
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 10002;
+  pointer-events: none;
 }
-.about-dialog-overlay.open { display: block; }
+.about-dialog-overlay.open { 
+  display: block;
+  pointer-events: auto;
+}
 
 .about-dialog {
   display: none;
@@ -2012,6 +2016,7 @@ nav-header {
   left: 50%;
   transform: translate(-50%, -50%);
   background: var(--color-surface);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.5rem;
@@ -2019,6 +2024,7 @@ nav-header {
   width: 90%;
   z-index: 10003;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  opacity: 1;
 }
 .about-dialog.open { display: block; }
 
@@ -2107,6 +2113,7 @@ nav-header {
 .about-drawer-link {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem;
   padding: 0.5rem 0.6rem;
   color: var(--color-text-light);
@@ -2116,6 +2123,7 @@ nav-header {
   border-radius: 6px;
   font-size: 0.9rem;
   transition: background var(--transition-fast);
+  text-align: left;
 }
 .about-drawer-link:hover { background: var(--color-bg-alt); }
 

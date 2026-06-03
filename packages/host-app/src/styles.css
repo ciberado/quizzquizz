@@ -2758,8 +2758,12 @@ body:has(question-display-screen) #app {
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 10002;
+  pointer-events: none;
 }
-.about-dialog-overlay.open { display: block; }
+.about-dialog-overlay.open { 
+  display: block;
+  pointer-events: auto;
+}
 
 .about-dialog {
   display: none;
@@ -2775,6 +2779,7 @@ body:has(question-display-screen) #app {
   width: 90%;
   z-index: 10003;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  opacity: 1;
 }
 .about-dialog.open { display: block; }
 
@@ -2855,6 +2860,7 @@ body:has(question-display-screen) #app {
 .about-drawer-link {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem;
   padding: 0.5rem 0.6rem;
   color: var(--color-text);
@@ -2864,6 +2870,7 @@ body:has(question-display-screen) #app {
   border-radius: 6px;
   font-size: 0.9rem;
   transition: background var(--transition-fast);
+  text-align: left;
 }
 .about-drawer-link:hover { background: var(--color-bg-alt); }
 
