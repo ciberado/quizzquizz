@@ -6,6 +6,10 @@ import './components/user-list-screen';
 
 import { route, startRouter, navigate, getCurrentPath } from './router';
 import { getSession } from './api-client';
+import { theme } from './theme';
+
+// Apply saved theme before first render
+theme.init();
 
 const app = document.getElementById('app')!;
 

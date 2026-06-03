@@ -1,15 +1,23 @@
 /**
  * Nav Header — top bar with hamburger menu for cross-app navigation.
  */
+import { theme } from '../theme';
+
 export class NavHeader extends HTMLElement {
   private menuOpen = false;
   private aboutDialogOpen = false;
 
   connectedCallback(): void {
     this.render();
+    window.addEventListener('theme-changed', () => this.render());
   }
 
   private render(): void {
+    const currentTheme = theme.load();
+    const isDark = currentTheme === 'dark';
+    const themeIcon = isDark ? '☀️' : '🌙';
+    const themeLabel = isDark ? 'Switch to light theme' : 'Switch to dark theme';
+
     this.innerHTML = `
       <header class="app-nav-bar">
         <button class="app-nav-hamburger" aria-label="Open navigation menu" title="Menu">☰</button>
@@ -17,7 +25,10 @@ export class NavHeader extends HTMLElement {
           <a href="/" class="app-nav-title">🎯 QuizzQuizz</a>
           <span class="app-nav-label">Admin</span>
         </div>
-        <button class="about-btn-nav" aria-label="About QuizzQuizz" title="About">ℹ️</button>
+        <div class="app-nav-actions">
+          <button class="app-nav-theme-btn" aria-label="${themeLabel}" title="${themeLabel}">${themeIcon}</button>
+          <button class="about-btn-nav" aria-label="About QuizzQuizz" title="About">ℹ️</button>
+        </div>
       </header>
       <div class="nav-drawer-overlay${this.menuOpen ? ' open' : ''}"></div>
       <nav class="nav-drawer${this.menuOpen ? ' open' : ''}" aria-label="App navigation">
@@ -62,6 +73,7 @@ export class NavHeader extends HTMLElement {
       this.menuOpen = false;
       this.render();
     });
+    this.querySelector('.app-nav-theme-btn')?.addEventListener('click', () => theme.toggle());
     this.querySelector('.about-btn-nav')?.addEventListener('click', () => {
       this.aboutDialogOpen = true;
       this.render();
