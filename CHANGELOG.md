@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.4] — 2026-06-18
+
+### Changed
+- **[player-app]** Merged timer, question number, and flag button into a single fixed header bar; moved `.question-header` to `position: fixed` at top of screen
+- **[player-app]** Removed `overflow-y: auto` from `.question-screen` to fix sticky/fixed positioning context
+- **[player-app]** Changed `.error-message` to hide when empty via `:empty { display: none }`
+- **[host-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing; changed answers grid to fixed 2-column layout; added `max-width: 100%` and `overflow-wrap: break-word` to grid and answer text
+- **[flashcard-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on flashcard text
+
 ## [0.17.3] — 2026-06-18
 
 ### Changed
