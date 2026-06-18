@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/host-app",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "description": "Host/presenter web application",
   "type": "module",
   "scripts": {

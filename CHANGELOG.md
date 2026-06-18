@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.2] — 2026-06-18
+
 ### Fixed
 - **[player-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on question and answer text
 - **[host-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on question and answer text

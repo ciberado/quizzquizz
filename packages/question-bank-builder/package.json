@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/question-bank-builder",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "description": "CLI tool to read JSONL question banks, enrich them with AI (Amazon Bedrock / LangGraph), and generate Markdown question-banks compatible with @quizzquizz/question-bank",
   "author": "Javi Moreno <email@javier-moreno.com>",
   "license": "MIT",
