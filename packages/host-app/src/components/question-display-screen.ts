@@ -9,6 +9,7 @@ import { state } from '../state';
 import { api, cancelAllRequests } from '../api-client';
 import morphdom from 'morphdom';
 import { connectToSession, type SessionDocState } from '../yjs-provider';
+import fitty from 'fitty';
 
 // Local interface for game state (matches API response)
 interface HostGameState {
@@ -529,6 +530,12 @@ export class QuestionDisplayScreen extends HTMLElement {
     if (pause) pause.onclick = () => this.handlePause();
     const endTimer = this.querySelector<HTMLElement>('#end-timer-button');
     if (endTimer) endTimer.onclick = () => this.handleEndTimer();
+
+    requestAnimationFrame(() => {
+      this.querySelectorAll<HTMLElement>('.question-text, .answer-text').forEach(el => {
+        fitty(el, el.classList.contains('question-text') ? { multiLine: true } : {});
+      });
+    });
 
     this.addStyles();
   }
