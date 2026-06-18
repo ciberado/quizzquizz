@@ -17,6 +17,7 @@ import { LeitnerEngine } from '../leitner';
 import type { FlashCard } from '../leitner';
 import type { FlashcardSessionState } from '../api-client';
 import { updateSetBoxCounts } from '../flashcard-sets';
+import fitty from 'fitty';
 
 type Phase = 'loading' | 'question' | 'answer' | 'complete';
 
@@ -791,6 +792,12 @@ export class FlashcardPlayScreen extends BaseComponent {
         </div>
       </div>
     `);
+
+    requestAnimationFrame(() => {
+      this.querySelectorAll<HTMLElement>('.fc-question-text, .fc-answer-text').forEach(el => {
+        fitty(el, el.classList.contains('fc-question-text') ? { multiLine: true } : {});
+      });
+    });
 
     if (revealed) {
       this.qs('#yes-btn')?.addEventListener('click', () => {
