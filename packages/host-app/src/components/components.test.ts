@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import morphdom from 'morphdom';
 
 describe('Base Component', () => {
   it('should render content when connected', () => {
@@ -415,6 +416,62 @@ describe('Event Handling', () => {
     button?.click();
     
     expect(mockHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not accumulate duplicate listeners when morphdom reuses elements with onclick', () => {
+    const tagName = 'morphdom-onclick-' + Date.now();
+    const mockHandler = vi.fn();
+
+    class MorphdomClickComponent extends HTMLElement {
+      private count = 0;
+
+      connectedCallback() {
+        this.render();
+      }
+
+      // Simulates morphdom-style in-place patch + onclick assignment
+      private render() {
+        const showNext = this.count > 0;
+        const html = `<button class="btn-action" data-action="${showNext ? 'next' : 'final'}">
+          ${showNext ? 'Next' : 'Final'}
+        </button>`;
+
+        if (this.firstElementChild) {
+          const template = document.createElement('div');
+          template.innerHTML = html;
+          if (template.firstElementChild) {
+            morphdom(this.firstElementChild, template.firstElementChild);
+          }
+        } else {
+          this.innerHTML = html;
+        }
+
+        // Use onclick assignment (the fix pattern)
+        const btn = this.querySelector<HTMLElement>('[data-action="next"]') ??
+                    this.querySelector<HTMLElement>('[data-action="final"]');
+        if (btn) btn.onclick = () => { mockHandler(); this.count++; this.render(); };
+      }
+    }
+
+    customElements.define(tagName, MorphdomClickComponent);
+
+    const element = document.createElement(tagName);
+    document.body.appendChild(element);
+
+    // First render shows "final" button (simulating totalQuestions=0 initial state)
+    const btn1 = element.querySelector('button')!;
+    expect(btn1?.getAttribute('data-action')).toBe('final');
+
+    // Click triggers the handler + re-render (patches button to "next")
+    btn1?.click();
+    expect(mockHandler).toHaveBeenCalledTimes(1);
+
+    const btn2 = element.querySelector('button')!;
+    expect(btn2?.getAttribute('data-action')).toBe('next');
+
+    // Click again — should still fire exactly once
+    btn2?.click();
+    expect(mockHandler).toHaveBeenCalledTimes(2);
   });
 
   it('should handle form submission', () => {

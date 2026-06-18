@@ -268,15 +268,14 @@ export class LeaderboardScreen extends HTMLElement {
       this.innerHTML = html;
     }
 
-    this.querySelector('[data-action="next"]')?.addEventListener('click', () => {
-      this.handleNextQuestion();
-    });
-    this.querySelector('[data-action="final"]')?.addEventListener('click', () => {
-      this.handleViewFinalResults();
-    });
-    this.querySelector('[data-action="end"]')?.addEventListener('click', () => {
-      this.handleEndQuiz();
-    });
+    // Use onclick assignment (not addEventListener) so morphdom-reused elements
+    // never accumulate duplicate listeners across re-renders.
+    const nextBtn = this.querySelector<HTMLElement>('[data-action="next"]');
+    if (nextBtn) nextBtn.onclick = () => this.handleNextQuestion();
+    const finalBtn = this.querySelector<HTMLElement>('[data-action="final"]');
+    if (finalBtn) finalBtn.onclick = () => this.handleViewFinalResults();
+    const endBtn = this.querySelector<HTMLElement>('[data-action="end"]');
+    if (endBtn) endBtn.onclick = () => this.handleEndQuiz();
   }
 
   private renderLeaderboardEntry(entry: LeaderboardEntry): string {

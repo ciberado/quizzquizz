@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file, organized b
 - **[admin-app]** Removed `about-btn-nav` (ℹ️) from the nav header.
 
 ### Fixed
+- **[host-app]** Fixed morphdom event listener leak in leaderboard screen where "Next Question" on the scoreboard jumped to "Quiz Complete" instead of the next question. Replaced `addEventListener` with `onclick` assignment to prevent duplicate handlers accumulating across morphdom re-renders.
 - **[host-app]** Theme system now falls back to OS `prefers-color-scheme` when no explicit preference is stored in localStorage, so light-mode browsers are respected automatically.
 - **[player-app]** Same About drawer button alignment fix as host-app.
 - **[flashcard-app]** About dialog was semi-transparent because `--color-surface` is undefined in flashcard-app; background now uses `var(--color-bg)`. Same button alignment fix applied.
