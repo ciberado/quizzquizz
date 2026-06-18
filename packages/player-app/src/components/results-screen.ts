@@ -3,7 +3,7 @@ import { state } from '../state';
 import { api } from '../api-client';
 import { router } from '../router';
 import type { PlayerReviewResponse } from '@quizzquizz/common';
-import fitty from 'fitty';
+import { fitText } from './text-fit';
 
 /**
  * Results Screen Component
@@ -108,7 +108,7 @@ export class ResultsScreen extends BaseComponent {
     this.setContent(html);
     requestAnimationFrame(() => {
       this.querySelectorAll<HTMLElement>('.question-text, .answer-text').forEach(el => {
-        fitty(el, el.classList.contains('question-text') ? { multiLine: true } : {});
+        fitText(el, el.classList.contains('question-text') ? { minSize: 14, maxSize: 32 } : { minSize: 12, maxSize: 20 });
       });
     });
     this.attachEventListeners();

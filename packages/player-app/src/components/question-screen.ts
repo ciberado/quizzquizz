@@ -4,7 +4,7 @@ import { api } from '../api-client';
 import { router } from '../router';
 import type { GameState } from '@quizzquizz/common';
 import { connectToSession, type SessionDocState } from '../yjs-provider';
-import fitty from 'fitty';
+import { fitText } from './text-fit';
 
 const LS_FLAGGED_QUESTIONS = 'qz-flagged-questions';
 
@@ -389,19 +389,19 @@ export class QuestionScreen extends BaseComponent {
           </div>
         </div>
       ` : `
-      <div class="screen question-screen">
-        <div class="question-header">
-          <div class="timer">0s</div>
-          <div class="question-number">
-            Question ${this.currentQuestionIndex + 1}
-          </div>
-          <button
-            class="qz-flag-btn${isFlagged ? ' qz-flagged' : ''}"
-            id="qz-flag-btn"
-            title="${isFlagged ? 'Question flagged — click to edit' : 'Report an issue with this question'}"
-            aria-label="${isFlagged ? 'Flagged' : 'Report issue'}"
-          >🚩</button>
+      <div class="question-header">
+        <div class="timer">0s</div>
+        <div class="question-number">
+          Question ${this.currentQuestionIndex + 1}
         </div>
+        <button
+          class="qz-flag-btn${isFlagged ? ' qz-flagged' : ''}"
+          id="qz-flag-btn"
+          title="${isFlagged ? 'Question flagged — click to edit' : 'Report an issue with this question'}"
+          aria-label="${isFlagged ? 'Flagged' : 'Report issue'}"
+        >🚩</button>
+      </div>
+      <div class="screen question-screen">
 
         <div class="question-text">
           ${this.escapeHtml(this.currentQuestion.text)}
@@ -446,7 +446,7 @@ export class QuestionScreen extends BaseComponent {
     this.setContent(html);
     requestAnimationFrame(() => {
       const el = this.querySelector<HTMLElement>('.question-text');
-      if (el) fitty(el, { multiLine: true });
+      if (el) fitText(el, { minSize: 16, maxSize: 36 });
     });
     this.attachEventListeners();
   }
