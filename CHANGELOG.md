@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.3] — 2026-06-18
+
+### Changed
+- **[host-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on question and answer text; changed answers grid to fixed 2-column layout
+- **[player-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on question and answer text
+- **[flashcard-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on flashcard question and answer text
+
 ## [0.17.2] — 2026-06-18
 
 ### Fixed
