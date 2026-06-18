@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[player-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on question and answer text
+- **[host-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on question and answer text
+- **[flashcard-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on flashcard question and answer text
+
+### Changed
+- **[player-app]** Simplified question screen header — removed `.qz-game-bar` (exit button + quiz title), moved flag button into `.question-header` as the last child
+
 ## [0.17.1] — 2026-06-18
 
 ### Added
