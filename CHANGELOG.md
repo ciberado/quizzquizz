@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.1] — 2026-06-18
+
 ### Added
 - **[auth-ui]** New `@quizzquizz/auth-ui` package with `LoginScreenBase` — an abstract `HTMLElement` with **concrete** implementations of all auth fetch calls (`signIn`, `signUp`, `imapSignIn`, `getAuthCapabilities`) using shared `authRequest()` helper against `/api/auth/*`. Apps only need to implement `navigateHome()` plus optional subtitle overrides.
 - **[auth-ui]** 17-test Vitest/happy-dom suite for `LoginScreenBase` covering sign-in, sign-up, IMAP toggle, error display, auth-changed event, and navigation.
