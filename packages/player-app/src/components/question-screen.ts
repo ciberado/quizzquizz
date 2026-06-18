@@ -4,9 +4,9 @@ import { api } from '../api-client';
 import { router } from '../router';
 import type { GameState } from '@quizzquizz/common';
 import { connectToSession, type SessionDocState } from '../yjs-provider';
+import fitty from 'fitty';
 
 const LS_FLAGGED_QUESTIONS = 'qz-flagged-questions';
-const LS_QUIZ_TITLE = 'qz-current-quiz-title';
 
 interface FlaggedQuestion {
   explanation: string;
@@ -30,12 +30,10 @@ export class QuestionScreen extends BaseComponent {
   private errorNavigationTimeout: number | null = null;
   private flaggedQuestions: Map<string, FlaggedQuestion> = new Map();
   private modalOverlay: HTMLElement | null = null;
-  private quizTitle: string = 'Quiz';
 
   protected onMount(): void {
-    this.injectStyles();
+    this.injectFlagStyles();
     this.loadFlags();
-    try { this.quizTitle = localStorage.getItem(LS_QUIZ_TITLE) || 'Quiz'; } catch { /* ignore */ }
 
     const currentState = state.getState();
     if (!currentState.sessionId || !currentState.playerId) {
@@ -62,48 +60,11 @@ export class QuestionScreen extends BaseComponent {
     this.removeModal();
   }
 
-  private injectStyles(): void {
-    if (document.getElementById('qz-game-bar-styles')) return;
+  private injectFlagStyles(): void {
+    if (document.getElementById('qz-flag-styles')) return;
     const style = document.createElement('style');
-    style.id = 'qz-game-bar-styles';
+    style.id = 'qz-flag-styles';
     style.textContent = `
-      .qz-game-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.4rem var(--spacing-md);
-        background: var(--color-bg);
-        border-bottom: 1px solid var(--color-border);
-        flex-shrink: 0;
-      }
-      .qz-exit-btn {
-        background: none;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        padding: 0.3rem 0.7rem;
-        font-size: var(--font-size-sm);
-        font-weight: 600;
-        color: var(--color-text-light);
-        cursor: pointer;
-        transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-        white-space: nowrap;
-      }
-      .qz-exit-btn:hover { background: rgba(0,0,0,0.6); color: white; border-color: transparent; }
-      .qz-game-bar-right {
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-        min-width: 0;
-      }
-      .qz-game-title {
-        font-size: var(--font-size-sm);
-        font-weight: 600;
-        color: var(--color-text-light);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 180px;
-      }
       .qz-flag-btn {
         background: none;
         border: none;
@@ -429,24 +390,17 @@ export class QuestionScreen extends BaseComponent {
         </div>
       ` : `
       <div class="screen question-screen">
-        <div class="qz-game-bar">
-          <button class="qz-exit-btn" id="qz-exit-btn" title="Leave game">✕ Exit</button>
-          <div class="qz-game-bar-right">
-            <span class="qz-game-title">${this.escapeHtml(this.quizTitle)}</span>
-            <button
-              class="qz-flag-btn${isFlagged ? ' qz-flagged' : ''}"
-              id="qz-flag-btn"
-              title="${isFlagged ? 'Question flagged — click to edit' : 'Report an issue with this question'}"
-              aria-label="${isFlagged ? 'Flagged' : 'Report issue'}"
-            >🚩</button>
-          </div>
-        </div>
-
         <div class="question-header">
           <div class="timer">0s</div>
           <div class="question-number">
             Question ${this.currentQuestionIndex + 1}
           </div>
+          <button
+            class="qz-flag-btn${isFlagged ? ' qz-flagged' : ''}"
+            id="qz-flag-btn"
+            title="${isFlagged ? 'Question flagged — click to edit' : 'Report an issue with this question'}"
+            aria-label="${isFlagged ? 'Flagged' : 'Report issue'}"
+          >🚩</button>
         </div>
 
         <div class="question-text">
@@ -490,6 +444,10 @@ export class QuestionScreen extends BaseComponent {
     `;
 
     this.setContent(html);
+    requestAnimationFrame(() => {
+      const el = this.querySelector<HTMLElement>('.question-text');
+      if (el) fitty(el, { multiLine: true });
+    });
     this.attachEventListeners();
   }
 
@@ -510,12 +468,6 @@ export class QuestionScreen extends BaseComponent {
         this.submitAnswer();
       });
     }
-
-    this.querySelector('#qz-exit-btn')?.addEventListener('click', () => {
-      if (confirm('Leave the quiz? Your progress will be lost.')) {
-        router.navigate('/');
-      }
-    });
 
     const questionId = this.currentQuestion?.id;
     if (questionId) {

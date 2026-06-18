@@ -14,6 +14,7 @@
   "dependencies": {
     "@quizzquizz/auth-ui": "*",
     "@quizzquizz/common": "*",
+    "fitty": "^2.4.2",
     "morphdom": "^2.7.8",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.30"

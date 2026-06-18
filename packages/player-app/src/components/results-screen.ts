@@ -3,6 +3,7 @@ import { state } from '../state';
 import { api } from '../api-client';
 import { router } from '../router';
 import type { PlayerReviewResponse } from '@quizzquizz/common';
+import fitty from 'fitty';
 
 /**
  * Results Screen Component
@@ -105,6 +106,11 @@ export class ResultsScreen extends BaseComponent {
     `;
     
     this.setContent(html);
+    requestAnimationFrame(() => {
+      this.querySelectorAll<HTMLElement>('.question-text, .answer-text').forEach(el => {
+        fitty(el, el.classList.contains('question-text') ? { multiLine: true } : {});
+      });
+    });
     this.attachEventListeners();
   }
 
