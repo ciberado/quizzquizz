@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.5] — 2026-07-13
+
+### Fixed
+- **[api-server]** Added missing `must_change_password` column to in-memory test DB schema (fixes 164 test failures)
+- **[host-app]** Updated question-display-screen tests for Yjs-based architecture (fixes 6 test failures)
+- **[player-app]** Updated component tests to verify Yjs connectivity instead of removed REST polling (fixes 2 test failures)
+
 ## [0.17.4] — 2026-06-18
 
 ### Changed
