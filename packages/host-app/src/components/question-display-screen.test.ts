@@ -1,10 +1,10 @@
 /**
  * Tests for QuestionDisplayScreen – autopace double-trigger prevention
  *
- * Previously a race condition existed where both the client-side countdown
- * timer AND the polling loadGameState() could each schedule an
+ * Previously a race condition existed where both the Yjs timer update
+ * AND the allPlayersAnswered flag could each schedule an
  * autoNavigateTimeout, resulting in two router.navigate('/leaderboard') calls
- * and a broken game flow.
+ * and a broken game flow. The component now uses Yjs instead of polling.
  *
  * These tests confirm that regardless of whether allPlayersAnswered fires,
  * or the client timer expires first, or both happen in the same cycle,
@@ -14,7 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Hoist mocks so they are available inside vi.mock factories ────────────────
-const { mockNavigate, mockGetState, mockGetSession, mockGetPlayers } = vi.hoisted(() => ({
+const { mockNavigate, mockGetState, mockGetSession, mockGetPlayers, mockDisconnect } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockGetState: vi.fn(() => ({
     sessionId: 'sess-test',
@@ -24,6 +24,7 @@ const { mockNavigate, mockGetState, mockGetSession, mockGetPlayers } = vi.hoiste
   })),
   mockGetSession: vi.fn(),
   mockGetPlayers: vi.fn(),
+  mockDisconnect: vi.fn(),
 }));
 
 vi.mock('../router', () => ({ router: { navigate: mockNavigate } }));
@@ -31,6 +32,15 @@ vi.mock('../state', () => ({ state: { getState: mockGetState } }));
 vi.mock('../api-client', () => ({
   api: { getSession: mockGetSession, getPlayers: mockGetPlayers, adjustTimer: vi.fn(() => Promise.resolve()) },
   cancelAllRequests: vi.fn(),
+}));
+
+// Capture the Yjs onStateChange callback so tests can simulate doc updates.
+let capturedYjsCallback: ((state: Record<string, unknown>) => void) | null = null;
+vi.mock('../yjs-provider', () => ({
+  connectToSession: vi.fn((_sessionId: string, _token: string, onStateChange: (state: Record<string, unknown>) => void) => {
+    capturedYjsCallback = onStateChange;
+    return mockDisconnect;
+  }),
 }));
 
 // ── Import the component AFTER mocks are registered ─────────────────────────
@@ -107,6 +117,7 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
     mockNavigate.mockClear();
     mockGetSession.mockReset();
     mockGetPlayers.mockReset();
+    capturedYjsCallback = null;
   });
 
   afterEach(() => {
@@ -120,16 +131,17 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
   // ── Scenario 1 ─────────────────────────────────────────────────────────────
   it('navigates to leaderboard exactly once when allPlayersAnswered fires before timer expires', async () => {
     // Timer has 25s left; all players have already answered.
-    mockGetSession.mockResolvedValue(makeSession({ elapsed: 5, allPlayersAnswered: true }));
+    mockGetSession.mockResolvedValue(makeSession({ elapsed: 5 }));
     mockGetPlayers.mockResolvedValue(makePlayers(2));
 
     el = document.createElement(TAG);
     document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100); // flush connectedCallback → loadInitialGameState + connectToSession
 
-    // Let connectedCallback's async loadGameState resolve (flush microtasks + small tick).
-    await vi.advanceTimersByTimeAsync(100);
+    // Simulate Yjs doc update: allPlayersAnswered=true → triggers earlyStop + 4s autoNavigateTimeout
+    capturedYjsCallback!({ allPlayersAnswered: true });
 
-    // allPlayersAnswered branch schedules a 4-second timeout → advance past it.
+    // Advance past the 4-second autopace delay.
     await vi.advanceTimersByTimeAsync(5000);
 
     expect(mockNavigate).toHaveBeenCalledTimes(1);
@@ -138,22 +150,19 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
 
   // ── Scenario 2 ─────────────────────────────────────────────────────────────
   it('navigates to leaderboard exactly once when client-side timer expires (no one answered yet)', async () => {
-    // Initial poll: 2s remaining on a 30-second question; nobody answered.
-    // Subsequent polls reflect the timer having fully expired on the server.
-    mockGetSession
-      .mockResolvedValueOnce(makeSession({ timeLimit: 30, elapsed: 28, allPlayersAnswered: false }))
-      .mockResolvedValue(makeSession({ timeLimit: 30, elapsed: 30, allPlayersAnswered: false }));
+    // 2s remaining on a 30-second question; nobody answered.
+    mockGetSession.mockResolvedValue(makeSession({ timeLimit: 30, elapsed: 28, allPlayersAnswered: false }));
     mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
 
     el = document.createElement(TAG);
     document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100); // flush connectedCallback
 
-    // Let initial loadGameState resolve → starts a 2-second countdown timer.
-    await vi.advanceTimersByTimeAsync(100);
+    // Simulate Yjs doc update: timeRemaining drops to 0 → timerStateChanged triggers autoNavigateTimeout
+    capturedYjsCallback!({ timeRemaining: 0 });
 
-    // Tick past 2 remaining seconds – client timer hits 0 → schedules 4s autopace delay.
-    // Also, the next poll (at 2s) will see elapsed=30 and detect timerStateChanged.
-    await vi.advanceTimersByTimeAsync(3000);
+    // Flush the callback processing
+    await vi.advanceTimersByTimeAsync(0);
 
     // Advance past the 4-second autopace delay.
     await vi.advanceTimersByTimeAsync(5000);
@@ -165,19 +174,17 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
   // ── Scenario 3 ─────────────────────────────────────────────────────────────
   it('navigates exactly once when allPlayersAnswered becomes true in the same poll cycle as timer almost expiring', async () => {
     // 1s remaining; all players just answered.
-    mockGetSession.mockResolvedValue(
-      makeSession({ timeLimit: 30, elapsed: 29, allPlayersAnswered: true }),
-    );
+    mockGetSession.mockResolvedValue(makeSession({ timeLimit: 30, elapsed: 29 }));
     mockGetPlayers.mockResolvedValue(makePlayers(2));
 
     el = document.createElement(TAG);
     document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100); // flush connectedCallback
 
-    // Initial poll: allPlayersAnswered=true, isTimerActive=true (1s left).
-    // The allPlayersAnswered path wins and calls stopTimer().
-    await vi.advanceTimersByTimeAsync(100);
+    // Simulate Yjs doc update: allPlayersAnswered=true with timer still active → earlyStop path
+    capturedYjsCallback!({ allPlayersAnswered: true, timeRemaining: 1 });
 
-    // Advance far past the 4-second autopace delay AND past any poll cycles.
+    // Advance far past the 4-second autopace delay.
     await vi.advanceTimersByTimeAsync(10_000);
 
     expect(mockNavigate).toHaveBeenCalledTimes(1);
@@ -186,29 +193,26 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
 
   // ── Scenario 4 ─────────────────────────────────────────────────────────────
   it('navigates exactly once when client timer fires first and a subsequent poll also sees allPlayersAnswered', async () => {
-    // First poll: 5s remaining on timer; nobody answered yet.
-    const sessionNotAnswered = makeSession({ elapsed: 25, allPlayersAnswered: false });
-    // All subsequent polls: timer elapsed, everyone has answered.
-    const sessionAllAnswered = makeSession({ elapsed: 30, allPlayersAnswered: true });
-
-    mockGetSession
-      .mockResolvedValueOnce(sessionNotAnswered)  // initial load → timer starts at 5s
-      .mockResolvedValue(sessionAllAnswered);      // subsequent polls
-
-    mockGetPlayers
-      .mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+    // 5s remaining on timer; nobody answered yet.
+    mockGetSession.mockResolvedValue(makeSession({ elapsed: 25, allPlayersAnswered: false }));
+    mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
 
     el = document.createElement(TAG);
     document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(100); // flush connectedCallback
 
-    // Initial poll: timer starts with 5s remaining.
-    await vi.advanceTimersByTimeAsync(100);
+    // Simulate Yjs: timer hits 0 → timerStateChanged → 4s timeout scheduled
+    capturedYjsCallback!({ timeRemaining: 0 });
+    await vi.advanceTimersByTimeAsync(0);
 
-    // Client timer ticks down to 0 → autoNavigateTimeout set by startTimer branch.
-    await vi.advanceTimersByTimeAsync(6000);
+    // Guard check: simulate a late allPlayersAnswered update arriving after timeout is set.
+    // The guard in handleDocState prevents a second navigate.
+    capturedYjsCallback!({ allPlayersAnswered: true, timeRemaining: 0 });
+    await vi.advanceTimersByTimeAsync(0);
 
-    // A poll fires at the 2s interval → sees allPlayersAnswered but guard prevents duplicate.
-    await vi.advanceTimersByTimeAsync(2000);
+    // Another poll cycle — guard must still hold
+    capturedYjsCallback!({ allPlayersAnswered: true, timeRemaining: 0 });
+    await vi.advanceTimersByTimeAsync(0);
 
     // Advance past the 4-second autopace delay.
     await vi.advanceTimersByTimeAsync(5000);
@@ -220,7 +224,7 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
   // ── Scenario 5 ─────────────────────────────────────────────────────────────
   it('does not navigate automatically when automaticPace is disabled', async () => {
     mockGetSession.mockResolvedValue(
-      makeSession({ elapsed: 5, allPlayersAnswered: true, automaticPace: false }),
+      makeSession({ elapsed: 5, automaticPace: false }),
     );
     mockGetPlayers.mockResolvedValue(makePlayers(2));
 
@@ -230,6 +234,11 @@ describe('QuestionDisplayScreen – autopace double-trigger prevention', () => {
     await vi.advanceTimersByTimeAsync(100);
     await vi.advanceTimersByTimeAsync(10_000);
 
+    expect(mockNavigate).not.toHaveBeenCalledWith('/leaderboard');
+
+    // Even with Yjs doc update allPlayersAnswered, should not navigate when automaticPace=false
+    capturedYjsCallback!({ allPlayersAnswered: true, timeRemaining: 20 });
+    await vi.advanceTimersByTimeAsync(5000);
     expect(mockNavigate).not.toHaveBeenCalledWith('/leaderboard');
   });
 });
@@ -243,6 +252,7 @@ describe('QuestionDisplayScreen – timer control buttons', () => {
     mockNavigate.mockClear();
     mockGetSession.mockReset();
     mockGetPlayers.mockReset();
+    capturedYjsCallback = null;
   });
 
   afterEach(() => {
@@ -378,14 +388,16 @@ describe('QuestionDisplayScreen – timer control buttons', () => {
   it('+5s and -5s buttons are absent when earlyStop fires (automaticPace + allPlayersAnswered)', async () => {
     // earlyStop is only triggered when automaticPace=true and allPlayersAnswered=true
     mockGetSession.mockResolvedValue(
-      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: true, allPlayersAnswered: true }),
+      makeSession({ elapsed: 5, timeLimit: 30, automaticPace: true }),
     );
     mockGetPlayers.mockResolvedValue(makePlayers(2));
     el = document.createElement(TAG);
     document.body.appendChild(el);
     await vi.advanceTimersByTimeAsync(100);
 
-    // earlyStop fires: timeRemaining forced to 0, autopace spinner shown instead of timer buttons
+    // Simulate Yjs doc update with allPlayersAnswered=true → triggers earlyStop
+    capturedYjsCallback!({ allPlayersAnswered: true, timeRemaining: 25 });
+
     expect(el.querySelector('#plus-5-button')).toBeNull();
     expect(el.querySelector('#minus-5-button')).toBeNull();
     expect(el.querySelector('.autopace-status')).toBeTruthy();
@@ -401,6 +413,7 @@ describe('QuestionDisplayScreen – server timer synchronization', () => {
     mockNavigate.mockClear();
     mockGetSession.mockReset();
     mockGetPlayers.mockReset();
+    capturedYjsCallback = null;
   });
 
   afterEach(() => {
@@ -410,33 +423,27 @@ describe('QuestionDisplayScreen – server timer synchronization', () => {
     vi.useRealTimers();
   });
 
-  it('+5s button value persists across a poll cycle (optimistic window)', async () => {
-    // Setup: 25s remaining (elapsed=5, timeLimit=30)
+  it('+5s button value persists across optimistic window against Yjs updates', async () => {
     mockGetSession.mockResolvedValue(
       makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false }),
     );
     mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+
     el = document.createElement(TAG);
     document.body.appendChild(el);
     await vi.advanceTimersByTimeAsync(100);
 
-    // Timer shows 25
     expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('25');
 
-    // Click +5 → should show 30
+    // Click +5 → optimistic = 30
     (el.querySelector('#plus-5-button') as HTMLButtonElement).click();
     expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('30');
 
-    // Advance 2s → poll fires but server still returns old timeLimit=30 (API hasn't propagated yet)
-    // The optimistic window (3s) protects us from reverting
-    mockGetSession.mockResolvedValue(
-      makeSession({ elapsed: 7, timeLimit: 30, automaticPace: false }),
-    );
-    await vi.advanceTimersByTimeAsync(2000);
+    // Yjs sends update with old server state — optimistic window blocks it
+    capturedYjsCallback!({ timeRemaining: 23, timeLimit: 30 });
 
-    // Timer should have ticked down ~2s from 30, NOT reverted to server's 23 (30-7)
-    const timerVal = parseInt(el.querySelector('.timer-value')?.textContent?.trim() || '0');
-    expect(timerVal).toBeGreaterThanOrEqual(27); // ~30 - 2 ticks = 28, not 23
+    // Timer must still show 30, not reverted.
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('30');
   });
 
   it('reconciles with server after optimistic window expires', async () => {
@@ -444,30 +451,29 @@ describe('QuestionDisplayScreen – server timer synchronization', () => {
       makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false }),
     );
     mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+
     el = document.createElement(TAG);
     document.body.appendChild(el);
     await vi.advanceTimersByTimeAsync(100);
 
-    // Click +5 → optimistic local = 30
+    // Click +5 → optimistic = 30
     (el.querySelector('#plus-5-button') as HTMLButtonElement).click();
 
-    // Advance past the 3s optimistic window; server now reflects the new timeLimit=35
-    mockGetSession.mockResolvedValue(
-      makeSession({ elapsed: 9, timeLimit: 35, automaticPace: false }),
-    );
-    await vi.advanceTimersByTimeAsync(4000);
+    // Flush microtasks → adjustTimer mock resolves → optimistic window expires
+    await vi.advanceTimersByTimeAsync(0);
 
-    // After reconciliation, timer should be ~26 (35-9) or thereabouts (local ticks ±1)
-    const timerVal = parseInt(el.querySelector('.timer-value')?.textContent?.trim() || '0');
-    expect(timerVal).toBeGreaterThanOrEqual(24);
-    expect(timerVal).toBeLessThanOrEqual(27);
+    // Yjs sends reconciled update: server has timeLimit=35, elapsed=9 → remaining=26
+    capturedYjsCallback!({ timeRemaining: 26, timeLimit: 35 });
+
+    expect(el.querySelector('.timer-value')?.textContent?.trim()).toBe('26');
   });
 
-  it('end timer sets time to 0 and does not revert on next poll', async () => {
+  it('end timer sets time to 0 and does not revert on Yjs updates', async () => {
     mockGetSession.mockResolvedValue(
       makeSession({ elapsed: 5, timeLimit: 30, automaticPace: false }),
     );
     mockGetPlayers.mockResolvedValue(makePlayers(2).map(p => ({ ...p, hasAnswered: false })));
+
     el = document.createElement(TAG);
     document.body.appendChild(el);
     await vi.advanceTimersByTimeAsync(100);
@@ -475,16 +481,12 @@ describe('QuestionDisplayScreen – server timer synchronization', () => {
     // End timer
     (el.querySelector('#end-timer-button') as HTMLButtonElement).click();
 
-    // Timer should be at 0, show leaderboard button
-    expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
+    // Timer should show "Show Leaderboard"
+    const btnText = el.querySelector('#next-button')?.textContent ?? '';
+    expect(btnText).toContain('Show Leaderboard');
 
-    // Next poll returns server reflecting the end (timeLimitOverride = elapsed)
-    mockGetSession.mockResolvedValue(
-      makeSession({ elapsed: 7, timeLimit: 7, automaticPace: false }),
-    );
-    await vi.advanceTimersByTimeAsync(2100);
-
-    // Should still show "Show Leaderboard" — not revert to active timer
+    // Even after a Yjs update, timer stays at 0
+    capturedYjsCallback!({ timeRemaining: 0, timeLimit: 7 });
     expect(el.querySelector('#next-button')?.textContent).toContain('Show Leaderboard');
   });
 });
