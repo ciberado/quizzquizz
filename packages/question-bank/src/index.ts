@@ -389,7 +389,7 @@ export function loadQuestionBankTree(rootDir: string): LoadQuestionBankTreeResul
           console.warn(`[question-bank] Skipping ${logicalEntryPath}: canonical path is outside rootDir`);
           continue;
         }
-        const bankId = relPath.replace(/\.md$/, '').replace(/\\/g, '/'); // normalise on Windows
+        const bankId = relPath.replace(/\.quizz\.md$|\.md$/, '').replace(/\\/g, '/'); // strip .quizz.md or .md; normalise on Windows
 
         // Reject reserved stems (root-level only, where id has no '/')
         if (!bankId.includes('/') && RESERVED_STEMS.has(bankId)) {
