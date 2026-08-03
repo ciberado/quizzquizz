@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/analytics",
-  "version": "0.17.6",
+  "version": "0.18.0",
   "description": "Analytics computation library for QuizzQuizz",
   "type": "module",
   "main": "./dist/index.js",
