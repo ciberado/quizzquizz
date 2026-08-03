@@ -1,25 +1,43 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
+// For format details, see https://aka.ms/devcontainer.json.
 {
 	"name": "Node.js & TypeScript",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+
+	// Build from a Dockerfile so we can use Ubuntu 24.04 (noble) and rename
+	// the default user to "dev". The typescript-node image has no noble variant.
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			"USERNAME": "dev",
+			"NODE_VERSION": "22"
+		}
+	},
+
+	// Give the container a stable Docker hostname.
+	// Tailscale still uses its own --hostname flag (vs-<PROJECT_NAME>).
+	"runArgs": [
+		"--hostname", "devcontainer",
+		"--env-file", "${localWorkspaceFolder}/.devcontainer/.env",
+		"--name", "vs-${localWorkspaceFolderBasename}"
+	],
+
 	"features": {
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers-extra/features/tailscale:1": {},
-		"ghcr.io/devcontainers-extra/features/tmux-apt-get:1": {},
-		"ghcr.io/devcontainers/features/docker-in-docker:3.0.0": {},
-		"ghcr.io/devcontainers/features/sshd:1": {},
-		"ghcr.io/devcontainers-extra/features/typescript:2": {}
+		"ghcr.io/devcontainers/features/docker-in-docker:3.0.0": {
+			"moby": false,
+			"runArgs" : "--privileged"
+		},
+		"ghcr.io/devcontainers/features/sshd:1": {}
+		// tmux is installed directly in the Dockerfile;
+		// oh-my-tmux config is applied in post-create.sh.
 	},
 
-	// Inject secrets and config from the host shell environment.
-	// See .devcontainer/README.md for setup instructions.
-	"remoteEnv": {
-		"TAILSCALE_AUTHKEY": "${localEnv:TAILSCALE_AUTHKEY}",
-		"PROJECT_NAME": "${localEnv:PROJECT_NAME}"
-	},
-	"postCreateCommand": "wget -O ~/.tmux.conf https://raw.githubusercontent.com/gpakosz/.tmux/master/.tmux.conf && wget -O ~/.tmux.conf.local https://raw.githubusercontent.com/gpakosz/.tmux/master/.tmux.conf.local",
-	// Start Tailscale (and OpenSSH) after the container is created.
+	// Drop into the container as our renamed user.
+	"remoteUser": "dev",
+
+	// Run once after the image is built: install oh-my-tmux and Fresh editor.
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+
+	// Start Tailscale (and OpenSSH) every time the container starts.
 	"postStartCommand": "bash .devcontainer/start-tailscale.sh"
 }

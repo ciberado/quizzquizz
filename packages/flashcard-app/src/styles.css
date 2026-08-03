@@ -714,8 +714,6 @@ label {
 
   .question-text {
     font-size: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
   }
 
   .timer {

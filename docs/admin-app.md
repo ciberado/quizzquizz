@@ -48,7 +48,7 @@ The route is also accessible directly by any authenticated user (admin or not), 
 
 ### User List (`/admin/users`)
 
-The main user management table. Protected by `isAdmin` guard — unauthenticated or non-admin requests are redirected to `/login`.
+ghe main user management table. Protected by `isAdmin` guard — unauthenticated or non-admin requests are redirected to `/login`.
 
 **Table columns:**
 

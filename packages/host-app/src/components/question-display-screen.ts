@@ -9,6 +9,7 @@ import { state } from '../state';
 import { api, cancelAllRequests } from '../api-client';
 import morphdom from 'morphdom';
 import { connectToSession, type SessionDocState } from '../yjs-provider';
+import { fitText } from './text-fit';
 
 // Local interface for game state (matches API response)
 interface HostGameState {
@@ -530,6 +531,14 @@ export class QuestionDisplayScreen extends HTMLElement {
     const endTimer = this.querySelector<HTMLElement>('#end-timer-button');
     if (endTimer) endTimer.onclick = () => this.handleEndTimer();
 
+    requestAnimationFrame(() => {
+      const questionText = this.querySelector<HTMLElement>('.question-text');
+      if (questionText) fitText(questionText, { minSize: 16, maxSize: 40 });
+      this.querySelectorAll<HTMLElement>('.answer-text').forEach(el => {
+        fitText(el, { minSize: 12, maxSize: 22 });
+      });
+    });
+
     this.addStyles();
   }
 
@@ -606,25 +615,13 @@ export class QuestionDisplayScreen extends HTMLElement {
 
       .answers-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: clamp(0.5rem, 1vh, 0.75rem);
         margin: clamp(0.5rem, 1vh, 0.75rem) 0;
         flex: 1 1 auto;
         min-height: 0;
         overflow: hidden;
-      }
-      
-      /* Adaptive grid: 2 columns for ≤4 answers, 3 columns for 5-6 answers */
-      .answers-grid:has(.answer-card:nth-child(5)) {
-        grid-template-columns: repeat(3, 1fr);
-      }
-      
-      .answers-grid:has(.answer-card:nth-child(5):last-child) {
-        grid-template-columns: repeat(3, 1fr);
-      }
-      
-      .answers-grid:has(.answer-card:nth-child(6)) {
-        grid-template-columns: repeat(3, 1fr);
+        max-width: 100%;
       }
 
       .answer-card {
@@ -677,6 +674,8 @@ export class QuestionDisplayScreen extends HTMLElement {
         line-height: 1.3;
         flex: 1;
         padding-left: 0;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
 
       .correct-indicator {

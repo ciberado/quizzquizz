@@ -2229,7 +2229,7 @@ body:has(question-display-screen) #app {
 }
 
 .question-text {
-  max-width: 320px;
+  /* max-width intentionally removed — fitty handles text fitting */
 }
 
 .question-actions {

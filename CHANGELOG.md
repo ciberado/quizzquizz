@@ -4,6 +4,47 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[api-server]** Skip `bootstrapAdminUser()` in test mode (`NODE_ENV=test`) to prevent flaky auth middleware test failures caused by concurrent DB resets during the full test suite run
+- **[analytics-ui]** Added `--passWithNoTests` to vitest scripts so the workspace does not fail the root `npm test` when no test files exist yet
+- **[host-app]** `leaderboard-screen`: `handleNextQuestion()` now navigates to `/question/${sessionId}` instead of the bare `/question`, keeping the host URL consistent with the session across auto-advances
+- **[host-app]** Added `leaderboard-screen.test.ts` with 4 tests covering navigation correctness, leaderboard rendering, and question-progress heading
+
+## [0.17.5] — 2026-07-13
+
+### Fixed
+- **[api-server]** Added missing `must_change_password` column to in-memory test DB schema (fixes 164 test failures)
+- **[host-app]** Updated question-display-screen tests for Yjs-based architecture (fixes 6 test failures)
+- **[player-app]** Updated component tests to verify Yjs connectivity instead of removed REST polling (fixes 2 test failures)
+
+## [0.17.4] — 2026-06-18
+
+### Changed
+- **[player-app]** Merged timer, question number, and flag button into a single fixed header bar; moved `.question-header` to `position: fixed` at top of screen
+- **[player-app]** Removed `overflow-y: auto` from `.question-screen` to fix sticky/fixed positioning context
+- **[player-app]** Changed `.error-message` to hide when empty via `:empty { display: none }`
+- **[host-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing; changed answers grid to fixed 2-column layout; added `max-width: 100%` and `overflow-wrap: break-word` to grid and answer text
+- **[flashcard-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on flashcard text
+
+## [0.17.3] — 2026-06-18
+
+### Changed
+- **[host-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on question and answer text; changed answers grid to fixed 2-column layout
+- **[player-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on question and answer text
+- **[flashcard-app]** Replaced fitty with custom `fitText` utility for dynamic font sizing on flashcard question and answer text
+
+## [0.17.2] — 2026-06-18
+
+### Fixed
+- **[player-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on question and answer text
+- **[host-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on question and answer text
+- **[flashcard-app]** Removed max-width constraint on `.question-text` and integrated fitty for dynamic font sizing on flashcard question and answer text
+
+### Changed
+- **[player-app]** Simplified question screen header — removed `.qz-game-bar` (exit button + quiz title), moved flag button into `.question-header` as the last child
+
+## [0.17.1] — 2026-06-18
+
 ### Added
 - **[auth-ui]** New `@quizzquizz/auth-ui` package with `LoginScreenBase` — an abstract `HTMLElement` with **concrete** implementations of all auth fetch calls (`signIn`, `signUp`, `imapSignIn`, `getAuthCapabilities`) using shared `authRequest()` helper against `/api/auth/*`. Apps only need to implement `navigateHome()` plus optional subtitle overrides.
 - **[auth-ui]** 17-test Vitest/happy-dom suite for `LoginScreenBase` covering sign-in, sign-up, IMAP toggle, error display, auth-changed event, and navigation.
@@ -27,6 +68,7 @@ All notable changes to this project will be documented in this file, organized b
 - **[admin-app]** Removed `about-btn-nav` (ℹ️) from the nav header.
 
 ### Fixed
+- **[host-app]** Fixed morphdom event listener leak in leaderboard screen where "Next Question" on the scoreboard jumped to "Quiz Complete" instead of the next question. Replaced `addEventListener` with `onclick` assignment to prevent duplicate handlers accumulating across morphdom re-renders.
 - **[host-app]** Theme system now falls back to OS `prefers-color-scheme` when no explicit preference is stored in localStorage, so light-mode browsers are respected automatically.
 - **[player-app]** Same About drawer button alignment fix as host-app.
 - **[flashcard-app]** About dialog was semi-transparent because `--color-surface` is undefined in flashcard-app; background now uses `var(--color-bg)`. Same button alignment fix applied.

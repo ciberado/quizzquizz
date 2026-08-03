@@ -1,9 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { router } from '../router';
 import { state } from '../state';
-import { api } from '../api-client';
 import '../components/join-screen';
 import type { JoinScreen } from '../components/join-screen';
+
+// ── Yjs mock ──────────────────────────────────────────────────────────────────
+const { mockConnectToSession } = vi.hoisted(() => ({
+  mockConnectToSession: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('../yjs-provider', () => ({
+  connectToSession: mockConnectToSession,
+}));
 
 describe('JoinScreen Component', () => {
   let component: JoinScreen;
@@ -145,29 +153,7 @@ describe('QuestionScreen Component', () => {
   let component: HTMLElement;
 
   beforeEach(() => {
-    // Mock API
-    vi.spyOn(api, 'getGameState').mockResolvedValue({
-      status: 'playing',
-      currentQuestion: {
-        id: 'q1',
-        text: 'What is 2 + 2?',
-        answers: [
-          { id: 'a1', text: '3' },
-          { id: 'a2', text: '4' },
-        ],
-        correctAnswerIds: ['a2'],
-        difficulty: 'easy' as const,
-        topics: ['math'],
-        tags: [] as string[],
-        status: 'active' as const,
-        timeLimit: 20,
-      },
-      questionStartedAt: Date.now(),
-      timeLimit: 20,
-      totalQuestions: 5,
-      currentQuestionNumber: 1,
-      serverTime: Date.now(),
-    });
+    mockConnectToSession.mockClear();
 
     // Set up state
     state.setState({
@@ -193,14 +179,14 @@ describe('QuestionScreen Component', () => {
     expect(component.tagName).toBe('QUESTION-SCREEN');
   });
 
-  it('should call API to get game state when mounted', async () => {
+  it('should connect to Yjs session when mounted', async () => {
     component = document.createElement('question-screen');
     document.body.appendChild(component);
 
-    // Wait for polling to trigger
+    // Wait for onMount to run
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    expect(api.getGameState).toHaveBeenCalled();
+    expect(mockConnectToSession).toHaveBeenCalled();
     
     if (component.parentNode) {
       document.body.removeChild(component);
@@ -212,16 +198,7 @@ describe('WaitingScreen Component', () => {
   let component: HTMLElement;
 
   beforeEach(() => {
-    // Mock API
-    vi.spyOn(api, 'getGameState').mockResolvedValue({
-      status: 'playing',
-      currentQuestion: null,
-      questionStartedAt: null,
-      timeLimit: null,
-      totalQuestions: 5,
-      currentQuestionNumber: 1,
-      serverTime: Date.now(),
-    });
+    mockConnectToSession.mockClear();
 
     state.setState({
       sessionId: 'session-123',
@@ -248,13 +225,13 @@ describe('WaitingScreen Component', () => {
     expect(component.tagName).toBe('WAITING-SCREEN');
   });
 
-  it('should call API to poll game state when mounted', async () => {
+  it('should connect to Yjs session when mounted', async () => {
     component = document.createElement('waiting-screen');
     document.body.appendChild(component);
 
-    // Wait for polling to trigger
+    // Wait for onMount to run
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    expect(api.getGameState).toHaveBeenCalled();
+    expect(mockConnectToSession).toHaveBeenCalled();
   });
 });

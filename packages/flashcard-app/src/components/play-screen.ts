@@ -17,6 +17,7 @@ import { LeitnerEngine } from '../leitner';
 import type { FlashCard } from '../leitner';
 import type { FlashcardSessionState } from '../api-client';
 import { updateSetBoxCounts } from '../flashcard-sets';
+import { fitText } from './text-fit';
 
 type Phase = 'loading' | 'question' | 'answer' | 'complete';
 
@@ -791,6 +792,12 @@ export class FlashcardPlayScreen extends BaseComponent {
         </div>
       </div>
     `);
+
+    requestAnimationFrame(() => {
+      this.querySelectorAll<HTMLElement>('.fc-question-text, .fc-answer-text').forEach(el => {
+        fitText(el, el.classList.contains('fc-question-text') ? { minSize: 14, maxSize: 28 } : { minSize: 12, maxSize: 18 });
+      });
+    });
 
     if (revealed) {
       this.qs('#yes-btn')?.addEventListener('click', () => {

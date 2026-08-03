@@ -563,6 +563,10 @@ input.error {
   font-size: var(--font-size-sm);
 }
 
+.error-message:empty {
+  display: none;
+}
+
 /* Success Message */
 .success-message {
   color: var(--color-success);
@@ -910,7 +914,6 @@ label {
   
   .answers-grid {
     padding: 0 var(--spacing-lg);
-    max-width: 600px;
   }
 }
 
@@ -928,8 +931,6 @@ label {
 
   .question-text {
     font-size: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
   }
 
   .timer {
@@ -941,7 +942,6 @@ label {
   .answers-grid {
     grid-template-columns: 1fr 1fr !important;
     gap: var(--spacing-lg);
-    max-width: 1000px;
     padding: 0 var(--spacing-lg);
   }
 
@@ -987,7 +987,6 @@ label {
   }
 
   .answers-grid {
-    max-width: 1100px;
     gap: var(--spacing-xl);
   }
 
@@ -1029,9 +1028,6 @@ label {
     box-shadow: var(--shadow-lg);
   }
 
-  .answers-grid {
-    max-width: 1000px;
-  }
 }
 
 /* Landscape phones - optimize for horizontal space (ONLY on actual landscape phones) */
@@ -1090,12 +1086,10 @@ label {
 }
 /* Question Screen Styles */
 .question-screen {
-  padding: 0;
+  padding: 3.5rem 0 0;
   justify-content: flex-start;
   min-height: 100vh;
   height: auto;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .question-header {
@@ -1103,9 +1097,14 @@ label {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-md);
   background-color: var(--color-bg);
   border-bottom: 2px solid var(--color-border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
 }
 
 .timer {
@@ -1147,7 +1146,7 @@ label {
   font-size: var(--font-size-xl);
   font-weight: 600;
   color: var(--color-text);
-  padding: var(--spacing-xl) var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   text-align: center;
   line-height: 1.6;
 }

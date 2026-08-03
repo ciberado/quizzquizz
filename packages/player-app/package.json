@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/player-app",
-  "version": "0.17.0",
+  "version": "0.17.5",
   "description": "Player web application",
   "type": "module",
   "scripts": {
