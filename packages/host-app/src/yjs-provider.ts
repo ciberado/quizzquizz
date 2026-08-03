@@ -15,6 +15,9 @@ export interface SessionQuestion {
   answers: Array<{ id: string; text: string }>;
   difficulty: string;
   timeLimit: number | null;
+  /** Number of answers required; never exposes which are correct */
+  correctAnswerCount?: number;
+  /** Only present for the host; never sent to players via doc */
   correctAnswerIds?: string[];
 }
 

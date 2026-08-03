@@ -2,8 +2,7 @@ import { BaseComponent } from './base-component';
 import { state } from '../state';
 import { api } from '../api-client';
 import { router } from '../router';
-import type { GameState } from '@quizzquizz/common';
-import { connectToSession, type SessionDocState } from '../yjs-provider';
+import { connectToSession, type SessionDocState, type SessionQuestion } from '../yjs-provider';
 import { fitText } from './text-fit';
 
 const LS_FLAGGED_QUESTIONS = 'qz-flagged-questions';
@@ -23,7 +22,7 @@ export class QuestionScreen extends BaseComponent {
   private selectedAnswerIds: Set<string> = new Set();
   private timeRemaining: number = 0;
   private timeLimit: number = 0;
-  private currentQuestion: GameState['currentQuestion'] = null;
+  private currentQuestion: SessionQuestion | null = null;
   private currentQuestionIndex: number = 0;
   private hasSubmitted: boolean = false;
   private hasRenderedQuestion: boolean = false;
@@ -210,7 +209,7 @@ export class QuestionScreen extends BaseComponent {
       if (!this.currentQuestion) {
         // First load
         console.log(`[PLAYER][Question] First question received: id=${docState.currentQuestion.id.slice(0,8)} "${docState.currentQuestion.text.slice(0,50)}"`);
-        this.currentQuestion = docState.currentQuestion as GameState['currentQuestion'];
+        this.currentQuestion = docState.currentQuestion ?? null;
         this.currentQuestionIndex = (docState.currentQuestionNumber || 1) - 1;
         this.timeLimit = docState.timeLimit ?? 20;
         this.timeRemaining = docState.timeRemaining ?? this.timeLimit;
@@ -304,7 +303,7 @@ export class QuestionScreen extends BaseComponent {
 
   private getSubmitButtonText(): string {
     if (this.hasSubmitted) return 'Submitted';
-    const correctCount = this.currentQuestion?.correctAnswerIds?.length ?? 1;
+    const correctCount = this.currentQuestion?.correctAnswerCount ?? 1;
     const remaining = correctCount - this.selectedAnswerIds.size;
     if (remaining > 1) {
       return `Select ${remaining} more answers`;
@@ -324,8 +323,8 @@ export class QuestionScreen extends BaseComponent {
         submitBtn.disabled = true;
         return;
       }
-      if (this.currentQuestion && this.currentQuestion.correctAnswerIds) {
-        const correctCount = this.currentQuestion.correctAnswerIds.length;
+      if (this.currentQuestion) {
+        const correctCount = this.currentQuestion.correctAnswerCount ?? 1;
         if (correctCount > 1 && this.selectedAnswerIds.size !== correctCount) {
           submitBtn.disabled = true;
           return;
@@ -407,9 +406,9 @@ export class QuestionScreen extends BaseComponent {
           ${this.escapeHtml(this.currentQuestion.text)}
         </div>
 
-        ${this.currentQuestion.correctAnswerIds && this.currentQuestion.correctAnswerIds.length > 1 ? `
+        ${(this.currentQuestion.correctAnswerCount ?? 1) > 1 ? `
           <div class="multiple-answers-hint">
-            ⚠️ Select exactly ${this.currentQuestion.correctAnswerIds.length} answers
+            ⚠️ Select exactly ${this.currentQuestion.correctAnswerCount} answers
           </div>
         ` : ''}
 
@@ -433,8 +432,8 @@ export class QuestionScreen extends BaseComponent {
             Submit Answer
           </button>
           <p class="hint">
-            ${this.currentQuestion.correctAnswerIds && this.currentQuestion.correctAnswerIds.length > 1 
-              ? `${this.selectedAnswerIds.size}/${this.currentQuestion.correctAnswerIds.length} selected`
+            ${(this.currentQuestion.correctAnswerCount ?? 1) > 1
+              ? `${this.selectedAnswerIds.size}/${this.currentQuestion.correctAnswerCount} selected`
               : 'Select one or more answers'}
           </p>
         </div>
