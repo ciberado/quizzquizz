@@ -18,6 +18,7 @@ COPY packages/analytics-ui/package*.json ./packages/analytics-ui/
 COPY packages/host-app/package*.json ./packages/host-app/
 COPY packages/player-app/package*.json ./packages/player-app/
 COPY packages/flashcard-app/package*.json ./packages/flashcard-app/
+COPY packages/auth-ui/package*.json ./packages/auth-ui/
 
 # Install all dependencies (including devDependencies for build)
 # Use --ignore-scripts: prisma schema isn't copied yet; explicit "prisma generate" runs later
@@ -33,6 +34,7 @@ COPY packages/analytics-ui/ ./packages/analytics-ui/
 COPY packages/host-app/ ./packages/host-app/
 COPY packages/player-app/ ./packages/player-app/
 COPY packages/flashcard-app/ ./packages/flashcard-app/
+COPY packages/auth-ui/ ./packages/auth-ui/
 
 # Generate Prisma client
 # Note: if network is unavailable, the pre-generated client from the build context is used.
@@ -67,6 +69,7 @@ COPY --chown=nodejs:nodejs packages/common/package*.json ./packages/common/
 COPY --chown=nodejs:nodejs packages/question-bank/package*.json ./packages/question-bank/
 COPY --chown=nodejs:nodejs packages/api-server/package*.json ./packages/api-server/
 COPY --chown=nodejs:nodejs packages/analytics/package*.json ./packages/analytics/
+COPY --chown=nodejs:nodejs packages/auth-ui/package*.json ./packages/auth-ui/
 
 # Install production dependencies only
 # Use --ignore-scripts to skip "prisma generate" postinstall (schema not copied yet).
@@ -90,6 +93,7 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/player-app/dist ./dist-b
 COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics-ui/dist ./dist-build/analytics-ui/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/flashcard-app/dist ./dist-build/flashcard-app/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/dist ./dist-build/analytics/dist
+COPY --chown=nodejs:nodejs --from=builder /app/packages/auth-ui/dist ./dist-build/auth-ui/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/common/dist ./dist-build/common/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/dist ./dist-build/question-bank/dist
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/dist ./dist-build/api-server/dist
@@ -100,6 +104,7 @@ COPY --chown=nodejs:nodejs --from=builder /app/packages/common/package.json ./di
 COPY --chown=nodejs:nodejs --from=builder /app/packages/question-bank/package.json ./dist-build/question-bank/package.json
 COPY --chown=nodejs:nodejs --from=builder /app/packages/api-server/package.json ./dist-build/api-server/package.json
 COPY --chown=nodejs:nodejs --from=builder /app/packages/analytics/package.json ./dist-build/analytics/package.json
+COPY --chown=nodejs:nodejs --from=builder /app/packages/auth-ui/package.json ./dist-build/auth-ui/package.json
 
 # Generate Prisma client in production environment
 # Migrations will be run automatically on startup by the application
@@ -114,7 +119,8 @@ RUN mkdir -p \
       /app/packages/api-server/prisma \
       /app/packages/common/dist \
       /app/packages/question-bank/dist \
-      /app/packages/analytics/dist && \
+      /app/packages/analytics/dist \
+      /app/packages/auth-ui/dist && \
     chown -R nodejs:nodejs /app/packages
 
 # Create target directory for frontend static files (shared with Caddy via app-static volume)

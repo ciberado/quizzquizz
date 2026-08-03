@@ -24,7 +24,8 @@
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers-extra/features/tailscale:1": {},
 		"ghcr.io/devcontainers/features/docker-in-docker:3.0.0": {
-			"moby": false
+			"moby": false,
+			"runArgs" : "--privileged"
 		},
 		"ghcr.io/devcontainers/features/sshd:1": {}
 		// tmux is installed directly in the Dockerfile;
