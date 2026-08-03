@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/flashcard-app",
-  "version": "0.17.5",
+  "version": "0.17.6",
   "description": "Flashcard player application",
   "type": "module",
   "scripts": {

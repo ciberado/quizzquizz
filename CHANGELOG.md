@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.17.6] — 2026-08-03
+
 ### Fixed
 - **[api-server]** Skip `bootstrapAdminUser()` in test mode (`NODE_ENV=test`) to prevent flaky auth middleware test failures caused by concurrent DB resets during the full test suite run
 - **[analytics-ui]** Added `--passWithNoTests` to vitest scripts so the workspace does not fail the root `npm test` when no test files exist yet
@@ -515,6 +517,8 @@ All notable changes to this project will be documented in this file, organized b
 - New `pace=manual` and `AUTO_QUESTION_TIME_MULTIPLIER` test suites in `game.test.ts` (3 tests).
 
 ## [Unreleased]
+
+## [0.17.6] — 2026-08-03
 
 ## [0.4.6] — 2026-03-16
 
