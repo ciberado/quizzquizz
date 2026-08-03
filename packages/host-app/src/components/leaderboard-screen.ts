@@ -150,7 +150,7 @@ export class LeaderboardScreen extends HTMLElement {
     this.isNavigating = true;
     try {
       await api.nextQuestion(sessionId, hostToken);
-      router.navigate('/question');
+      router.navigate(`/question/${sessionId}`);
     } catch (error) {
       console.error('Error advancing to next question:', error);
       this.isNavigating = false;
