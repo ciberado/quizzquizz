@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[question-bank]** Strip `.quizz` extension from bank IDs when loading `.quizz.md` files, so bank IDs are clean (e.g. `02-aws/.../...part01` instead of `...part01.quizz`)
+- **[api-server]** Add `correctAnswerCount` to the `currentQuestion` object pushed via the Yjs doc, so the player UI can enforce the correct number of selections for multi-answer questions without exposing which answers are correct
+- **[player-app]** `question-screen`: use `correctAnswerCount` (from Yjs doc) instead of the absent `correctAnswerIds?.length` to determine multi-select count; fixes multi-answer questions always being marked wrong
+
 ## [0.17.6] — 2026-08-03
 
 ### Fixed
