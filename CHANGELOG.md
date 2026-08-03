@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+### Fixed
+- **[api-server]** Skip `bootstrapAdminUser()` in test mode (`NODE_ENV=test`) to prevent flaky auth middleware test failures caused by concurrent DB resets during the full test suite run
+- **[analytics-ui]** Added `--passWithNoTests` to vitest scripts so the workspace does not fail the root `npm test` when no test files exist yet
+- **[host-app]** `leaderboard-screen`: `handleNextQuestion()` now navigates to `/question/${sessionId}` instead of the bare `/question`, keeping the host URL consistent with the session across auto-advances
+- **[host-app]** Added `leaderboard-screen.test.ts` with 4 tests covering navigation correctness, leaderboard rendering, and question-progress heading
+
 ## [0.17.5] — 2026-07-13
 
 ### Fixed
