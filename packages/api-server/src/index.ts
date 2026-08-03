@@ -128,8 +128,10 @@ async function initialize() {
   
   console.log(`✅ Loaded ${banks.size} question bank(s)`);
   
-  // Bootstrap global admin user from env vars (no-op if already exists or not configured)
-  await bootstrapAdminUser();
+  // Bootstrap global admin user from env vars (no-op if already exists, not configured, or in test mode)
+  if (process.env.NODE_ENV !== 'test') {
+    await bootstrapAdminUser();
+  }
 
   // Start session cleanup job (runs every 60 minutes by default)
   const cleanupIntervalMinutes = parseInt(process.env.CLEANUP_INTERVAL_MINUTES || '60', 10);
