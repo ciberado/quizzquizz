@@ -103,6 +103,7 @@ gameRoutes.get('/:sessionId/state', async (c) => {
         answers: currentQuestion.answers,
         difficulty: currentQuestion.difficulty,
         timeLimit,
+        correctAnswerCount: currentQuestion.correctAnswerIds.length,
       } : null,
       questionStartedAt,
       timeLimit,

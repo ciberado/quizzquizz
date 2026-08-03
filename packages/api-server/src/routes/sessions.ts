@@ -310,7 +310,7 @@ sessionRoutes.post('/:id/start', async (c) => {
       currentQuestionIndex: 0,
       currentQuestionNumber: 1,
       currentQuestion: firstQ
-        ? { id: firstQ.id, text: firstQ.text, answers: firstQ.answers, difficulty: firstQ.difficulty, timeLimit }
+        ? { id: firstQ.id, text: firstQ.text, answers: firstQ.answers, difficulty: firstQ.difficulty, timeLimit, correctAnswerCount: firstQ.correctAnswerIds.length }
         : null,
       questionStartedAt: now.getTime(),
       timeLimit,
@@ -429,7 +429,7 @@ sessionRoutes.post('/:id/next', async (c) => {
       currentQuestionIndex: nextIndex,
       currentQuestionNumber: nextIndex + 1,
       currentQuestion: nextQ
-        ? { id: nextQ.id, text: nextQ.text, answers: nextQ.answers, difficulty: nextQ.difficulty, timeLimit: nextTimeLimit }
+        ? { id: nextQ.id, text: nextQ.text, answers: nextQ.answers, difficulty: nextQ.difficulty, timeLimit: nextTimeLimit, correctAnswerCount: nextQ.correctAnswerIds.length }
         : null,
       questionStartedAt: now.getTime(),
       timeLimit: nextTimeLimit,

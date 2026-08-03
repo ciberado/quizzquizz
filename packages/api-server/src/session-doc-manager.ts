@@ -25,13 +25,14 @@ export interface SessionDocState {
   status: string; // 'lobby' | 'playing' | 'finished'
   currentQuestionIndex: number;
   currentQuestionNumber: number; // 1-based
-  /** Current question WITHOUT correctAnswerIds (kept server-side only) */
+  /** Current question WITHOUT correctAnswerIds (kept server-side only); correctAnswerCount tells clients how many to select */
   currentQuestion: {
     id: string;
     text: string;
     answers: Array<{ id: string; text: string }>;
     difficulty: string;
     timeLimit: number | null;
+    correctAnswerCount: number;
   } | null;
   questionStartedAt: number | null;
   timeLimit: number | null;
