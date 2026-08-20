@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file, organized b
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-08-20
+
+### Added
+- **[scripts]** Add a standalone `json-to-markdown.html` browser tool that converts a JSON array of questions into question-bank Markdown, plus a local `scripts/README.md` documenting usage
+
 ## [0.18.0] — 2026-08-03
 
 ### Fixed
