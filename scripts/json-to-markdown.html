@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JSON → Question Bank Markdown</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  label { display: block; margin: 0.5rem 0 0.25rem; font-weight: 600; }
+  textarea, input { width: 100%; box-sizing: border-box; }
+  textarea { font-family: ui-monospace, monospace; font-size: 13px; }
+  button { margin: 0.75rem 0.5rem 0.75rem 0; padding: 0.5rem 1rem; }
+  .row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .row label { margin: 0; font-weight: normal; }
+  #log { color: #a00; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>JSON array → Question Bank Markdown</h1>
+
+<label for="input">Paste JSON array (one array of question objects)</label>
+<textarea id="input" rows="10" spellcheck="false">[
+  {"code":"Q1","question":"A company is planning to create several ML prediction models. The training data is stored in Amazon S3. The entire dataset is more than 5 TB in size and consists of CSV, JSON, Apache Parquet, and simple text files. The data must be processed in several consecutive steps. The steps include complex manipulations that can take hours to finish running. Some of the processing involves natural language processing (NLP) transformations. The entire process must be automated. Which solution will meet these requirements?","correct":["Use Amazon SageMaker Pipelines to create a pipeline of data processing steps"],"incorrect":["Process data at each step by using Amazon SageMaker Data Wrangler","Use Amazon SageMaker notebooks for each data processing step","Process data at each step by using AWS Lambda functions"],"topics":[],"tags":[],"difficulty":null,"quality":null}
+]</textarea>
+
+<div class="row">
+  <label>Bank name (title):
+    <input id="title" type="text" value="ML Prediction Models">
+  </label>
+  <label><input id="timeLimit" type="number" value="30" min="1" style="width: 6em;"> default time limit (s)</label>
+</div>
+
+<button id="generate">Generate Markdown</button>
+<button id="download" disabled>Download .md</button>
+<div id="log"></div>
+
+<label for="output">Generated Markdown</label>
+<textarea id="output" rows="20" spellcheck="false"></textarea>
+
+<script>
+  function toId(code, i) {
+    const id = (code != null && String(code).trim()) || ("Q" + (i + 1));
+    return id.replace(/\s+/g, "-");
+  }
+
+  // Runtime parser only accepts easy | medium | hard.
+  // "normal", null, and anything else map to "medium".
+  function toDifficulty(d) {
+    const v = String(d ?? "").toLowerCase().trim();
+    if (v === "easy" || v === "hard") return v;
+    return "medium";
+  }
+
+  function strList(v) {
+    return Array.isArray(v)
+      ? v.map((x) => String(x).trim()).filter((x) => x.length > 0)
+      : [];
+  }
+
+  function buildMarkdown(items, title, timeLimit) {
+    const bankName = (title && String(title).trim()) || "Question Bank";
+    const out = [];
+    out.push("# Question Bank: " + bankName, "");
+    out.push("## Metadata");
+
+    const bankTopics = [...new Set(items.flatMap((q) => strList(q.topics)))];
+    if (bankTopics.length) out.push("- **Topics**: " + bankTopics.join(", "));
+    out.push("- **Default Time Limit**: " + timeLimit + "s");
+
+    out.push("", "---", "", "## Questions", "");
+
+    items.forEach((q, i) => {
+      const id = toId(q.code, i);
+      const topics = strList(q.topics);
+      const tags = strList(q.tags);
+
+      out.push("### " + id);
+      out.push("**Difficulty**: " + toDifficulty(q.difficulty));
+      if (topics.length) out.push("**Topics**: " + topics.join(", "));
+      if (tags.length) out.push("**Tags**: " + tags.join(", "));
+      out.push("");
+
+      out.push(String(q.question ?? "").trim());
+      out.push("");
+
+      strList(q.correct).forEach((t) => out.push("- [x] " + t));
+      strList(q.incorrect).forEach((t) => out.push("- [ ] " + t));
+
+      out.push("", "---", "");
+    });
+
+    return out.join("\n");
+  }
+
+  const inputEl = document.getElementById("input");
+  const titleEl = document.getElementById("title");
+  const timeEl = document.getElementById("timeLimit");
+  const outputEl = document.getElementById("output");
+  const logEl = document.getElementById("log");
+  const downloadBtn = document.getElementById("download");
+
+  let lastMarkdown = "";
+  let lastFileName = "questions.md";
+
+  function slug(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "questions";
+  }
+
+  document.getElementById("generate").addEventListener("click", () => {
+    logEl.textContent = "";
+    let parsed;
+    try {
+      parsed = JSON.parse(inputEl.value);
+    } catch (e) {
+      logEl.textContent = "Invalid JSON: " + e.message;
+      return;
+    }
+    if (!Array.isArray(parsed)) {
+      logEl.textContent = "Expected a JSON array at the top level.";
+      return;
+    }
+    if (parsed.length === 0) {
+      logEl.textContent = "Array is empty.";
+      return;
+    }
+
+    const timeLimit = Math.max(1, parseInt(timeEl.value, 10) || 30);
+    lastMarkdown = buildMarkdown(parsed, titleEl.value, timeLimit);
+    lastFileName = slug(titleEl.value) + ".md";
+
+    outputEl.value = lastMarkdown;
+    downloadBtn.disabled = false;
+    logEl.textContent = "Generated " + parsed.length + " question(s).";
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    const blob = new Blob([lastMarkdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = lastFileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+</script>
+</body>
+</html>
