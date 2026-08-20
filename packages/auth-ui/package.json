@@ -1,6 +1,6 @@
 {
   "name": "@quizzquizz/auth-ui",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Shared authentication UI components for QuizzQuizz apps",
   "type": "module",
   "main": "./dist/index.js",
